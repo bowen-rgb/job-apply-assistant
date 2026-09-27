@@ -157,7 +157,7 @@
   "http://127.0.0.1:9222": "http://127.0.0.1:9222",
   "indeed, google, linkedin": "indeed, google, linkedin",
   "France, USA, UK…": "France, USA, UK…",
-  "greenhouse:company-token:Company Name\nashby:company-slug:Company Name\nlever:company-site:Company Name": "greenhouse:company-token:Company Name\nashby:company-slug:Company Name\nlift:company-site:Company Name",
+  "greenhouse:company-token:Company Name\nashby:company-slug:Company Name\nlever:company-site:Company Name": "greenhouse:company-token:Company Name\nashby:company-slug:Company Name\nlever:company-site:Company Name",
   "Aucune offre dans cette vue.": "No jobs match this view.",
   "Offre sans titre": "Untitled job",
   "Pas relu": "Not reviewed",
