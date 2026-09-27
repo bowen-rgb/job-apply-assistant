@@ -32,9 +32,11 @@ function showView(which){
   el('profileView').classList.toggle('hidden',!profile);
   el('pipelineView').classList.toggle('hidden',!pipeline);
   el('jobSidebar').classList.toggle('hidden',!jobs);
-  el('jobsNav').classList.toggle('active',jobs);
-  el('profileNav').classList.toggle('active',profile);
-  el('pipelineNav').classList.toggle('active',pipeline);
+  [['jobsNav',jobs],['profileNav',profile],['pipelineNav',pipeline]].forEach(([id,active])=>{
+    el(id).classList.toggle('active',active);
+    el(id).toggleAttribute('aria-current',active);
+    if(active) el(id).setAttribute('aria-current','page');
+  });
   if(profile) loadProfile();
   if(pipeline) loadPipeline();
 }
@@ -50,16 +52,26 @@ async function loadSources(){
     sourceLabels=Object.fromEntries(xs.map(x=>[x.key,x.label]));
     sourceSelect.innerHTML=`<option value="">${esc(tr('Toutes les sources'))}</option>`+xs.filter(x=>x.enabled).map(x=>`<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
     renderSourceSettings();
-  }catch(e){}
+  }catch(e){
+    sourceLabels={};
+    sourceSelect.innerHTML=`<option value="">${esc(tr('Sources indisponibles'))}</option>`;
+  }
 }
 
 async function load(){
-  const r=await fetch('/api/jobs');
-  allJobs=await r.json();
-  render();
-  const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict));
-  if(running && !pollTimer) pollTimer=setInterval(load,3500);
-  if(!running && pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  cards.setAttribute('aria-busy','true');
+  try{
+    const r=await fetch('/api/jobs');
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    allJobs=await r.json();
+    render();
+    const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict));
+    if(running && !pollTimer) pollTimer=setInterval(load,3500);
+    if(!running && pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  }catch(e){
+    summary.textContent=tr('Impossible de charger les offres');
+    cards.innerHTML=`<div class="empty error-state"><strong>${esc(tr('Le tableau de bord est indisponible.'))}</strong><span>${esc(tr('Vérifiez que le serveur local est démarré puis rechargez la page.'))}</span></div>`;
+  }finally{cards.setAttribute('aria-busy','false');}
 }
 
 function matchFilter(j){

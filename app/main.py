@@ -9,12 +9,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from pydantic import BaseModel
 
-from .db import init_db, connect
-from .browser import launch_apply
-from .review_launcher import launch_review
-from .batch_review_launcher import launch_batch_review
+from .db import init_db
 from .scan_manager import start as start_scan, status as scan_status
 from .queue_manager import enqueue as queue_enqueue, start as queue_start, status as queue_status, remove as queue_remove, clear_finished as queue_clear_finished
 from .scheduler import start_scheduler, status as scheduler_status
@@ -35,10 +31,19 @@ from .profile_store import (
     update_resume_metadata,
     replace_profile_raw,
 )
+from .contracts import (
+    ApplicationStatus,
+    Decision,
+    QueueRequest,
+    ResumePatch,
+    TrackPatch,
+)
+from .repositories import JobRepository
+from .services import ApplicationService
 
 STATIC = ROOT / 'static'
 
-app = FastAPI(title='Job Apply Assistant V8')
+app = FastAPI(title='Job Apply Assistant V8.4')
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=['127.0.0.1', 'localhost', '[::1]', 'testserver'])
 
 @app.middleware('http')
@@ -56,28 +61,8 @@ async def local_security(request: Request, call_next):
 app.mount('/static', StaticFiles(directory=STATIC), name='static')
 
 
-class Decision(BaseModel):
-    decision: str
-
-
-class ResumePatch(BaseModel):
-    label: str | None = None
-    tags: list[str] | None = None
-
-
-class ApplicationStatus(BaseModel):
-    status: str
-
-
-class QueueRequest(BaseModel):
-    job_ids: list[int]
-    priority: int = 100
-
-
-class TrackPatch(BaseModel):
-    stage: str
-    note: str = ''
-    followup_at: str = ''
+job_repository = JobRepository()
+application_service = ApplicationService(job_repository)
 
 
 @app.on_event('startup')
@@ -253,34 +238,12 @@ def sources():
 
 @app.get('/api/jobs')
 def jobs(decision: str | None = None, source: str | None = None):
-    clauses = []
-    args: list[object] = []
-    if decision:
-        clauses.append('decision=?')
-        args.append(decision)
-    if source:
-        clauses.append('provider_key=?')
-        args.append(source)
-    where = (' WHERE ' + ' AND '.join(clauses)) if clauses else ''
-    order = " ORDER BY CASE user_action WHEN 'liked' THEN 0 WHEN 'skipped' THEN 6 ELSE CASE decision WHEN 'keep' THEN 1 WHEN 'review' THEN 2 WHEN 'new' THEN 3 WHEN 'low' THEN 4 ELSE 5 END END, score DESC, discovered_at DESC"
-    with connect() as c:
-        rows = c.execute("SELECT jobs.*,COALESCE((SELECT status FROM application_queue q WHERE q.job_id=jobs.id),'') AS queue_status FROM jobs" + where + order, tuple(args)).fetchall()
-    return [dict(r) for r in rows]
+    return job_repository.list(decision, source)
 
 
 @app.get('/api/stats')
 def stats():
-    with connect() as c:
-        row = c.execute('''SELECT
-            COUNT(*) AS total,
-            COALESCE(SUM(CASE WHEN decision='keep' THEN 1 ELSE 0 END),0) AS keep_n,
-            COALESCE(SUM(CASE WHEN user_action='liked' THEN 1 ELSE 0 END),0) AS liked_n,
-            COALESCE(SUM(CASE WHEN review_verdict='APPLY' THEN 1 ELSE 0 END),0) AS apply_n,
-            COALESCE(SUM(CASE WHEN review_verdict='HUMAN_REVIEW' THEN 1 ELSE 0 END),0) AS human_n,
-            COALESCE(SUM(CASE WHEN decision='expired' OR availability_status='expired' THEN 1 ELSE 0 END),0) AS expired_n,
-            COALESCE(SUM(CASE WHEN application_status IN ('submitted','submitted_verified') THEN 1 ELSE 0 END),0) AS submitted_n
-            FROM jobs''').fetchone()
-    return dict(row)
+    return job_repository.stats()
 
 
 @app.post('/api/search')
@@ -296,52 +259,33 @@ def search_status():
 
 @app.post('/api/jobs/{job_id}/decision')
 def set_decision(job_id: int, payload: Decision):
-    if payload.decision not in {'liked', 'skipped', 'clear_user_action', 'keep', 'review', 'low', 'reject', 'expired'}:
-        raise HTTPException(400, 'invalid decision')
-    with connect() as c:
-        exists = c.execute('SELECT id FROM jobs WHERE id=?', (job_id,)).fetchone()
-        if not exists:
-            raise HTTPException(404, 'job not found')
-        if payload.decision in {'liked', 'skipped'}:
-            c.execute('UPDATE jobs SET user_action=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (payload.decision, job_id))
-        elif payload.decision == 'clear_user_action':
-            c.execute("UPDATE jobs SET user_action='', updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
-        else:
-            c.execute('UPDATE jobs SET decision=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (payload.decision, job_id))
+    try:
+        job_repository.set_decision(job_id, payload.decision)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
     return {'ok': True}
 
 
 @app.post('/api/jobs/{job_id}/application-status')
 def set_application_status(job_id: int, payload: ApplicationStatus):
-    allowed = {'prefilled', 'needs_human', 'submitted', 'submitted_verified', 'withdrawn', 'error', ''}
-    if payload.status not in allowed:
-        raise HTTPException(400, 'invalid application status')
-    with connect() as c:
-        exists = c.execute('SELECT id FROM jobs WHERE id=?', (job_id,)).fetchone()
-        if not exists:
-            raise HTTPException(404, 'job not found')
-        tracker = 'submitted' if payload.status in {'submitted','submitted_verified'} else ('prepared' if payload.status in {'prefilled','needs_human'} else '')
-        c.execute('UPDATE jobs SET application_status=?, tracker_stage=CASE WHEN ?<>'' THEN ? ELSE tracker_stage END, last_application_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?', (payload.status, tracker, tracker, job_id))
-        c.execute('INSERT INTO applications(job_id,status,note) VALUES(?,?,?)', (job_id, payload.status or 'status_cleared', 'Manual dashboard status change'))
-        if tracker:
-            c.execute('INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,?,?)', (job_id, tracker, 'Application status changed from dashboard'))
+    try:
+        job_repository.set_application_status(job_id, payload.status)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
     return {'ok': True}
 
 
 @app.get('/api/jobs/{job_id}/applications')
 def application_history(job_id: int):
-    with connect() as c:
-        rows = c.execute('SELECT * FROM applications WHERE job_id=? ORDER BY id DESC LIMIT 100', (job_id,)).fetchall()
-    return [dict(r) for r in rows]
+    return job_repository.history(job_id)
 
 
 @app.get('/api/jobs/{job_id}/audit')
 def application_audit(job_id: int):
-    with connect() as c:
-        row = c.execute('SELECT fill_audit_path FROM jobs WHERE id=?', (job_id,)).fetchone()
-    if not row or not row['fill_audit_path']:
+    raw_path = job_repository.audit_path(job_id, 'fill_audit_path')
+    if not raw_path:
         raise HTTPException(404, 'No fill audit for this job')
-    path = Path(row['fill_audit_path']).resolve()
+    path = Path(raw_path).resolve()
     audit_root = (ROOT / 'data' / 'application_audits').resolve()
     if audit_root not in path.parents or not path.exists():
         raise HTTPException(404, 'Audit file unavailable')
@@ -353,11 +297,10 @@ def application_audit(job_id: int):
 
 @app.get('/api/jobs/{job_id}/agent-trace')
 def agent_trace(job_id: int):
-    with connect() as c:
-        row = c.execute('SELECT agent_trace_path FROM jobs WHERE id=?', (job_id,)).fetchone()
-    if not row or not row['agent_trace_path']:
+    raw_path = job_repository.audit_path(job_id, 'agent_trace_path')
+    if not raw_path:
         raise HTTPException(404, 'No agent trace for this job')
-    path = Path(row['agent_trace_path']).resolve()
+    path = Path(raw_path).resolve()
     trace_root = (ROOT / 'data' / 'agent_traces').resolve()
     if trace_root not in path.parents or not path.exists():
         raise HTTPException(404, 'Agent trace unavailable')
@@ -383,32 +326,29 @@ def review(job_id: int):
     cfg = profile.get('chatgpt_web_reviewer', {})
     if not cfg.get('enabled', True):
         raise HTTPException(400, 'ChatGPT web reviewer is disabled')
-    with connect() as c:
-        row = c.execute('SELECT id FROM jobs WHERE id=?', (job_id,)).fetchone()
-        if not row:
-            raise HTTPException(404, 'job not found')
-        c.execute("UPDATE jobs SET review_verdict='QUEUED', review_summary='Waiting for ChatGPT web reviewer', updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
-    launch_review(job_id)
-    return {'ok': True, 'message': 'ChatGPT web review queued'}
+    try:
+        return application_service.queue_review(job_id, bool(cfg.get('enabled', True)))
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post('/api/review/batch')
 def review_batch(mode: str = 'strong'):
-    if mode not in {'strong', 'liked'}:
-        raise HTTPException(400, 'mode must be strong or liked')
-    launch_batch_review(mode)
-    return {'ok': True, 'message': f'Batch review queued: {mode}'}
+    try:
+        return application_service.queue_batch_review(mode)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post('/api/jobs/{job_id}/apply')
 def apply(job_id: int):
-    with connect() as c:
-        row = c.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
-        if not row:
-            raise HTTPException(404, 'job not found')
-        job = dict(row)
-    launch_apply(job_id)
-    return {'ok': True, 'message': 'Browser worker launched', 'review_verdict': job.get('review_verdict', '')}
+    try:
+        result = application_service.prefill(job_id)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+    return result
 
 
 
@@ -439,59 +379,34 @@ def clear_queue_finished():
     return {'ok': True}
 
 
-TRACK_STAGES = {'saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'}
-
-
 @app.get('/api/pipeline')
 def pipeline():
-    with connect() as c:
-        rows = c.execute("""SELECT jobs.*,COALESCE((SELECT status FROM application_queue q WHERE q.job_id=jobs.id),'') AS queue_status
-                            FROM jobs WHERE tracker_stage<>'' OR application_status<>'' OR user_action='liked'
-                            ORDER BY COALESCE(last_application_at,updated_at) DESC""").fetchall()
-    return [dict(r) for r in rows]
+    return job_repository.pipeline()
 
 
 @app.put('/api/jobs/{job_id}/track')
 def track(job_id: int, payload: TrackPatch):
-    if payload.stage not in TRACK_STAGES:
-        raise HTTPException(400, 'invalid tracker stage')
-    with connect() as c:
-        row = c.execute('SELECT id FROM jobs WHERE id=?', (job_id,)).fetchone()
-        if not row:
-            raise HTTPException(404, 'job not found')
-        c.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
-                  (payload.stage, payload.note[:4000], payload.followup_at[:80], job_id))
-        c.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at) VALUES(?,?,?,?)',
-                  (job_id, payload.stage, payload.note[:4000], payload.followup_at[:80]))
+    try:
+        job_repository.track(job_id, payload.stage, payload.note, payload.followup_at)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     return {'ok': True}
 
 
 @app.get('/api/jobs/{job_id}/stage-events')
 def stage_events(job_id: int):
-    with connect() as c:
-        rows = c.execute('SELECT * FROM application_stage_events WHERE job_id=? ORDER BY id DESC LIMIT 200', (job_id,)).fetchall()
-    return [dict(r) for r in rows]
+    return job_repository.stage_events(job_id)
 
 
 @app.get('/api/analytics')
 def analytics():
-    with connect() as c:
-        totals = dict(c.execute("""SELECT COUNT(*) total,
-            COALESCE(SUM(CASE WHEN user_action='liked' THEN 1 ELSE 0 END),0) liked,
-            COALESCE(SUM(CASE WHEN review_verdict='APPLY' THEN 1 ELSE 0 END),0) reviewer_apply,
-            COALESCE(SUM(CASE WHEN application_status IN ('submitted','submitted_verified') THEN 1 ELSE 0 END),0) submitted
-            FROM jobs""").fetchone())
-        stages = [dict(r) for r in c.execute("SELECT tracker_stage stage,COUNT(*) n FROM jobs WHERE tracker_stage<>'' GROUP BY tracker_stage ORDER BY n DESC").fetchall()]
-        sources = [dict(r) for r in c.execute("SELECT provider_key source,COUNT(*) n FROM jobs GROUP BY provider_key ORDER BY n DESC LIMIT 20").fetchall()]
-        campaigns = [dict(r) for r in c.execute("SELECT search_profile_label profile,COUNT(*) n FROM jobs GROUP BY search_profile_label ORDER BY n DESC LIMIT 20").fetchall()]
-        queue = [dict(r) for r in c.execute("SELECT status,COUNT(*) n FROM application_queue GROUP BY status").fetchall()]
-    return {'totals': totals, 'stages': stages, 'sources': sources, 'campaigns': campaigns, 'queue': queue, 'scheduler': scheduler_status()}
+    data = job_repository.analytics()
+    data['scheduler'] = scheduler_status()
+    return data
 
 @app.delete('/api/jobs')
 def clear_jobs():
-    with connect() as c:
-        c.execute('DELETE FROM application_queue')
-        c.execute('DELETE FROM application_stage_events')
-        c.execute('DELETE FROM applications')
-        c.execute('DELETE FROM jobs')
+    job_repository.clear()
     return {'ok': True}

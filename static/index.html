@@ -3,18 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Apply Assistant V8</title>
+  <meta name="theme-color" content="#10202e" />
+  <title>Job Apply Assistant V8.4</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link rel="stylesheet" href="/static/dashboard.css" />
 </head>
 <body>
+<a class="skip-link" href="#mainContent">Passer au contenu principal</a>
 <div class="shell">
-  <aside>
-    <div class="brand"><span class="brand-mark" aria-hidden="true">JA</span><span>Job Apply Assistant <small>WORKSPACE · V8.3</small></span></div>
+  <aside aria-label="Navigation principale">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">JA</span><span>Job Apply Assistant <small>WORKSPACE · V8.4</small></span></div>
     <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
-    <button id="jobsNav" class="navmain active">Offres</button>
-    <button id="profileNav" class="navmain">Profil & préférences</button>
-    <button id="pipelineNav" class="navmain">Pipeline & file</button>
+    <nav class="primary-nav" aria-label="Sections">
+      <button id="jobsNav" class="navmain active" aria-current="page">Offres</button>
+      <button id="profileNav" class="navmain">Profil & préférences</button>
+      <button id="pipelineNav" class="navmain">Pipeline & file</button>
+    </nav>
 
     <div id="jobSidebar">
       <button id="searchBtn" class="primary">Scanner le web</button>
@@ -43,14 +47,14 @@
     <div class="hint">Profil local, CV multiples, découverte web, déduplication, pré-remplissage et revue humaine avant envoi.</div>
   </aside>
 
-  <main>
+  <main id="mainContent" tabindex="-1">
     <section id="jobsView">
       <header>
         <div>
           <h1>Offres</h1>
           <p id="summary">Chargement…</p>
         </div>
-        <div id="status" class="status"></div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
       </header>
       <section id="jobMetrics" class="metric-grid" aria-label="Résumé des offres"></section>
 
@@ -65,11 +69,11 @@
         <select id="sourceSelect"><option value="">Toutes les sources</option></select>
       </section>
 
-      <section id="cards" class="cards"></section>
+      <section id="cards" class="cards" aria-live="polite" aria-busy="false"></section>
     </section>
 
     <section id="pipelineView" class="hidden">
-      <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status"></div></header>
+      <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status" role="status" aria-live="polite"></div></header>
       <section id="analyticsCards" class="metric-grid"></section>
       <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Les formulaires sont préparés l’un après l’autre. Le Submit final reste manuel.</p></div><div><button id="queueRunBtn" class="primary compact">Démarrer</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
@@ -81,7 +85,7 @@
           <h1>Profil & préférences</h1>
           <p>Tout est modifiable depuis cette page. Le profil n'est lié à aucune personne ni à aucun métier précis.</p>
         </div>
-        <div id="profileStatus" class="status"></div>
+        <div id="profileStatus" class="status" role="status" aria-live="polite"></div>
       </header>
 
       <form id="profileForm" class="settings-grid" onsubmit="return false;">

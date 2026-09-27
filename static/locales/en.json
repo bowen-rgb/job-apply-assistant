@@ -270,5 +270,12 @@
   "étapes": "steps",
   "Langue de l’interface": "Interface language",
   "Résumé des offres": "Job overview",
-  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Change the filters or scan for jobs."
+  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Change the filters or scan for jobs.",
+  "Sources indisponibles": "Sources unavailable",
+  "Impossible de charger les offres": "Unable to load jobs",
+  "Le tableau de bord est indisponible.": "The dashboard is unavailable.",
+  "Vérifiez que le serveur local est démarré puis rechargez la page.": "Check that the local server is running, then reload the page.",
+  "Passer au contenu principal": "Skip to main content",
+  "Navigation principale": "Main navigation",
+  "Sections": "Sections"
 }

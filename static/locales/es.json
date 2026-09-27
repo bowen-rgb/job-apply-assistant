@@ -270,5 +270,12 @@
   "étapes": "pasos",
   "Langue de l’interface": "Idioma de la interfaz",
   "Résumé des offres": "Resumen de empleos",
-  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Cambia los filtros o busca empleos."
+  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Cambia los filtros o busca empleos.",
+  "Sources indisponibles": "Fuentes no disponibles",
+  "Impossible de charger les offres": "No se pueden cargar las ofertas",
+  "Le tableau de bord est indisponible.": "El panel no está disponible.",
+  "Vérifiez que le serveur local est démarré puis rechargez la page.": "Comprueba que el servidor local está activo y vuelve a cargar la página.",
+  "Passer au contenu principal": "Saltar al contenido principal",
+  "Navigation principale": "Navegación principal",
+  "Sections": "Secciones"
 }

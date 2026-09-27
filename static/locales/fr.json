@@ -270,5 +270,12 @@
   "étapes": "étapes",
   "Langue de l’interface": "Langue de l’interface",
   "Résumé des offres": "Résumé des offres",
-  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Modifiez les filtres ou lancez un scan pour trouver des offres."
+  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Modifiez les filtres ou lancez un scan pour trouver des offres.",
+  "Sources indisponibles": "Sources indisponibles",
+  "Impossible de charger les offres": "Impossible de charger les offres",
+  "Le tableau de bord est indisponible.": "Le tableau de bord est indisponible.",
+  "Vérifiez que le serveur local est démarré puis rechargez la page.": "Vérifiez que le serveur local est démarré puis rechargez la page.",
+  "Passer au contenu principal": "Passer au contenu principal",
+  "Navigation principale": "Navigation principale",
+  "Sections": "Sections"
 }

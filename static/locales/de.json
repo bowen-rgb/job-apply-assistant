@@ -270,5 +270,12 @@
   "étapes": "Schritte",
   "Langue de l’interface": "Oberflächensprache",
   "Résumé des offres": "Stellenübersicht",
-  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Filter ändern oder nach Stellen suchen."
+  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "Filter ändern oder nach Stellen suchen.",
+  "Sources indisponibles": "Quellen nicht verfügbar",
+  "Impossible de charger les offres": "Stellen konnten nicht geladen werden",
+  "Le tableau de bord est indisponible.": "Das Dashboard ist nicht verfügbar.",
+  "Vérifiez que le serveur local est démarré puis rechargez la page.": "Prüfe, ob der lokale Server läuft, und lade die Seite neu.",
+  "Passer au contenu principal": "Zum Hauptinhalt springen",
+  "Navigation principale": "Hauptnavigation",
+  "Sections": "Bereiche"
 }

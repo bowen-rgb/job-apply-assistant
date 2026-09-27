@@ -270,5 +270,12 @@
   "étapes": "步骤",
   "Langue de l’interface": "界面语言",
   "Résumé des offres": "岗位概览",
-  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "调整筛选条件，或开始扫描寻找岗位。"
+  "Modifiez les filtres ou lancez un scan pour trouver des offres.": "调整筛选条件，或开始扫描寻找岗位。",
+  "Sources indisponibles": "来源不可用",
+  "Impossible de charger les offres": "无法加载职位",
+  "Le tableau de bord est indisponible.": "仪表板暂时不可用。",
+  "Vérifiez que le serveur local est démarré puis rechargez la page.": "请确认本地服务器已启动，然后重新加载页面。",
+  "Passer au contenu principal": "跳到主要内容",
+  "Navigation principale": "主导航",
+  "Sections": "分区"
 }

@@ -3,7 +3,7 @@
 
 If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now installs core, JobSpy, and Scrapling in separate steps and uses `scrapling[fetchers]` rather than the much larger optional `scrapling[all]` dependency graph. See `FIX_V8_2.md`.
 
-# Job Apply Assistant V8.3
+# Job Apply Assistant V8.4
 
 Local-first job discovery, review, tracking and semi-automatic application assistant.
 
@@ -14,6 +14,10 @@ V8.2 is designed as a reusable personal automation tool rather than a script tie
 The dashboard now has a compact job overview, clickable status metrics, clearer empty states, a horizontally scrolling application pipeline and a layout that works on smaller screens. Choose the interface language from the selector at the top of the sidebar: Chinese, French, English, German, Spanish or Portuguese. The choice is saved in this browser and applies immediately to the dashboard, including job cards and pipeline controls. Job descriptions, search terms, saved answers and other user data are never translated or changed by the switch.
 
 The interface catalogs live in `static/locales/`. French is the fallback language if a translation key is missing. The translations were generated as a starting point and key job-search terms were reviewed manually; contributions improving phrasing are welcome.
+
+## V8.4 structure and interface polish
+
+V8.4 keeps the local-first workflow while introducing a clearer application boundary: validated request contracts live in `app/contracts.py`, SQL and transactions live in `app/repositories/`, and browser/reviewer side effects are coordinated in `app/services/`. The dashboard adds keyboard skip navigation, explicit live status and error states, a calmer system font stack, and a documented visual language in `DESIGN.md`. See `ARCHITECTURE.md` for the boundary map and the mature-project patterns used as references.
 
 The repository excludes local profiles, résumés, browser sessions, job databases and audit files. Copy `profile.example.json` to `profile.json` or use the Windows launcher to create a local profile before use.
 
