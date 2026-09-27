@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Apply Assistant V8</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/dashboard.css" />
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">JA</span><span>Job Apply Assistant <small>WORKSPACE · V8.3</small></span></div>
+    <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
+    <button id="jobsNav" class="navmain active">Offres</button>
+    <button id="profileNav" class="navmain">Profil & préférences</button>
+    <button id="pipelineNav" class="navmain">Pipeline & file</button>
+
+    <div id="jobSidebar">
+      <button id="searchBtn" class="primary">Scanner le web</button>
+      <button id="batchBtn" class="secondary">终审强匹配</button>
+      <button id="healthBtn" class="ghost diag">环境检查</button>
+      <button id="startQueueBtn" class="ghost diag">Préparer la file</button>
+
+      <div class="navtitle">File d'offres</div>
+      <button data-filter="all" class="filter active">Toutes</button>
+      <button data-filter="keep" class="filter">Match fort</button>
+      <button data-filter="review" class="filter">À vérifier</button>
+      <button data-filter="liked" class="filter">Aimées</button>
+      <button data-filter="approved" class="filter">Reviewer: APPLY</button>
+      <button data-filter="human" class="filter">Reviewer: humain</button>
+      <button data-filter="queued" class="filter">Dans la file</button>
+      <button data-filter="submitted" class="filter">Candidatures envoyées</button>
+      <button data-filter="expired" class="filter">Expirées / rejetées</button>
+      <div class="sep"></div>
+      <div class="reviewer-box">
+        <div class="reviewer-title">Final reviewer</div>
+        <div>ChatGPT Web via Chrome/CDP</div>
+        <div class="small">Les valeurs personnelles déjà saisies ne sont pas envoyées au reviewer.</div>
+      </div>
+      <button id="clearBtn" class="danger ghost">Vider la base locale</button>
+    </div>
+    <div class="hint">Profil local, CV multiples, découverte web, déduplication, pré-remplissage et revue humaine avant envoi.</div>
+  </aside>
+
+  <main>
+    <section id="jobsView">
+      <header>
+        <div>
+          <h1>Offres</h1>
+          <p id="summary">Chargement…</p>
+        </div>
+        <div id="status" class="status"></div>
+      </header>
+      <section id="jobMetrics" class="metric-grid" aria-label="Résumé des offres"></section>
+
+      <section id="scanPanel" class="scanpanel hidden">
+        <div class="scanrow"><strong id="scanText">Scan…</strong><span id="scanCounts"></span></div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div id="scanCurrent" class="small"></div>
+      </section>
+
+      <section class="toolbar">
+        <input id="q" type="search" placeholder="Filtrer titre, entreprise, lieu…" />
+        <select id="sourceSelect"><option value="">Toutes les sources</option></select>
+      </section>
+
+      <section id="cards" class="cards"></section>
+    </section>
+
+    <section id="pipelineView" class="hidden">
+      <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status"></div></header>
+      <section id="analyticsCards" class="metric-grid"></section>
+      <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Les formulaires sont préparés l’un après l’autre. Le Submit final reste manuel.</p></div><div><button id="queueRunBtn" class="primary compact">Démarrer</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
+      <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
+    </section>
+
+    <section id="profileView" class="hidden">
+      <header>
+        <div>
+          <h1>Profil & préférences</h1>
+          <p>Tout est modifiable depuis cette page. Le profil n'est lié à aucune personne ni à aucun métier précis.</p>
+        </div>
+        <div id="profileStatus" class="status"></div>
+      </header>
+
+      <form id="profileForm" class="settings-grid" onsubmit="return false;">
+        <section class="settings-card span2">
+          <div class="section-head"><div><h2>Identité & contact</h2><p>Valeurs utilisées pour le pré-remplissage des formulaires.</p></div></div>
+          <div class="form-grid cols3">
+            <label>Prénom<input id="first_name" autocomplete="given-name"></label>
+            <label>Nom<input id="last_name" autocomplete="family-name"></label>
+            <label>E-mail<input id="email" type="email" autocomplete="email"></label>
+            <label>Téléphone<input id="phone" autocomplete="tel"></label>
+            <label>Adresse<input id="address_line1" autocomplete="street-address"></label>
+            <label>Ville<input id="city" autocomplete="address-level2"></label>
+            <label>Code postal<input id="postal_code" autocomplete="postal-code"></label>
+            <label>Pays<input id="country"></label>
+            <label>LinkedIn<input id="linkedin" placeholder="https://…"></label>
+            <label>Portfolio / site<input id="portfolio" placeholder="https://…"></label>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>Parcours (optionnel)</h2><p>Informations réutilisées lorsque les formulaires demandent un résumé du parcours.</p></div></div>
+          <div class="form-grid cols2">
+            <label>Poste actuel / dernier poste<input id="current_title"></label>
+            <label>Entreprise actuelle / dernière<input id="current_company"></label>
+            <label>Années d'expérience<input id="years_experience" type="number" min="0" step="0.5"></label>
+            <label>École / université<input id="school"></label>
+            <label>Diplôme<input id="degree"></label>
+            <label>Domaine d'études<input id="field_of_study"></label>
+            <label>Année de diplôme<input id="graduation_year" inputmode="numeric"></label>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>Disponibilité</h2><p>Définit la fenêtre pendant laquelle les offres sont acceptables.</p></div></div>
+          <div class="form-grid">
+            <label>Date de début<input id="availability_start_date" type="date"></label>
+            <label>Date de fin maximale<input id="availability_end_date" type="date"></label>
+            <label class="wide">Texte libre<textarea id="availability_text" rows="3" placeholder="Ex. Disponible immédiatement jusqu'au…"></textarea></label>
+            <label>Week-ends<select id="weekends"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
+            <label>Travail de nuit<select id="night_shifts"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
+            <label>Jours fériés / fêtes<select id="holiday_work"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
+            <label>Heures / semaine min<input id="hours_min" type="number" min="0"></label>
+            <label>Heures / semaine max<input id="hours_max" type="number" min="0"></label>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>Cibles de recherche</h2><p>Une valeur par ligne. Les rôles et lieux alimentent directement la recherche web.</p></div></div>
+          <label>Postes recherchés<textarea id="roles" rows="6" placeholder="hôtesse d'accueil&#10;préparateur de commandes"></textarea></label>
+          <label>Lieux<textarea id="locations" rows="4" placeholder="Paris&#10;Val-de-Marne"></textarea></label>
+          <label>Contrats<textarea id="contracts" rows="3" placeholder="CDD&#10;Intérim"></textarea></label>
+          <label>Secteurs<textarea id="industries" rows="3" placeholder="Hôtellerie&#10;Retail"></textarea></label>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>Filtres & contraintes</h2><p>Ces règles sont appliquées avant l'agent final.</p></div></div>
+          <label>Termes souhaités<textarea id="include_terms" rows="3"></textarea></label>
+          <label>Termes à exclure<textarea id="exclude_terms" rows="4" placeholder="CDD 12 mois&#10;poste de nuit"></textarea></label>
+          <div class="form-grid cols2">
+            <label>Trajet max (min)<input id="max_commute_minutes" type="number" min="0"></label>
+            <label>Salaire minimum<input id="min_salary" type="number" min="0" step="0.01"></label>
+            <label>Période salaire<select id="salary_period"><option value="hour">heure</option><option value="month">mois</option><option value="year">an</option></select></label>
+          </div>
+          <label>Langues<textarea id="languages" rows="3" placeholder="Français B2&#10;Anglais B1"></textarea></label>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>CV</h2><p>Bibliothèque locale. Le CV actif est celui envoyé par le pré-remplissage.</p></div></div>
+          <div class="upload-row">
+            <input id="resumeFile" type="file" accept=".pdf,.doc,.docx">
+            <input id="resumeLabel" placeholder="Nom du CV, ex. Accueil">
+            <button id="uploadResumeBtn" type="button" class="primary compact">Ajouter</button>
+          </div>
+          <label class="check topgap"><input id="auto_resume_routing" type="checkbox"> Choisir automatiquement le CV selon les tags du CV et le contenu de l’offre</label>
+          <div class="small">Exemples de tags : accueil, logistique, data, mécanique, retail. Sans correspondance, le CV actif reste utilisé.</div>
+          <div id="resumeList" class="resume-list"></div>
+        </section>
+
+        <section class="settings-card span2">
+          <div class="section-head"><div><h2>Réponses réutilisables</h2><p>Pour les questions répétitives non sensibles. Elles ne sont remplies que si le libellé correspond clairement.</p></div><button id="addAnswerBtn" type="button" class="ghost compact">+ Ajouter</button></div>
+          <div id="answersList" class="answer-list"></div>
+          <div class="notice">Les questions de santé, handicap, origine, religion, politique, syndicat, orientation sexuelle, casier, autorisation de travail et attestations légales restent toujours manuelles.</div>
+        </section>
+
+        <section class="settings-card span2">
+          <div class="section-head"><div><h2>Sources & automatisation</h2><p>Configure la découverte, le navigateur et le reviewer sans modifier de fichier JSON.</p></div></div>
+          <div id="sourcesGrid" class="source-grid"></div>
+          <div class="subsection topgap">
+            <h3>Sources web personnalisées</h3>
+            <p class="small">Ajoute n’importe quel site de recrutement public sans modifier le code. Une ligne : <code>Nom | domaine.com</code>. Ces sources sont recherchées avec <code>site:</code>.</p>
+            <label>Sources personnalisées<textarea id="custom_sources" rows="4" placeholder="Company Careers | careers.example.com&#10;Regional jobs | jobs.example.org"></textarea></label>
+          </div>
+          <div class="form-grid cols3 topgap">
+            <label>Requêtes / scan<input id="search_queries_per_run" type="number" min="1" max="100"></label>
+            <label>Résultats / requête<input id="max_results_per_query" type="number" min="1" max="50"></label>
+            <label>Pages sources directes<input id="direct_source_pages" type="number" min="1" max="20"></label>
+            <label>Locale recherche (optionnel)<input id="search_market" placeholder="fr-FR, en-US…"></label>
+            <label>Mode navigateur<select id="browser_mode"><option value="cdp">Chrome/CDP existant</option><option value="persistent">Profil Chromium local</option></select></label>
+            <label class="wide">Endpoint CDP<input id="chrome_cdp_endpoint" placeholder="http://127.0.0.1:9222"></label>
+            <label class="check"><input id="dynamic_fetch_fallback" type="checkbox"> Fallback navigateur dynamique</label>
+            <label class="check"><input id="reviewer_enabled" type="checkbox"> ChatGPT Web reviewer</label>
+          </div>
+
+          <div class="subsection topgap">
+            <h3>Découverte multi-sites (JobSpy)</h3>
+            <p class="small">Agrège plusieurs grands job boards dans le même pipeline, puis déduplique avec les résultats des moteurs et des ATS publics.</p>
+            <div class="form-grid cols3">
+              <label class="check"><input id="jobspy_enabled" type="checkbox"> Activer JobSpy</label>
+              <label>Sites<input id="jobspy_sites" placeholder="indeed, google, linkedin"></label>
+              <label>Résultats / requête<input id="jobspy_results_wanted" type="number" min="1" max="200"></label>
+              <label>Ancienneté max (heures)<input id="jobspy_hours_old" type="number" min="0"></label>
+              <label>Pays Indeed/Glassdoor<input id="jobspy_country_indeed" placeholder="France, USA, UK…"></label>
+              <label>Déduplication<select id="dedupe_scope"><option value="title_company_location">Poste + entreprise + lieu</option><option value="title_company">Poste + entreprise</option></select></label>
+              <label>Scan auto (minutes, 0=off)<input id="auto_scan_interval_minutes" type="number" min="0"></label>
+              <label class="check"><input id="jobspy_linkedin_fetch_description" type="checkbox"> Charger description LinkedIn (plus lent)</label>
+            </div>
+          </div>
+
+          <div class="subsection topgap">
+            <div class="section-head"><div><h3>Profils de recherche</h3><p class="small">Crée plusieurs campagnes indépendantes (ex. accueil, logistique, ingénierie), chacune avec ses rôles, lieux, sources et CV.</p></div><button id="addSearchProfileBtn" type="button" class="ghost compact">+ Profil</button></div>
+            <div id="searchProfilesList" class="search-profiles"></div>
+          </div>
+
+          <div class="subsection topgap">
+            <h3>Agent fallback (formulaires complexes)</h3>
+            <p class="small">ChatGPT Web peut planifier des actions sur les formulaires difficiles. Le moteur local valide chaque action et bloque toujours Submit, CAPTCHA/MFA, création de compte et questions sensibles/légales.</p>
+            <div class="form-grid cols3">
+              <label class="check"><input id="agent_enabled" type="checkbox"> Activer l’agent fallback</label>
+              <label>Étapes max<input id="agent_max_steps" type="number" min="1" max="30"></label>
+              <label>Confiance min (%)<input id="agent_min_confidence" type="number" min="50" max="100"></label>
+              <label class="check"><input id="agent_allow_next" type="checkbox"> Autoriser les boutons Suivant non finaux</label>
+              <label class="check"><input id="agent_for_assisted" type="checkbox"> Pour ATS complexes (Workday/iCIMS/Taleo…)</label>
+              <label class="check"><input id="agent_for_required" type="checkbox"> Si des champs obligatoires restent vides</label>
+              <label class="check"><input id="agent_screenshots" type="checkbox"> Capturer chaque étape pour audit local</label>
+            </div>
+          </div>
+
+          <div class="subsection topgap">
+            <h3>Job boards ATS publics (optionnel)</h3>
+            <p class="small">Une ligne par board surveillé. Permet d’interroger directement les flux publics Greenhouse, Ashby et Lever avant le moteur de recherche général.</p>
+            <label>Boards configurés<textarea id="company_boards" rows="5" placeholder="greenhouse:company-token:Company Name&#10;ashby:company-slug:Company Name&#10;lever:company-site:Company Name"></textarea></label>
+          </div>
+        </section>
+
+        <section class="settings-card span2 savebar">
+          <div><strong>Les changements prennent effet au prochain scan / pré-remplissage.</strong><div class="small">Le profil peut être exporté/importé sans toucher aux CV stockés localement.</div></div>
+          <div class="save-actions">
+            <input id="profileImportFile" class="hidden" type="file" accept="application/json,.json">
+            <button id="importProfileBtn" type="button" class="ghost savebtn">Importer</button>
+            <button id="exportProfileBtn" type="button" class="ghost savebtn">Exporter</button>
+            <button id="saveProfileBtn" type="button" class="primary savebtn">Enregistrer le profil</button>
+          </div>
+        </section>
+      </form>
+    </section>
+  </main>
+</div>
+<script src="/static/locale.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

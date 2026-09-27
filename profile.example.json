@@ -1,0 +1,130 @@
+{
+  "schema_version": 8,
+  "identity": {
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "phone": "",
+    "address_line1": "",
+    "city": "",
+    "postal_code": "",
+    "country": "",
+    "linkedin": "",
+    "portfolio": ""
+  },
+  "background": {
+    "current_title": "",
+    "current_company": "",
+    "years_experience": "",
+    "school": "",
+    "degree": "",
+    "field_of_study": "",
+    "graduation_year": ""
+  },
+  "availability": {
+    "start_date": "",
+    "end_date": "",
+    "text": "",
+    "weekends": "flexible",
+    "night_shifts": "flexible",
+    "holiday_work": "flexible",
+    "hours_per_week_min": "",
+    "hours_per_week_max": ""
+  },
+  "preferences": {
+    "roles": [],
+    "role_aliases": {},
+    "locations": [],
+    "contracts": [],
+    "industries": [],
+    "include_terms": [],
+    "exclude_terms": [],
+    "remote_modes": [],
+    "max_commute_minutes": "",
+    "min_salary": "",
+    "salary_period": "hour",
+    "languages": []
+  },
+  "application": {
+    "active_resume_id": "",
+    "cover_letter_path": "",
+    "saved_answers": [],
+    "custom_fields": [],
+    "auto_resume_routing": false
+  },
+  "review": {
+    "rules": [
+      "If an important fact is missing or ambiguous, request human review instead of guessing.",
+      "Never answer sensitive/protected-personal questions automatically.",
+      "Never make legally binding declarations on the candidate behalf."
+    ]
+  },
+  "automation": {
+    "enabled_sources": [
+      "france_travail",
+      "hellowork",
+      "indeed",
+      "wttj",
+      "cityone",
+      "plany",
+      "staffme",
+      "adecco",
+      "manpower",
+      "randstad",
+      "synergie",
+      "meteojob",
+      "crit",
+      "samsic",
+      "actual"
+    ],
+    "search_engines": [
+      "bing",
+      "duckduckgo"
+    ],
+    "search_queries_per_run": 18,
+    "search_market": "",
+    "custom_sources": [],
+    "max_results_per_query": 10,
+    "dynamic_fetch_fallback": true,
+    "scan_delay_seconds": 0.25,
+    "browser_mode": "cdp",
+    "chrome_cdp_endpoint": "http://127.0.0.1:9222",
+    "direct_source_discovery": true,
+    "direct_sources": [
+      "plany",
+      "cityone"
+    ],
+    "direct_source_pages": 3,
+    "auto_submit": false,
+    "chatgpt_web_reviewer": {
+      "enabled": true,
+      "url": "https://chatgpt.com/",
+      "cdp_endpoint": "http://127.0.0.1:9222",
+      "timeout_seconds": 180,
+      "keep_chat_tab_open": false
+    },
+    "agent_fallback": {
+      "enabled": true,
+      "max_steps": 8,
+      "min_action_confidence": 82,
+      "allow_next_clicks": true,
+      "run_for_agent_assisted_ats": true,
+      "run_when_required_unanswered": true,
+      "screenshot_each_step": false
+    },
+    "company_boards": [],
+    "jobspy_enabled": true,
+    "jobspy_sites": [
+      "indeed",
+      "google"
+    ],
+    "jobspy_results_wanted": 20,
+    "jobspy_hours_old": 168,
+    "jobspy_country_indeed": "",
+    "jobspy_timeout_seconds": 90,
+    "jobspy_linkedin_fetch_description": false,
+    "dedupe_scope": "title_company_location",
+    "search_profiles": [],
+    "auto_scan_interval_minutes": 0
+  }
+}

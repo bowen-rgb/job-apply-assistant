@@ -1,0 +1,186 @@
+
+## Windows V8.2 dependency fix
+
+If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now installs core, JobSpy, and Scrapling in separate steps and uses `scrapling[fetchers]` rather than the much larger optional `scrapling[all]` dependency graph. See `FIX_V8_2.md`.
+
+# Job Apply Assistant V8.3
+
+Local-first job discovery, review, tracking and semi-automatic application assistant.
+
+V8.2 is designed as a reusable personal automation tool rather than a script tied to one person, country or profession. Identity, availability, job targets, search campaigns, CVs, sources, reviewer policy and browser automation are editable from the local dashboard.
+
+## V8.3 dashboard and language settings
+
+The dashboard now has a compact job overview, clickable status metrics, clearer empty states, a horizontally scrolling application pipeline and a layout that works on smaller screens. Choose the interface language from the selector at the top of the sidebar: Chinese, French, English, German, Spanish or Portuguese. The choice is saved in this browser and applies immediately to the dashboard, including job cards and pipeline controls. Job descriptions, search terms, saved answers and other user data are never translated or changed by the switch.
+
+The interface catalogs live in `static/locales/`. French is the fallback language if a translation key is missing. The translations were generated as a starting point and key job-search terms were reviewed manually; contributions improving phrasing are welcome.
+
+The repository excludes local profiles, résumés, browser sessions, job databases and audit files. Copy `profile.example.json` to `profile.json` or use the Windows launcher to create a local profile before use.
+
+To run the tests on Windows, use `run_tests.bat`; it installs the small test dependency set before running the suite.
+
+## V8.2 highlights
+
+### Multi-source discovery with JobSpy
+
+V8.2 adds an optional first-class `python-jobspy` provider. A search campaign can query selected sites such as Indeed, Google Jobs, LinkedIn or Glassdoor and feed those results into the same extraction, scoring and deduplication pipeline used by search engines, custom domains and public ATS boards.
+
+The JobSpy call runs in a subprocess with bounded retries, so one scraper failure does not crash the local FastAPI server.
+
+### Search campaigns
+
+Instead of one global search definition, create multiple independent profiles from the dashboard. Each campaign can define:
+
+- roles;
+- locations;
+- contract types;
+- selected built-in sources;
+- JobSpy sites;
+- freshness/result limits;
+- country for Indeed/Glassdoor;
+- an optional dedicated CV.
+
+Candidate identity, safety rules and browser settings stay global.
+
+### Cross-source deduplication
+
+The same opening may appear through a company ATS, a job board, JobSpy and a search engine. V8.2 adds a normalized job identity and keeps all known `source_variants` while storing one primary job record.
+
+The dedupe scope is configurable:
+
+- `title_company_location` — safer default;
+- `title_company` — more aggressive cross-location merging.
+
+### Application queue
+
+Jobs can be added to a local queue and prepared sequentially. The worker launches the existing ATS/agent pre-fill pipeline, waits until a job becomes `prefilled`, `needs_human`, submitted or errors, then advances to the next queued job.
+
+**Final submission remains manual.** Queue automation does not bypass CAPTCHA/MFA, create accounts, make legal declarations or click final Submit.
+
+### Pipeline tracker
+
+The dashboard now has a Pipeline view with stages:
+
+`Saved → Queued → Prepared → Submitted → Screening → Interview → Offer`
+
+and terminal stages `Rejected` / `Withdrawn`. Stage changes are stored as events; notes and follow-up dates are supported by the API.
+
+### Automatic scanning
+
+An optional local scheduler can rescan at a configurable minute interval. `0` disables scheduling. The scheduler respects the same scan lock, so overlapping scans are not started.
+
+## Existing V7 capabilities retained
+
+- local FastAPI dashboard;
+- personal profile editor;
+- multiple local CVs with tags and automatic CV routing;
+- reusable non-sensitive answers;
+- Scrapling static/dynamic fetching;
+- Bing / DuckDuckGo discovery and arbitrary custom `site:` sources;
+- public Greenhouse, Ashby and Lever board discovery;
+- ATS detection and deterministic adapters;
+- safe ChatGPT Web reviewer through an existing Chrome/CDP session;
+- bounded agent fallback for difficult forms;
+- stable DOM field IDs, custom dropdown handling and local field learnings;
+- application fill audit and agent trace;
+- automatic confirmation-page detection after a **manual** Submit;
+- localhost-only API hardening.
+
+## Windows quick start
+
+Run:
+
+```bat
+run_windows.bat
+```
+
+It creates `.venv`, installs Python dependencies and Playwright Chromium, prepares Scrapling, starts a reusable debug Chrome profile, starts the local server and opens:
+
+```text
+http://127.0.0.1:8765
+```
+
+After the first install, use:
+
+```bat
+start.bat
+```
+
+Run diagnostics with:
+
+```bat
+doctor.bat
+```
+
+## Dashboard workflow
+
+1. Open **Profil & préférences**.
+2. Enter candidate identity and availability.
+3. Upload one or more CVs; optionally add tags.
+4. Define global targets and/or several **Profils de recherche**.
+5. Select discovery sources and optional JobSpy sites.
+6. Log into ChatGPT and any required job sites in the debug Chrome profile.
+7. Scan the web.
+8. Keep / skip jobs and run ChatGPT review where useful.
+9. Add chosen jobs to **File** or pre-fill one directly.
+10. Use **Pipeline & file** to prepare jobs sequentially and track outcomes.
+11. Review each prepared form and submit manually.
+
+## Search-source architecture
+
+```text
+Public ATS boards ─┐
+Direct source pages├─→ normalize → dedupe/source variants → score → Inbox
+JobSpy boards ─────┤
+Search engines ────┤
+Custom domains ────┘
+
+Inbox → human choice / ChatGPT review → application queue
+      → deterministic ATS adapter → safe agent fallback → manual Submit
+      → confirmation detection → Pipeline tracker
+```
+
+## ChatGPT Web reviewer
+
+The web reviewer is controlled through the configured Chrome/CDP session. This is browser automation over the ChatGPT web UI, not a stable OpenAI API contract, so `app/chatgpt_bridge.py` remains isolated from the rest of the system.
+
+For difficult application forms the model returns a constrained action plan. Local policy validates every action before execution. It cannot request arbitrary JavaScript execution or final submission.
+
+## Safety / candidate agency boundaries
+
+The automation deliberately stops or hands off when it encounters:
+
+- CAPTCHA or MFA;
+- account creation / password setup;
+- citizenship, visa or work-authorization declarations;
+- health/disability and protected-personal questions;
+- criminal-history questions;
+- legal attestations or signatures;
+- ambiguous required facts;
+- the final application submission action.
+
+## Data storage
+
+Local data is stored under `data/` and `profile.json`. CV files are placed under `data/resumes/`. Do not commit personal profile/CV/database files to a public repository.
+
+## Tests
+
+```bat
+run_tests.bat
+```
+
+or:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+V8.2 currently covers profile generalization, dates, ATS routing, safety barriers, public board configuration, cross-source identity, search campaigns, queue/pipeline API and analytics.
+
+## Open-source lineage
+
+The project intentionally learns from mature open-source job-search/application projects. Code is only adapted where an explicit compatible license was verified; architectural ideas from repositories without a confirmed license are reimplemented independently. See:
+
+- `OPEN_SOURCE_REFERENCES.md`
+- `THIRD_PARTY_NOTICES.md`
+- `CHANGELOG_V8.md`

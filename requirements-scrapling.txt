@@ -1,0 +1,3 @@
+# fetchers is all the app needs at runtime. Do NOT install scrapling[all]:
+# that also pulls MCP + IPython/shell extras and can trigger very deep pip resolution.
+scrapling[fetchers]==0.4.15
