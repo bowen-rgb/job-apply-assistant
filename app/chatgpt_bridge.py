@@ -61,6 +61,8 @@ def _assistant_messages(page) -> list[str]:
         '[data-message-author-role="assistant"]',
         'article[data-turn="assistant"]',
         'article:has([data-message-author-role="assistant"])',
+        '[data-testid^="conversation-turn-"]',
+        'main article',
     ]
     for sel in selectors:
         try:
