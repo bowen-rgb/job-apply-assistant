@@ -107,6 +107,56 @@ def extract_json(text: str) -> dict[str, Any]:
     raise ValueError('No valid JSON object found in ChatGPT response')
 
 
+def _matches_purpose(obj: Any, purpose: str) -> bool:
+    if not isinstance(obj, dict):
+        return False
+    if purpose == 'final-review':
+        return str(obj.get('verdict', '')).upper().strip() in {'APPLY', 'SKIP', 'HUMAN_REVIEW'}
+    if purpose == 'job-agent':
+        return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
+    return True
+
+
+def _extract_json_for_purpose(text: str, purpose: str) -> dict[str, Any] | None:
+    raw = (text or '').strip()
+    if not raw:
+        return None
+    decoder = json.JSONDecoder()
+    found = None
+    for m in re.finditer(r'\{', raw):
+        try:
+            obj, _ = decoder.raw_decode(raw[m.start():])
+        except Exception:
+            continue
+        if _matches_purpose(obj, purpose):
+            found = obj
+    return found
+
+
+def _page_json(page, purpose: str) -> dict[str, Any] | None:
+    # Fast path: known assistant/turn containers.
+    for sel in (
+        '[data-message-author-role="assistant"]',
+        '[data-testid^="conversation-turn-"]',
+        'article',
+        'main',
+        'body',
+    ):
+        try:
+            loc = page.locator(sel)
+            n = min(loc.count(), 80)
+            for i in range(max(0, n - 12), n):
+                try:
+                    obj = _extract_json_for_purpose(loc.nth(i).inner_text(timeout=1000), purpose)
+                    if obj is not None:
+                        return obj
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    return None
+
+
 def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str = 'job-agent') -> dict[str, Any]:
     """Use an already-authenticated ChatGPT web session as a JSON planner/reviewer.
 
