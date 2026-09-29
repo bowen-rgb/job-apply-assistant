@@ -186,7 +186,15 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
             last = ''
             stable = 0
             while time.time() < deadline:
-                page.wait_for_timeout(1200)
+                page.wait_for_timeout(1000)
+
+                # ChatGPT web changes its message DOM periodically. Prefer a
+                # complete typed JSON object visible anywhere in the recent
+                # conversation over relying on one assistant selector.
+                obj = _page_json(page, purpose)
+                if obj is not None:
+                    return obj
+
                 msgs = _assistant_messages(page)
                 if len(msgs) > len(before):
                     response = msgs[-1]
@@ -198,11 +206,18 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                     stable = 0
                 last = response
                 if response and stable >= 2:
-                    break
+                    obj = _extract_json_for_purpose(response, purpose)
+                    if obj is not None:
+                        return obj
 
-            if not response:
-                raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
-            return extract_json(response)
+            obj = _page_json(page, purpose)
+            if obj is not None:
+                return obj
+            if response:
+                obj = _extract_json_for_purpose(response, purpose)
+                if obj is not None:
+                    return obj
+            raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
         finally:
             if not keep_open:
                 try:
