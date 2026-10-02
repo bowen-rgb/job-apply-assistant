@@ -298,5 +298,14 @@
   "Détails du matching": "Pourquoi cette offre ?",
   "Générer automatiquement une lettre par offre via ChatGPT": "Générer automatiquement une lettre par offre via ChatGPT",
   "Le CV sélectionné et les informations du profil sont transmis à votre session ChatGPT pour rédiger la lettre.": "Le CV sélectionné et les informations du profil sont transmis à votre session ChatGPT pour rédiger la lettre.",
-  "Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel.": "Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel."
+  "Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel.": "Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel.",
+  "Titre original :": "Titre original :",
+  "Traduction du poste…": "Traduction du poste…",
+  "Traduction indisponible": "Traduction indisponible",
+  "ChatGPT web review in progress": "Vérification ChatGPT en cours",
+  "ChatGPT web review queued": "Vérification ChatGPT en attente",
+  "Match faible": "Match faible",
+  "Nouvelle": "Nouvelle",
+  "Expirée": "Expirée",
+  "Annulée": "Annulée"
 }

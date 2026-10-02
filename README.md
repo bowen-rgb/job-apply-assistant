@@ -7,6 +7,10 @@ If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now i
 
 ## Application documents and queue fixes
 
+### Job-title language
+
+Switching the interface language also displays translated job titles in offer cards and the application pipeline. The original title stays underneath for verification. Common recruitment titles and contract terms use a local glossary; other visible titles are translated on demand through MyMemory and cached locally. Only the public job title is sent to that service. Provider failures keep the original title visible. The source title, candidate profile, matching and application documents are unchanged. Search supports translated titles already available locally.
+
 The French interface now translates review controls and application states. The dashboard uses a restrained warm light palette, compact controls and collapsible matching details.
 
 **Ajouter à la file** adds an offer to the preparation list. **Démarrer la file** starts sequential preparation; final submission remains manual. Previously prepared offers without a document audit are prepared again; complete preparations wait for review.

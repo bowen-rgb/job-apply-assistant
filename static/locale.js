@@ -25,7 +25,7 @@ const Locale = (() => {
   }
 
   function translateNode(node) {
-    if (node.parentElement?.closest('script,style,code,pre,#languageSelect,.brand,#sourceSelect,.snippet,.reason,.title,.company,.source,.fact,.review-summary,.letter-copy,.pipeline-card b,.queue-item b')) return;
+    if (node.parentElement?.closest('script,style,code,pre,#languageSelect,.brand,#sourceSelect,.snippet,.reason,.title,.title-original,.company,.source,.fact,.review-summary,.letter-copy,.pipeline-card b,.queue-item b')) return;
     const previous = originals.get(node);
     const current = node.nodeValue;
     const source = previous && current === previous.last ? previous.source : current;

@@ -40,10 +40,12 @@ from .contracts import (
     QueueRequest,
     ResumePatch,
     TrackPatch,
+    TitleTranslationRequest,
 )
 from .repositories import JobRepository
 from .services import ApplicationService
 from .cover_letter import letter_paths, save_letter_state
+from .job_translation import translate_jobs, local_title
 
 STATIC = ROOT / 'static'
 
@@ -79,6 +81,11 @@ def startup():
 @app.get('/')
 def index():
     return FileResponse(STATIC / 'index.html')
+
+
+@app.post('/api/jobs/translate-titles')
+def translate_job_titles(payload: TitleTranslationRequest):
+    return {'language': payload.language, 'translations': translate_jobs(job_repository.titles(payload.job_ids), payload.language)}
 
 
 @app.get('/api/profile')
@@ -241,8 +248,16 @@ def sources():
 
 
 @app.get('/api/jobs')
-def jobs(decision: str | None = None, source: str | None = None):
-    return job_repository.list(decision, source)
+def jobs(decision: str | None = None, source: str | None = None, language: str = 'fr'):
+    if language not in {'fr','zh','en','de','es','pt'}:
+        raise HTTPException(400, 'Unsupported language')
+    rows = job_repository.list(decision, source)
+    if language != 'fr':
+        for row in rows:
+            translated = local_title(row.get('title') or '', language)
+            if translated:
+                row['display_title'] = translated
+    return rows
 
 
 @app.get('/api/stats')

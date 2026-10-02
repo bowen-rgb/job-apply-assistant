@@ -22,6 +22,10 @@ class LocaleCatalogTests(unittest.TestCase):
         self.assertEqual(catalogs['en']['Offres'], 'Jobs')
         self.assertFalse(any(re.search('[\u4e00-\u9fff]', value) for value in catalogs['fr'].values()))
         self.assertEqual(catalogs['fr']['+ File'], 'Ajouter à la file')
+        self.assertEqual(catalogs['zh']['À écarter'], '建议跳过')
+        self.assertEqual(catalogs['zh']['Lettre de motivation'], '求职信')
+        self.assertEqual(catalogs['zh']['En cours'], '处理中')
+        self.assertEqual(catalogs['zh']['File:'], '队列：')
 
 
 if __name__ == '__main__':

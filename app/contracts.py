@@ -47,6 +47,11 @@ class QueueRequest(BaseModel):
     priority: int = Field(default=100, ge=0, le=1000)
 
 
+class TitleTranslationRequest(BaseModel):
+    job_ids: list[int] = Field(min_length=1, max_length=12)
+    language: Literal['zh', 'fr', 'en', 'de', 'es', 'pt']
+
+
 class TrackPatch(BaseModel):
     stage: TrackerStage
     note: str = Field(default='', max_length=4000)

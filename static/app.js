@@ -26,7 +26,59 @@ const toLines=a=>(a||[]).join('\n');
 const el=id=>document.getElementById(id);
 const tr=key=>Locale.t(key);
 const statusLabels={keep:'Match fort',review:'À vérifier',reject:'Refus',liked:'Aimées',skipped:'Passer',prefilled:'Pré-remplie',needs_human:'À compléter',opening:'Ouverture…',preparing:'Préparation…',queued:'En file',running:'En cours',waiting_user:'À vérifier avant envoi',done:'Terminée',error:'Erreur',prepared:'Préparée',saved:'Sauvegardée',submitted:'Envoyée',submitted_verified:'vérifiée',APPLY:'Candidature conseillée',SKIP:'À écarter',HUMAN_REVIEW:'À vérifier',QUEUED:'En file',RUNNING:'En cours',ERROR:'Erreur'};
+Object.assign(statusLabels,{low:'Match faible',new:'Nouvelle',expired:'Expirée',cancelled:'Annulée',withdrawn:'Retirée'});
 const statusLabel=value=>tr(statusLabels[value]||value);
+const titleTranslations=new Map();
+let titleObserver=null, titleTimer=null, titleRequestRunning=false;
+const pendingTitles=new Set();
+const titleKey=(job,language=Locale.language)=>`${language}:${job.id}:${job.title||''}`;
+function titleMarkup(job,tag='div'){
+  const translation=titleTranslations.get(titleKey(job));
+  const original=job.title||tr('Offre sans titre');
+  const title=translation?.title||original;
+  const hint=Locale.language==='fr'?'':translation?.status==='unavailable'?tr('Traduction indisponible'):title!==original?`${tr('Titre original :')} ${original}`:translation?'':tr('Traduction du poste…');
+  return `<${tag} class="title" data-job-title="${job.id}">${esc(title)}</${tag}><div class="title-original" data-title-hint="${job.id}">${esc(hint)}</div>`;
+}
+function observeTitles(){
+  titleObserver?.disconnect();pendingTitles.clear();
+  if(Locale.language==='fr')return;
+  titleObserver=new IntersectionObserver(entries=>{
+    for(const entry of entries){
+      if(!entry.isIntersecting)continue;
+      const id=Number(entry.target.dataset.jobTitle);
+      const job=allJobs.find(job=>job.id===id);
+      if(job&&!titleTranslations.has(titleKey(job)))pendingTitles.add(id);
+      titleObserver.unobserve(entry.target);
+    }
+    scheduleTitles();
+  },{rootMargin:'120px'});
+  document.querySelectorAll('[data-job-title]').forEach(node=>titleObserver.observe(node));
+}
+function scheduleTitles(){
+  if(titleTimer||titleRequestRunning||!pendingTitles.size)return;
+  titleTimer=setTimeout(()=>{titleTimer=null;translateVisibleTitles();},100);
+}
+async function translateVisibleTitles(){
+  if(titleRequestRunning||!pendingTitles.size)return;
+  const language=Locale.language;
+  const ids=[...pendingTitles].slice(0,12);ids.forEach(id=>pendingTitles.delete(id));
+  titleRequestRunning=true;
+  try{
+    const response=await requestJson('/api/jobs/translate-titles',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids,language})});
+    for(const [id,translation] of Object.entries(response.translations)){
+      const job=allJobs.find(job=>job.id===Number(id));
+      if(!job||job.title!==translation.original)continue;
+      titleTranslations.set(titleKey(job,language),translation);
+      if(Locale.language!==language)continue;
+      document.querySelectorAll(`[data-job-title="${id}"]`).forEach(node=>{node.textContent=translation.title||job.title;});
+      document.querySelectorAll(`[data-title-hint="${id}"]`).forEach(node=>{
+        node.textContent=translation.status==='unavailable'?tr('Traduction indisponible'):translation.title!==job.title?`${tr('Titre original :')} ${job.title}`:'';
+      });
+    }
+  }catch(error){
+    if(Locale.language===language)ids.forEach(id=>document.querySelectorAll(`[data-title-hint="${id}"]`).forEach(node=>{node.textContent=tr('Traduction indisponible');}));
+  }finally{titleRequestRunning=false;scheduleTitles();}
+}
 
 function showView(which){
   const jobs=which==='jobs', profile=which==='profile', pipeline=which==='pipeline';
@@ -63,9 +115,12 @@ async function loadSources(){
 async function load(){
   cards.setAttribute('aria-busy','true');
   try{
-    const r=await fetch('/api/jobs');
+    const language=Locale.language;
+    const r=await fetch(`/api/jobs?language=${language}`);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const jobs=await r.json();
+    if(Locale.language!==language)return;
+    jobs.filter(job=>job.display_title).forEach(job=>titleTranslations.set(titleKey(job,language),{title:job.display_title,status:'ready',method:'glossary'}));
     const changed=JSON.stringify(jobs)!==JSON.stringify(allJobs);
     allJobs=jobs;
     if(changed || !cards.children.length)render();
@@ -115,7 +170,7 @@ function reviewDetails(j){
       if(reasons||manual||risks) extra=`<details><summary>${esc(tr('Détails du reviewer'))}</summary>${reasons?`<div class="detail-title">${esc(tr('Raisons'))}</div><ul>${reasons}</ul>`:''}${risks?`<div class="detail-title">${esc(tr('Risques'))}</div><ul>${risks}</ul>`:''}${manual?`<div class="detail-title">${esc(tr('À vérifier'))}</div><ul>${manual}</ul>`:''}</details>`;
     }catch(e){}
   }
-  return `<div class="review-summary">${esc(j.review_summary||'')}${extra}</div>`;
+  return `<div class="review-summary">${esc(tr(j.review_summary||''))}${extra}</div>`;
 }
 
 function render(){
@@ -123,7 +178,7 @@ function render(){
   const src=sourceSelect.value;
   const jobs=allJobs.filter(j=>matchFilter(j)).filter(j=>!src || j.provider_key===src).filter(j=>{
     if(!q) return true;
-    return [j.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
+    return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
   const liked=allJobs.filter(j=>j.user_action==='liked').length;
   const keep=allJobs.filter(j=>j.decision==='keep').length;
@@ -135,7 +190,7 @@ function render(){
   el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>{current=button.dataset.metricFilter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();});
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
-    <div class="top"><div><div class="title">${esc(j.title||tr('Offre sans titre'))}</div><div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
+    <div class="top"><div>${titleMarkup(j)}<div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
     <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
@@ -152,6 +207,7 @@ function render(){
     </div>
     <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(tr('Envoyée'))}${j.application_status==='submitted_verified'?` · ${esc(tr('vérifiée'))}`:''}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
   </article>`).join('');
+  observeTitles();
 }
 
 async function decide(id,d){
@@ -360,14 +416,15 @@ async function loadPipeline(){
   const jobs=await pr.json(), q=await qr.json(), a=await ar.json();
   el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · worker ${tr(q.running?'actif':'inactif')}`;
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item"><b>${esc(x.title||'')}</b> · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(x.note)}`:''}</div><button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
+  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(x.note)}`:''}</div><button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card"><b>${esc(j.title||'')}</b><div>${esc(j.company||'')}</div><div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div><div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
+  observeTitles();
 }
 el('queueRunBtn').onclick=async()=>{await fetch('/api/queue/start',{method:'POST'});el('pipelineStatus').textContent='Worker démarré.';setTimeout(loadPipeline,700);};
 el('queueClearBtn').onclick=async()=>{await fetch('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
 el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
 
-document.addEventListener('localechange',()=>{render();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();Locale.apply();});
+document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();Locale.apply();});
 async function init(){await Locale.ready;await loadSources();await load();await pollScan();}
 init();

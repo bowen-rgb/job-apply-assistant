@@ -30,6 +30,12 @@ class JobRepository:
         with connect() as conn:
             return conn.execute('SELECT 1 FROM jobs WHERE id=?', (job_id,)).fetchone() is not None
 
+    def titles(self, job_ids: list[int]) -> list[dict]:
+        ids = list(dict.fromkeys(job_ids))
+        placeholders = ','.join('?' for _ in ids)
+        with connect() as conn:
+            return [dict(row) for row in conn.execute(f'SELECT id,title FROM jobs WHERE id IN ({placeholders})', ids).fetchall()]
+
     def list(self, decision: str | None = None, source: str | None = None) -> list[dict[str, Any]]:
         clauses: list[str] = []
         args: list[object] = []
