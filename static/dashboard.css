@@ -18,3 +18,18 @@ body{background:var(--bg);font-family:"Segoe UI",system-ui,-apple-system,sans-se
 @media(max-width:1100px){.shell{grid-template-columns:214px minmax(0,1fr)}main{padding:28px 22px}.metric{padding:9px 12px;flex-basis:30%}.cards{grid-template-columns:1fr}}
 @media(max-width:760px){.shell{display:block}aside{position:relative;height:auto;overflow:visible;padding:16px;border-right:0;border-bottom:1px solid var(--line)}.brand{margin:0 0 16px}.language-control{max-width:240px}.primary-nav{display:flex;margin-bottom:14px;gap:6px;padding-bottom:12px}.navmain{width:auto}.filter{display:inline-block;width:auto}.navtitle{padding-top:14px}.reviewer-box,.hint{display:none}#jobSidebar{display:flex;gap:6px;flex-wrap:wrap}#jobSidebar>button{width:auto}#jobSidebar>.primary{flex:1 1 100%}.queue-help,.navtitle,.sep{flex:1 1 100%}.sep{margin:8px 0}main{padding:24px 16px}header{align-items:flex-start;flex-direction:column;gap:10px}.status{text-align:left}.metric{flex-basis:40%;font-size:11px}.metric b{font-size:18px}.toolbar{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.card{padding:20px}.settings-grid{grid-template-columns:1fr}.settings-card.span2{grid-column:auto}.form-grid.cols2,.form-grid.cols3,.upload-row,.answer-row,.resume-fields{grid-template-columns:1fr}.source-grid{grid-template-columns:1fr 1fr}.savebar{position:static}.save-actions{flex-wrap:wrap}.section-head{flex-wrap:wrap}.title{font-size:18px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* Action hierarchy follows the actual application workflow. */
+.workflow-help{font-size:11px;color:var(--muted);margin:12px 0 0;border-top:1px solid var(--line);padding-top:12px}
+.actions.five{display:flex;flex-wrap:wrap;gap:8px;border:0;padding-top:0}
+.actions.five .letter-action{order:0;flex:1 1 42%;background:var(--accent);color:#fff}
+.actions.five .apply{order:1;flex:1 1 42%;background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.actions.five .skip{order:4}.actions.five .like{order:5}.actions.five .reviewbtn{order:3}.actions.five .ghost{order:2}
+.actions.five .skip,.actions.five .like,.actions.five .reviewbtn,.actions.five .ghost{flex:1 1 auto;font-size:11px;min-height:32px;padding:5px 9px}
+#queueStopBtn{border:1px solid var(--line)}
+.letter-panel[open]{border:1px solid var(--line);border-radius:8px;padding:12px;background:#f4f6f0}
+@media(max-width:700px){.section-head{flex-wrap:wrap;gap:12px}.actions.five .letter-action,.actions.five .apply{flex-basis:100%}}
+
+.automation-status{font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);padding:0 0 12px;margin-bottom:24px}
+
+.application-error{border-left:2px solid var(--red);color:var(--red);font-size:12px;padding:8px 12px;background:#f8eeeb;border-radius:0 5px 5px 0}

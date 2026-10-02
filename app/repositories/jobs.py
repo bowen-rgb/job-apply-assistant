@@ -48,7 +48,9 @@ class JobRepository:
         where = (' WHERE ' + ' AND '.join(clauses)) if clauses else ''
         query = (
             "SELECT jobs.*, COALESCE((SELECT status FROM application_queue q "
-            "WHERE q.job_id=jobs.id),'') AS queue_status FROM jobs"
+            "WHERE q.job_id=jobs.id),'') AS queue_status, "
+            "COALESCE((SELECT note FROM applications a WHERE a.job_id=jobs.id "
+            "AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS application_error FROM jobs"
             + where + self._ORDER
         )
         with connect() as conn:
@@ -130,7 +132,7 @@ class JobRepository:
     def pipeline(self) -> list[dict[str, Any]]:
         query = """SELECT jobs.*, COALESCE((SELECT status FROM application_queue q WHERE q.job_id=jobs.id),'') AS queue_status
                    FROM jobs
-                   WHERE tracker_stage<>'' OR application_status<>'' OR user_action='liked'
+                     WHERE user_action<>'skipped' AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
                    ORDER BY COALESCE(last_application_at,updated_at) DESC"""
         with connect() as conn:
             return [dict(row) for row in conn.execute(query).fetchall()]

@@ -13,13 +13,25 @@ Switching the interface language also displays translated job titles in offer ca
 
 The French interface now translates review controls and application states. The dashboard uses a restrained warm light palette, compact controls and collapsible matching details.
 
-**Ajouter à la file** adds an offer to the preparation list. **Démarrer la file** starts sequential preparation; final submission remains manual. Previously prepared offers without a document audit are prepared again; complete preparations wait for review.
+**Ajouter à la file** adds an offer to the preparation list. **Préparer la suivante** prepares one application and then pauses for the candidate to inspect it; final submission remains manual. **Arrêter** cancels the current preparation cooperatively and retains the remaining queue. Failed and cancelled entries require an explicit retry. Previously prepared offers without a document audit are prepared again; complete preparations wait for review.
 
 Choose an active CV in **Profil & préférences**. A library containing exactly one available CV also works when an imported profile has lost its selection. CV and cover-letter inputs are identified separately, so a letter upload does not receive a CV.
 
 Pre-fill generates a French cover letter for each offer through the existing ChatGPT Web session using the selected CV, job description and profile. The profile checkbox can disable automatic generation. Expand **Lettre de motivation** on an offer to generate, read, refresh or download its PDF before filling a form. CV text and profile information are sent to the configured ChatGPT session for this feature; generated letters remain in local `data/cover_letters/` and are excluded from Git.
 
-Start with `start.bat`, then sign in to ChatGPT in the dedicated Chrome window. The browser must expose the configured local CDP endpoint (default `127.0.0.1:9222`). PDF and DOCX CVs with readable text support generation; scanned PDFs and legacy DOC files need conversion. Generation errors, missing CV attachment and unanswered required fields produce a human-review state, with document details in the application audit. A generated letter is reused only while the job, profile and CV text are unchanged.
+Start with `start.bat`, then sign in to ChatGPT in the dedicated Chrome window. The browser must expose the configured local CDP endpoint (default `127.0.0.1:9222`). PDF and DOCX CVs with readable text support generation; scanned PDFs and legacy DOC files need conversion. A generation error stops preparation before opening the application form. Missing document attachment and unanswered required fields produce a human-review state, with document details in the application audit. A generated letter is reused only while the job, profile and CV text are unchanged.
+
+### Controlled application workflow
+
+Use **Rédiger la lettre** to generate and preview the French letter and download its PDF. It uses the selected CV and the actual job/company information. The ChatGPT letter conversation remains open for inspection. **Pré-remplir** reuses a matching letter, or generates it first; it then fills contact fields and attaches CV/letter to separately identified upload controls. Hidden dropzone inputs are matched with their own nearby text. The final submit control is never clicked.
+
+**Évaluer le poste** is a separate, optional job-fit review. Pre-fill no longer launches a review or AI navigation automatically. Advanced form navigation remains available only when `application.assisted_form_navigation` is explicitly enabled. **Passer** immediately hides the job from ordinary views and removes its pending preparation; **Ignorées → Restaurer** brings it back.
+
+Queue entries are claimed once per explicit start, cancellation cannot be overwritten by a late completion, and failures do not advance to another application. Managed workers use UTF-8 log files, deduplicate active launches and check cancellation while waiting for ChatGPT and between application stages. Stop is cooperative: an in-flight browser navigation can take up to its bounded timeout before returning. Prepared tabs stay open for manual inspection; there is no indefinitely running submission observer. Use **Marquer envoyée** after submitting manually.
+
+These semantics adapt the cancellation and pause patterns documented by [BullMQ](https://docs.bullmq.io/guide/workers/cancelling-jobs) and its [worker pause guide](https://docs.bullmq.io/guide/workers/pausing-queues) to the existing local Python/SQLite app. [Reactive Resume](https://github.com/reactive-resume/reactive-resume) was reviewed as a mature local/self-hosted document product; it does not replace the application's browser workflow.
+
+Regression tests cover a GBK console, separate hidden CV/letter dropzones in a real headless browser, generation failure before form opening, single-step queues and cancellation racing with completion. Install Playwright Chromium with `python -m playwright install chromium` before running browser fixture tests.
 
 Local-first job discovery, review, tracking and semi-automatic application assistant.
 

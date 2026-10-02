@@ -32,5 +32,6 @@ if __name__ == '__main__':
         main(job_id)
     except Exception as exc:
         from .cover_letter import save_letter_state, generation_error
-        save_letter_state(job_id, {'status': 'error', 'error': generation_error(exc)})
+        from .worker_runtime import Cancelled
+        save_letter_state(job_id, {'status': 'cancelled'} if isinstance(exc, Cancelled) else {'status': 'error', 'error': generation_error(exc)})
         raise

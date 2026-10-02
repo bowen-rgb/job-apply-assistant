@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 import tempfile
-import subprocess
-import sys
 from datetime import datetime, timezone
 import urllib.request
 from pathlib import Path
@@ -46,6 +44,8 @@ from .repositories import JobRepository
 from .services import ApplicationService
 from .cover_letter import letter_paths, save_letter_state
 from .job_translation import translate_jobs, local_title
+from .worker_runtime import launch as launch_worker, cancel as cancel_worker
+from .queue_manager import stop as queue_stop
 
 STATIC = ROOT / 'static'
 
@@ -76,6 +76,13 @@ def startup():
     init_db()
     load_profile_raw()
     start_scheduler()
+
+
+@app.on_event('shutdown')
+def shutdown():
+    from .worker_runtime import cancel_all
+    queue_stop()
+    cancel_all()
 
 
 @app.get('/')
@@ -280,6 +287,8 @@ def search_status():
 def set_decision(job_id: int, payload: Decision):
     try:
         job_repository.set_decision(job_id, payload.decision)
+        if payload.decision == 'skipped':
+            queue_remove(job_id)
     except KeyError:
         raise HTTPException(404, 'job not found')
     return {'ok': True}
@@ -327,8 +336,7 @@ def create_letter(job_id: int):
         raise HTTPException(400, 'Activez ChatGPT Web dans le profil.')
     save_letter_state(job_id, {'status': 'generating'})
     try:
-        subprocess.Popen([sys.executable, '-m', 'app.cover_letter_worker', str(job_id)], cwd=str(ROOT),
-                         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform.startswith('win') else 0)
+        launch_worker('app.cover_letter_worker', job_id)
     except Exception as exc:
         save_letter_state(job_id, {'status': 'error', 'error': str(exc)})
         raise HTTPException(500, 'Impossible de démarrer la génération.')
@@ -342,6 +350,16 @@ def download_letter(job_id: int):
     if state.get('status') != 'ready' or not pdf.is_file():
         raise HTTPException(404, 'Lettre indisponible')
     return FileResponse(pdf, media_type='application/pdf', filename=f'lettre_motivation_{job_id}.pdf')
+
+
+@app.post('/api/jobs/{job_id}/stop')
+def stop_application(job_id: int):
+    if not job_repository.exists(job_id):
+        raise HTTPException(404, 'job not found')
+    cancel_worker('app.apply_worker', job_id)
+    cancel_worker('app.cover_letter_worker', job_id)
+    queue_remove(job_id)
+    return {'ok': True}
 
 
 @app.get('/api/jobs/{job_id}/audit')
@@ -412,6 +430,8 @@ def apply(job_id: int):
         result = application_service.prefill(job_id)
     except KeyError:
         raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
     return result
 
 
@@ -435,6 +455,11 @@ def start_queue():
 def remove_queue(job_id: int):
     queue_remove(job_id)
     return {'ok': True}
+
+
+@app.post('/api/queue/stop')
+def stop_queue():
+    return queue_stop()
 
 
 @app.post('/api/queue/clear-finished')

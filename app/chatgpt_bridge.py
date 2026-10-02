@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from filelock import FileLock
+from .worker_runtime import check_cancelled, Cancelled
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -82,7 +83,7 @@ def _assistant_messages(page) -> list[str]:
 
 
 def _is_generating(page) -> bool:
-    for rx in [re.compile(r'stop generating', re.I), re.compile(r'arrêter', re.I), re.compile(r'^stop$', re.I)]:
+    for rx in [re.compile(r'stop generating', re.I), re.compile(r'arrêter', re.I), re.compile(r'^stop$', re.I), re.compile(r'停止生成|停止输出'), re.compile(r'generation stoppen|detener|parar de gerar', re.I)]:
         try:
             b = page.get_by_role('button', name=rx).first
             if b.count() and b.is_visible():
@@ -139,10 +140,8 @@ def _page_json(page, purpose: str, previous: list[dict] | None = None) -> dict[s
     # Fast path: known assistant/turn containers.
     for sel in (
         '[data-message-author-role="assistant"]',
-        '[data-testid^="conversation-turn-"]',
-        'article',
-        'main',
-        'body',
+        'article[data-turn="assistant"]',
+        'article:has([data-message-author-role="assistant"])',
     ):
         try:
             loc = page.locator(sel)
@@ -168,9 +167,20 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
     """
     chat_url = cfg.get('url', 'https://chatgpt.com/')
     timeout_s = max(30, int(cfg.get('timeout_seconds', 180)))
-    keep_open = bool(cfg.get('keep_chat_tab_open', False))
+    keep_open = purpose == 'cover-letter' or bool(cfg.get('keep_chat_tab_open', False))
 
-    with CHATGPT_LOCK.acquire(timeout=max(300, timeout_s + 120)):
+    # Wait cooperatively rather than making Stop wait for a five-minute lock.
+    from filelock import Timeout
+    deadline = time.monotonic() + max(300, timeout_s + 120)
+    while True:
+        check_cancelled()
+        try:
+            CHATGPT_LOCK.acquire(timeout=0.5)
+            break
+        except Timeout:
+            if time.monotonic() >= deadline:
+                raise PlaywrightTimeoutError('ChatGPT is busy. Retry explicitly.')
+    try:
         page = context.new_page()
         try:
             page.goto(chat_url, wait_until='domcontentloaded', timeout=60000)
@@ -189,14 +199,20 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
             last = ''
             stable = 0
             while time.time() < deadline:
+                check_cancelled()
                 page.wait_for_timeout(1000)
 
                 # ChatGPT web changes its message DOM periodically. Prefer a
                 # complete typed JSON object visible anywhere in the recent
                 # conversation over relying on one assistant selector.
                 obj = _page_json(page, purpose, previous_json)
-                if obj is not None:
-                    return obj
+                if obj is not None and not _is_generating(page):
+                    encoded = json.dumps(obj, sort_keys=True)
+                    stable = stable + 1 if encoded == last else 0
+                    last = encoded
+                    if stable >= 2:
+                        return obj
+                    continue
 
                 msgs = _assistant_messages(page)
                 if len(msgs) > len(before):
@@ -213,17 +229,23 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                     if obj is not None and obj not in previous_json:
                         return obj
 
-            obj = _page_json(page, purpose, previous_json)
-            if obj is not None:
-                return obj
-            if response:
+            if response and not _is_generating(page):
                 obj = _extract_json_for_purpose(response, purpose)
                 if obj is not None and obj not in previous_json:
                     return obj
             raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
+        except Cancelled:
+            # Close only this worker's chat tab, never the candidate's browser.
+            page.close()
+            raise
+        except Exception:
+            keep_open = True
+            raise
         finally:
             if not keep_open:
                 try:
                     page.close()
                 except Exception:
                     pass
+    finally:
+        CHATGPT_LOCK.release()

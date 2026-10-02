@@ -157,6 +157,28 @@ LETTER_RX = re.compile(r'cover.?letter|lettre|motivation|supporting.?letter', re
 RESUME_RX = re.compile(r'\bcv\b|r[eé]sum[eé]|curriculum', re.I)
 
 
+def file_descriptor(page, field, index: int) -> str:
+    """Associate hidden upload controls with their own dropzone, not the whole form."""
+    label = label_for(page, field, index)
+    try:
+        nearby = field.evaluate('''(e) => {
+            const named = e.getAttribute('aria-labelledby');
+            if (named) return named.split(/\\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ');
+            for (let p=e.parentElement, depth=0; p && depth<4; p=p.parentElement, depth++) {
+                if (p.matches('form,body')) break;
+                if (p.querySelectorAll('input[type=file]').length !== 1) break;
+                const text = (p.innerText || p.textContent || '').trim();
+                if (text && text.length < 600 && /cv|resume|curriculum|lettre|motivation|cover.?letter/i.test(text)) return text;
+            }
+            return '';
+        }''')
+        if isinstance(nearby, str):
+            label += ' ' + nearby
+    except Exception:
+        pass
+    return label + ' ' + (field.get_attribute('name') or '') + ' ' + (field.get_attribute('id') or '')
+
+
 def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, report: dict) -> None:
     if not resume_path or not resume_path.exists():
         report['errors'].append('resume: Aucun CV disponible dans le profil')
@@ -169,8 +191,8 @@ def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, r
         try:
             loc = page.locator(selector).first
             if loc.count():
-                descriptor = label_for(page, loc, 0) + ' ' + (loc.get_attribute('name') or '')
-                if LETTER_RX.search(descriptor):
+                descriptor = file_descriptor(page, loc, 0)
+                if LETTER_RX.search(descriptor) or (selector == 'input[type="file"]' and not RESUME_RX.search(descriptor)):
                     continue
                 loc.set_input_files(str(resume_path))
                 report['filled'].append('resume')
@@ -183,7 +205,7 @@ def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, r
     for i in range(min(files.count(), 30)):
         try:
             inp = files.nth(i)
-            label = label_for(page, inp, i)
+            label = file_descriptor(page, inp, i)
             attrs = ' '.join([
                 label,
                 inp.get_attribute('name') or '',
@@ -207,7 +229,7 @@ def upload_cover_letter(page, path: Path | None, report: dict) -> None:
     files = page.locator('input[type="file"]')
     for index in range(min(files.count(), 30)):
         field = files.nth(index)
-        descriptor = label_for(page, field, index) + ' ' + (field.get_attribute('name') or '')
+        descriptor = file_descriptor(page, field, index)
         if LETTER_RX.search(descriptor):
             try:
                 field.set_input_files(str(path))

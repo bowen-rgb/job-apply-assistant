@@ -24,7 +24,7 @@
       <button id="searchBtn" class="primary">Scanner le web</button>
       <button id="batchBtn" class="secondary">终审强匹配</button>
       <button id="healthBtn" class="ghost diag">环境检查</button>
-      <button id="startQueueBtn" class="ghost diag">Préparer la file</button><p class="queue-help">Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel.</p>
+      <button id="startQueueBtn" class="ghost diag">Préparer la suivante</button><p class="queue-help">Une candidature à la fois. Vérifiez le résultat avant de continuer.</p>
 
       <div class="navtitle">File d'offres</div>
       <button data-filter="all" class="filter active">Toutes</button>
@@ -35,12 +35,13 @@
       <button data-filter="human" class="filter">Reviewer: humain</button>
       <button data-filter="queued" class="filter">Dans la file</button>
       <button data-filter="submitted" class="filter">Candidatures envoyées</button>
+      <button data-filter="skipped" class="filter">Ignorées</button>
       <button data-filter="expired" class="filter">Expirées / rejetées</button>
       <div class="sep"></div>
       <div class="reviewer-box">
-        <div class="reviewer-title">Final reviewer</div>
-        <div>ChatGPT Web via Chrome/CDP</div>
-        <div class="small">Les valeurs personnelles déjà saisies ne sont pas envoyées au reviewer.</div>
+        <div class="reviewer-title">Lettre de motivation</div>
+        <div>Rédaction par ChatGPT, vérification par vous.</div>
+        <div class="small">Évaluer le poste reste une action séparée.</div>
       </div>
       <button id="clearBtn" class="danger ghost">Vider la base locale</button>
     </div>
@@ -48,6 +49,7 @@
   </aside>
 
   <main id="mainContent" tabindex="-1">
+    <div id="automationStatus" class="automation-status" role="status"></div>
     <section id="jobsView">
       <header>
         <div>
@@ -75,7 +77,7 @@
     <section id="pipelineView" class="hidden">
       <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status" role="status" aria-live="polite"></div></header>
       <section id="analyticsCards" class="metric-grid"></section>
-      <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Les formulaires sont préparés l’un après l’autre. Le Submit final reste manuel.</p></div><div><button id="queueRunBtn" class="primary compact">Démarrer</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
+      <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Une candidature à la fois. Vérifiez le résultat avant de continuer.</p></div><div><button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
     </section>
 

@@ -14,8 +14,8 @@ from .ats_adapters import get_adapter
 from .db import connect
 from .form_scanner import instrument_and_scan
 from .profile_store import load_profile_raw, runtime_profile, select_resume_for_job
-from .review_launcher import launch_review
-from .cover_letter import generate_letter, letter_paths
+from .worker_runtime import check_cancelled, Cancelled
+from .cover_letter import generate_letter, letter_paths, generation_error
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -42,6 +42,8 @@ def _update_status(job_id: int, status: str, **extra) -> None:
             sets.append(f'{key}=?')
             args.append(value)
     tracker = 'prepared' if status in {'prefilled','needs_human'} else ('submitted' if status in {'submitted','submitted_verified'} else '')
+    if status in {'error', 'cancelled'}:
+        tracker = 'saved'
     if tracker:
         sets.append('tracker_stage=?')
         args.append(tracker)
@@ -89,9 +91,21 @@ def main(job_id: int):
     _record(job_id, 'opening', f"URL: {job.get('url','')}")
 
     with sync_playwright() as p:
-        browser, context, mode = _open_browser(p, profile)
-        page = context.new_page()
+        page = None
+        context = None
+        mode = 'cdp'
         try:
+            check_cancelled()
+            if not resume_path or not resume_path.is_file():
+                raise ValueError('Aucun CV sélectionné. Activez un CV avant le pré-remplissage.')
+            browser, context, mode = _open_browser(p, profile)
+            if raw_profile.get('application', {}).get('generate_cover_letter', True):
+                _update_status(job_id, 'preparing_letter')
+                letter = generate_letter(context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
+                profile['cover_letter_text'] = letter['letter']
+                profile['cover_letter_path'] = str(letter_paths(job_id)[1])
+            check_cancelled()
+            page = context.new_page()
             page.goto(job['url'], wait_until='domcontentloaded', timeout=45000)
             page.wait_for_timeout(1000)
             try:
@@ -105,14 +119,8 @@ def main(job_id: int):
             adapter.prepare(page)
             page.wait_for_timeout(900)
             letter_error = ''
-            if raw_profile.get('application', {}).get('generate_cover_letter', True):
-                try:
-                    letter = generate_letter(context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
-                    profile['cover_letter_text'] = letter['letter']
-                    profile['cover_letter_path'] = str(letter_paths(job_id)[1])
-                except Exception as exc:
-                    letter_error = str(exc)
-                    _record(job_id, 'cover_letter_error', letter_error)
+            check_cancelled()
+            check_cancelled()
             report = adapter.fill(page, profile, resume_path, job)
             if letter_error:
                 report['errors'].append('cover_letter: ' + letter_error)
@@ -138,7 +146,8 @@ def main(job_id: int):
             agent_trace = None
             agent_cfg = profile.get('agent_fallback', {}) or {}
             reviewer_cfg = profile.get('chatgpt_web_reviewer', {}) or {}
-            should_agent = bool(agent_cfg.get('enabled', True) and reviewer_cfg.get('enabled', True)) and (
+            should_agent = bool(raw_profile.get('application', {}).get('assisted_form_navigation', False)
+                                and agent_cfg.get('enabled', False) and reviewer_cfg.get('enabled', True)) and (
                 (adapter.info.mode == 'agent-assisted' and agent_cfg.get('run_for_agent_assisted_ats', True))
                 or (ordinary_unanswered and agent_cfg.get('run_when_required_unanswered', True))
             )
@@ -173,6 +182,7 @@ def main(job_id: int):
                     _update_status(job_id, 'preparing', agent_status='ERROR')
                     _record(job_id, 'agent_error', str(exc))
 
+            check_cancelled()
             now = datetime.now(timezone.utc).isoformat()
             audit = {
                 'job_id': job_id,
@@ -227,16 +237,12 @@ def main(job_id: int):
                 status,
                 apply_adapter=adapter.info.key,
                 fill_audit_path=str(audit_path),
-                review_verdict='QUEUED',
-                review_summary=summary,
+
             )
             _record(job_id, status, summary)
 
-            if reviewer_cfg.get('enabled', True):
-                launch_review(job_id, str(snap_path))
-                print('\nApplication prepared. ChatGPT Web final review queued.')
-            else:
-                print('\nApplication prepared. ChatGPT Web reviewer disabled.')
+            check_cancelled()
+            print('Application prepared. Review is optional and explicitly requested.')
 
             print(f'ATS adapter: {adapter.info.label} ({adapter.info.mode})')
             if agent_trace:
@@ -246,35 +252,18 @@ def main(job_id: int):
             print(f'Deterministic auto-fill: {report.get("filled") or "none"}. Required unanswered: {len(unanswered)}.')
             print('Final submission remains manual. The agent is hard-blocked from clicking final Submit.')
 
-            # Keep observing the tab. If the candidate manually submits and the ATS displays a
-            # recognizable confirmation, record it automatically. Never click Submit here.
-            verified = False
-            try:
-                while True:
-                    time.sleep(2)
-                    if page.is_closed():
-                        break
-                    ok, evidence = adapter.confirmation(page)
-                    if ok:
-                        verified = True
-                        _update_status(job_id, 'submitted_verified')
-                        _record(job_id, 'submitted_verified', evidence)
-                        print('Submission confirmation detected:', evidence)
-                        break
-            except KeyboardInterrupt:
-                pass
-
-            if not verified:
-                with connect() as c:
-                    current = c.execute('SELECT application_status FROM jobs WHERE id=?', (job_id,)).fetchone()
-                    if current and current['application_status'] in {'opening', 'preparing'}:
-                        c.execute("UPDATE jobs SET application_status='prefilled', updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
+            # CDP application tab remains open for manual review and submission.
+        except Cancelled:
+            if page is not None and not page.is_closed():
+                page.close()
+            _update_status(job_id, 'cancelled')
+            _record(job_id, 'cancelled', 'Stopped by user')
         except Exception as exc:
             _update_status(job_id, 'error')
-            _record(job_id, 'apply_error', str(exc))
+            _record(job_id, 'apply_error', generation_error(exc))
             raise
         finally:
-            if mode != 'cdp':
+            if context is not None and mode != 'cdp':
                 try:
                     context.close()
                 except Exception:

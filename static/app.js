@@ -26,7 +26,12 @@ const toLines=a=>(a||[]).join('\n');
 const el=id=>document.getElementById(id);
 const tr=key=>Locale.t(key);
 const statusLabels={keep:'Match fort',review:'À vérifier',reject:'Refus',liked:'Aimées',skipped:'Passer',prefilled:'Pré-remplie',needs_human:'À compléter',opening:'Ouverture…',preparing:'Préparation…',queued:'En file',running:'En cours',waiting_user:'À vérifier avant envoi',done:'Terminée',error:'Erreur',prepared:'Préparée',saved:'Sauvegardée',submitted:'Envoyée',submitted_verified:'vérifiée',APPLY:'Candidature conseillée',SKIP:'À écarter',HUMAN_REVIEW:'À vérifier',QUEUED:'En file',RUNNING:'En cours',ERROR:'Erreur'};
-Object.assign(statusLabels,{low:'Match faible',new:'Nouvelle',expired:'Expirée',cancelled:'Annulée',withdrawn:'Retirée'});
+Object.assign(statusLabels,{preparing_letter:'Rédaction de la lettre…',low:'Match faible',new:'Nouvelle',expired:'Expirée',cancelled:'Annulée',withdrawn:'Retirée'});
+function errorMessage(value){
+  if(/(?:gbk|charmap).*codec/.test(value||''))return tr('La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.');
+  if((value||'').includes('Target page, context or browser has been closed'))return tr('Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.');
+  return tr(value||'');
+}
 const statusLabel=value=>tr(statusLabels[value]||value);
 const titleTranslations=new Map();
 let titleObserver=null, titleTimer=null, titleRequestRunning=false;
@@ -124,7 +129,7 @@ async function load(){
     const changed=JSON.stringify(jobs)!==JSON.stringify(allJobs);
     allJobs=jobs;
     if(changed || !cards.children.length)render();
-    const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict)||['opening','preparing'].includes(j.application_status)||j.queue_status==='running');
+    const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict)||['opening','preparing','preparing_letter'].includes(j.application_status)||j.queue_status==='running');
     if(running && !pollTimer) pollTimer=setInterval(load,3500);
     if(!running && pollTimer){clearInterval(pollTimer);pollTimer=null;}
   }catch(e){
@@ -134,6 +139,8 @@ async function load(){
 }
 
 function matchFilter(j){
+  if(current==='skipped') return j.user_action==='skipped';
+  if(j.user_action==='skipped') return false;
   if(current==='all') return true;
   if(['keep','review'].includes(current)) return j.decision===current;
   if(current==='liked') return j.user_action==='liked';
@@ -149,7 +156,7 @@ function reviewBadge(j){
   const v=j.review_verdict||'';
   if(!v) return `<span class="review none">${esc(tr('Pas relu'))}</span>`;
   const cls=v==='APPLY'?'applyok':v==='SKIP'?'skipbad':v==='HUMAN_REVIEW'?'human':v==='ERROR'?'err':'running';
-  const conf=j.review_confidence?` · ${j.review_confidence}%`:'';
+  const conf=['APPLY','SKIP','HUMAN_REVIEW'].includes(v)&&j.review_confidence?` · ${j.review_confidence}%`:'';
   return `<span class="review ${cls}">${esc(statusLabel(v))}${conf}</span>`;
 }
 
@@ -170,7 +177,7 @@ function reviewDetails(j){
       if(reasons||manual||risks) extra=`<details><summary>${esc(tr('Détails du reviewer'))}</summary>${reasons?`<div class="detail-title">${esc(tr('Raisons'))}</div><ul>${reasons}</ul>`:''}${risks?`<div class="detail-title">${esc(tr('Risques'))}</div><ul>${risks}</ul>`:''}${manual?`<div class="detail-title">${esc(tr('À vérifier'))}</div><ul>${manual}</ul>`:''}</details>`;
     }catch(e){}
   }
-  return `<div class="review-summary">${esc(tr(j.review_summary||''))}${extra}</div>`;
+  return `<div class="review-summary">${esc(j.review_verdict==='ERROR'?errorMessage(j.review_summary):tr(j.review_summary||''))}${extra}</div>`;
 }
 
 function render(){
@@ -181,7 +188,7 @@ function render(){
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
   const liked=allJobs.filter(j=>j.user_action==='liked').length;
-  const keep=allJobs.filter(j=>j.decision==='keep').length;
+  const keep=allJobs.filter(j=>j.decision==='keep'&&j.user_action!=='skipped').length;
   const approved=allJobs.filter(j=>j.review_verdict==='APPLY').length;
   const human=allJobs.filter(j=>j.review_verdict==='HUMAN_REVIEW').length;
   const submitted=allJobs.filter(j=>['submitted','submitted_verified'].includes(j.application_status)).length;
@@ -195,14 +202,16 @@ function render(){
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
     ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}
+    ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
     ${reviewDetails(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a></div>
-    <div class="actions five">
-      <button class="skip" onclick="decide(${j.id},'skipped')">${esc(tr('Passer'))}</button>
+    <p class="workflow-help">${esc(tr("Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
+      <button class="primary letter-action" onclick="openLetter(${j.id})">${esc(tr("Rédiger la lettre"))}</button>
+      <button class="skip" onclick="decide(${j.id},'${j.user_action==='skipped'?'clear_user_action':'skipped'}')">${esc(tr(j.user_action==='skipped'?'Restaurer':'Passer'))}</button>
       <button class="like" onclick="decide(${j.id},'liked')">${esc(tr('Garder'))}</button>
-      <button class="reviewbtn" onclick="reviewJob(${j.id})">${esc(tr('ChatGPT终审'))}</button>
-      <button class="apply" onclick="applyJob(${j.id},'${esc(j.review_verdict||'')}')">${esc(tr('Pré-remplir'))}</button>
+      <button class="reviewbtn" onclick="reviewJob(${j.id})">${esc(tr("Évaluer le poste"))}</button>
+      ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" onclick="applyJob(${j.id},'${esc(j.review_verdict||'')}')">${esc(tr('Pré-remplir'))}</button>`}
       <button class="ghost" onclick="queueJob(${j.id})">${esc(tr('+ File'))}</button>
     </div>
     <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(tr('Envoyée'))}${j.application_status==='submitted_verified'?` · ${esc(tr('vérifiée'))}`:''}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
@@ -211,22 +220,19 @@ function render(){
 }
 
 async function decide(id,d){
-  await fetch(`/api/jobs/${id}/decision`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:d})});
+  await requestJson(`/api/jobs/${id}/decision`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:d})});
   await load();
 }
 async function reviewJob(id){
-  statusEl.textContent='ChatGPT Web 终审排队中…';
+  statusEl.textContent=tr('Évaluation du poste en cours…');
   const r=await fetch(`/api/jobs/${id}/review`,{method:'POST'}); const x=await r.json();
   statusEl.textContent=x.message||'Reviewer queued'; await load();
 }
 async function applyJob(id, verdict){
-  if(!verdict){if(!confirm(tr('Cette offre n’a pas encore été relue par ChatGPT. Ouvrir quand même ?'))) return;}
-  else if(verdict==='SKIP'){if(!confirm(tr('Le reviewer recommande SKIP. Ouvrir quand même ?'))) return;}
-  else if(verdict==='HUMAN_REVIEW'){if(!confirm(tr('Le reviewer demande une vérification humaine. Ouvrir le formulaire ?'))) return;}
-  statusEl.textContent='Ouverture du formulaire…';
-  const r=await fetch(`/api/jobs/${id}/apply`,{method:'POST'}); const x=await r.json();
-  if(!r.ok){statusEl.textContent=x.detail||tr('Erreur');return;}
-  statusEl.textContent=tr('Ouverture du formulaire…'); setTimeout(load,1500);
+  try{
+    await requestJson(`/api/jobs/${id}/apply`,{method:'POST'});
+    statusEl.textContent=tr('Préparation de la lettre et du formulaire…'); await load();
+  }catch(error){statusEl.textContent=error.message;}
 }
 async function markApplication(id,status){
   await fetch(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
@@ -250,13 +256,24 @@ async function loadLetter(id){
     const state=await requestJson(`/api/jobs/${id}/letter`);
     if(!target.isConnected)return;
     if(state.status==='ready')target.innerHTML=`<p class="letter-copy">${esc(state.letter)}</p><a href="/api/jobs/${id}/letter/pdf" target="_blank" rel="noopener">${esc(tr('Télécharger la lettre PDF'))}</a> <button class="ghost compact" onclick="generateLetter(${id})">${esc(tr('Actualiser la lettre'))}</button>`;
-    else if(state.status==='generating'){target.textContent=tr('Génération via ChatGPT en cours…');setTimeout(()=>{if(target.isConnected&&target.closest('details').open)loadLetter(id);},2500);}
-    else target.innerHTML=`<p>${esc(state.error||tr('Une lettre spécifique au poste sera générée à partir de votre CV et de votre profil.'))}</p><button class="primary compact" onclick="generateLetter(${id})">${esc(tr('Générer avec ChatGPT'))}</button>`;
+    else if(state.status==='generating'){target.innerHTML=`<p>${esc(tr('Génération via ChatGPT en cours…'))}</p><button class="ghost compact" onclick="stopApplication(${id})">${esc(tr('Arrêter'))}</button>`;setTimeout(()=>{if(target.isConnected&&target.closest('details').open)loadLetter(id);},2500);}
+    else target.innerHTML=`<p>${esc(state.error?errorMessage(state.error):tr('Une lettre spécifique au poste sera générée à partir de votre CV et de votre profil.'))}</p><button class="primary compact" onclick="generateLetter(${id})">${esc(tr('Générer avec ChatGPT'))}</button>`;
   }catch(error){target.textContent=error.message;}
 }
+async function openLetter(id){
+  const panel=el(`letter-${id}`)?.closest('details');
+  if(panel){
+    panel.open=true;panel.scrollIntoView({block:'nearest',behavior:'smooth'});
+    try{const state=await requestJson(`/api/jobs/${id}/letter`);if(!['ready','generating'].includes(state.status))await generateLetter(id);else await loadLetter(id);}
+    catch(error){el(`letter-${id}`).textContent=error.message;}
+  }
+}
+async function stopApplication(id){await requestJson(`/api/jobs/${id}/stop`,{method:'POST'});await load();await loadLetter(id);}
+window.stopApplication=stopApplication;
+window.openLetter=openLetter;
 async function generateLetter(id){
   try{await requestJson(`/api/jobs/${id}/letter`,{method:'POST'});await loadLetter(id);}
-  catch(error){el(`letter-${id}`).textContent=error.message;}
+  catch(error){if(el(`letter-${id}`))el(`letter-${id}`).textContent=error.message;}
 }
 window.loadLetter=loadLetter;window.generateLetter=generateLetter;
 window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; window.markApplication=markApplication; window.queueJob=queueJob;
@@ -279,7 +296,11 @@ for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.que
 qInput.oninput=render; sourceSelect.onchange=render;
 el('searchBtn').onclick=async()=>{statusEl.textContent='Démarrage du scan…';const r=await fetch('/api/search',{method:'POST'});const x=await r.json();statusEl.textContent=x.running?'Scan lancé':'Scan déjà actif';await pollScan();};
 el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;const r=await fetch('/api/review/batch?mode=strong',{method:'POST'});const x=await r.json();statusEl.textContent=x.message||tr('Batch review lancé');setTimeout(load,1000);};
-el('healthBtn').onclick=async()=>{statusEl.textContent='Vérification locale…';try{const r=await fetch('/api/health');const h=await r.json();const ls=h.learning_stats||{};const bits=[`CV:${h.resume_ok?'OK':'MANQUANT'}`,`CDP:${h.cdp_ok?'OK':'OFF'}`,`Playwright:${h.playwright_ok?'OK':'MANQUANT'}`,`Scrapling:${h.scrapling_ok?'OK':'MANQUANT'}`,`Agent:${h.agent_fallback_enabled?'ON':'OFF'}`,`Learn:${ls.rules??0}/${ls.successes??0}`];statusEl.textContent=bits.join(' · ')+(h.cdp_browser?` · ${h.cdp_browser}`:'');}catch(e){statusEl.textContent='Diagnostic impossible: '+e;}};
+async function refreshAutomationStatus(){
+  try{const h=await requestJson('/api/health');el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'ChatGPT déconnecté : ouvrez start.bat puis connectez-vous dans le navigateur dédié.')].join(' · ');}
+  catch(error){el('automationStatus').textContent=error.message;}
+}
+el('healthBtn').onclick=refreshAutomationStatus;
 el('clearBtn').onclick=async()=>{if(!confirm(tr('Supprimer toutes les offres locales ?')))return;await fetch('/api/jobs',{method:'DELETE'});await load();};
 
 function setValue(id,v){const x=el(id);if(x)x.value=v??'';}
@@ -411,20 +432,31 @@ async function setStage(id,stage){
 }
 async function removeQueue(id){await fetch(`/api/queue/${id}`,{method:'DELETE'});await loadPipeline();await load();}
 window.setStage=setStage;window.removeQueue=removeQueue;
+let pipelineTimer=null;
 async function loadPipeline(){
+  clearTimeout(pipelineTimer);
   const [pr,qr,ar]=await Promise.all([fetch('/api/pipeline'),fetch('/api/queue'),fetch('/api/analytics')]);
   const jobs=await pr.json(), q=await qr.json(), a=await ar.json();
-  el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · worker ${tr(q.running?'actif':'inactif')}`;
+  el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · ${tr(q.running?'Préparation en cours':'File arrêtée')}`;
+  el('queueRunBtn').disabled=q.running||!(q.counts?.queued);
+  el('queueStopBtn').disabled=!q.running;
+  el('queueRunBtn').textContent=tr(q.running?'Préparation en cours':'Préparer la suivante');
+  el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':'Une candidature à la fois. Vérifiez le résultat avant de continuer.');
+  if(q.running&&!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(loadPipeline,1500);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(x.note)}`:''}</div><button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
+  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(statusLabels[x.note]?statusLabel(x.note):errorMessage(x.note))}`:''}</div>${['error','cancelled'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Réessayer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div><div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
   observeTitles();
 }
-el('queueRunBtn').onclick=async()=>{await fetch('/api/queue/start',{method:'POST'});el('pipelineStatus').textContent='Worker démarré.';setTimeout(loadPipeline,700);};
+el('queueRunBtn').onclick=async()=>{await requestJson('/api/queue/start',{method:'POST'});await loadPipeline();};
+el('queueStopBtn').onclick=async()=>{await requestJson('/api/queue/stop',{method:'POST'});await loadPipeline();};
+async function retryQueue(id){await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id]})});await loadPipeline();}
+window.retryQueue=retryQueue;
 el('queueClearBtn').onclick=async()=>{await fetch('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
 el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
 
-document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();Locale.apply();});
-async function init(){await Locale.ready;await loadSources();await load();await pollScan();}
+document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();refreshAutomationStatus();Locale.apply();});
+async function init(){await Locale.ready;await loadSources();await load();await pollScan();await refreshAutomationStatus();}
 init();
+setInterval(refreshAutomationStatus,15000);

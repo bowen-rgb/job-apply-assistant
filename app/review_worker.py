@@ -18,7 +18,6 @@ def main(job_id: int, snapshot_path: str | None = None):
             snapshot = json.loads(p.read_text(encoding='utf-8'))
     try:
         result = review_via_chatgpt_web(job_id, form_snapshot=snapshot)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
     except Exception as exc:
         msg = str(exc)
         with connect() as c:
@@ -26,6 +25,8 @@ def main(job_id: int, snapshot_path: str | None = None):
             c.execute('INSERT INTO applications(job_id,status,note) VALUES(?,?,?)', (job_id, 'chatgpt_review_error', msg[:2000]))
         print('Reviewer error:', msg, file=sys.stderr)
         raise
+    # Logging must never overwrite a successful review as an error.
+    print(json.dumps(result, ensure_ascii=True, indent=2))
 
 
 if __name__ == '__main__':

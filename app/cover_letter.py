@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 
 from .chatgpt_bridge import ask_chatgpt_json
 from .profile_store import ROOT
+from .worker_runtime import check_cancelled, Cancelled
+from filelock import FileLock, Timeout
+import time
+import uuid
 
 LETTER_DIR = ROOT / 'data' / 'cover_letters'
 
@@ -23,6 +27,8 @@ def generation_error(exc: Exception) -> str:
         return 'Connectez-vous à ChatGPT dans le navigateur dédié, puis relancez la génération.'
     if 'No ChatGPT response' in message:
         return 'ChatGPT n’a pas répondu à temps. Vérifiez sa connexion puis réessayez.'
+    if 'Target page, context or browser has been closed' in message:
+        return 'Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.'
     return message[:500]
 
 
@@ -50,13 +56,31 @@ def letter_paths(job_id: int) -> tuple[Path, Path]:
 def save_letter_state(job_id: int, state: dict) -> None:
     metadata, _ = letter_paths(job_id)
     metadata.parent.mkdir(parents=True, exist_ok=True)
-    temporary = metadata.with_suffix('.tmp')
+    temporary = metadata.with_name(metadata.name + '.' + uuid.uuid4().hex + '.tmp')
     state = {**state, 'updated_at': datetime.now(timezone.utc).isoformat()}
     temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding='utf-8')
     temporary.replace(metadata)
 
 
 def generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cfg: dict) -> dict:
+    LETTER_DIR.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(LETTER_DIR / f'job_{job["id"]}.lock'))
+    deadline = time.monotonic() + 600
+    while True:
+        check_cancelled()
+        try:
+            lock.acquire(timeout=0.5)
+            break
+        except Timeout:
+            if time.monotonic() >= deadline:
+                raise RuntimeError('Une génération est déjà en cours. Réessayez plus tard.')
+    try:
+        return _generate_letter(context, job, raw, resume_path, cfg)
+    finally:
+        lock.release()
+
+
+def _generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cfg: dict) -> dict:
     metadata, pdf = letter_paths(int(job['id']))
     try:
         cv = resume_text(resume_path)
@@ -85,6 +109,7 @@ def generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cfg
             + json.dumps(payload, ensure_ascii=False)
         )
         result = ask_chatgpt_json(context, prompt, cfg, purpose='cover-letter')
+        check_cancelled()
         letter = result.get('letter', '').strip()
         if len(letter) < 150 or len(letter) > 12000:
             raise ValueError('La lettre reçue est vide, trop courte ou trop longue.')
@@ -102,6 +127,9 @@ def generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cfg
         state = {'status': 'ready', 'letter': letter, 'fingerprint': fingerprint}
         save_letter_state(job['id'], state)
         return state
+    except Cancelled:
+        save_letter_state(job['id'], {'status': 'cancelled'})
+        raise
     except Exception as exc:
         save_letter_state(job['id'], {'status': 'error', 'error': generation_error(exc)})
         raise
