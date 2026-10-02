@@ -193,6 +193,14 @@ The automation deliberately stops or hands off when it encounters:
 
 ## Data storage
 
+The pre-fill action generates a job-specific letter through the connected ChatGPT
+session, saves its response as a local PDF, and uploads it alongside the selected
+CV. Embedded application dialogs are scanned as well as the main page. Cegid
+OneClick sites expose only a CV import: the application then uploads a combined
+PDF containing the original CV followed by the letter, without changing either
+source file. The worker stops before final submission. A site-specific privacy
+charter pauses the workflow until the user explicitly accepts for that application.
+
 Local data is stored under `data/` and `profile.json`. CV files are placed under `data/resumes/`. Do not commit personal profile/CV/database files to a public repository.
 
 ## Tests

@@ -124,7 +124,12 @@ def _generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cf
         for paragraph in letter.split('\n'):
             if paragraph.strip():
                 content.extend([Paragraph(escape(paragraph), style), Spacer(1, 10)])
-        SimpleDocTemplate(str(pdf), title=f"Lettre de motivation — {job.get('title', '')}").build(content)
+        temporary_pdf = pdf.with_name(f'{pdf.stem}.{uuid.uuid4().hex}.tmp.pdf')
+        try:
+            SimpleDocTemplate(str(temporary_pdf), title=f"Lettre de motivation — {job.get('title', '')}").build(content)
+            temporary_pdf.replace(pdf)
+        finally:
+            temporary_pdf.unlink(missing_ok=True)
         state = {'status': 'ready', 'letter': letter, 'fingerprint': fingerprint}
         save_letter_state(job['id'], state)
         return state

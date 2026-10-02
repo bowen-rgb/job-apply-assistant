@@ -335,5 +335,8 @@
   "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.",
   "Évaluation du poste": "Évaluation du poste",
   "Évaluation échouée": "Évaluation échouée",
-  "Score de matching": "Score de matching"
+  "Score de matching": "Score de matching",
+  "Accord à la charte de données requis.": "Accord à la charte de données requis.",
+  "Accepter pour cette candidature et continuer": "Accepter pour cette candidature et continuer",
+  "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?": "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?"
 }

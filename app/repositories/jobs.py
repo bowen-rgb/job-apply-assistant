@@ -50,7 +50,9 @@ class JobRepository:
             "SELECT jobs.*, COALESCE((SELECT status FROM application_queue q "
             "WHERE q.job_id=jobs.id),'') AS queue_status, "
             "COALESCE((SELECT note FROM applications a WHERE a.job_id=jobs.id "
-            "AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS application_error FROM jobs"
+            "AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS application_error, "
+            "COALESCE((SELECT status FROM applications a WHERE a.job_id=jobs.id "
+            "ORDER BY a.id DESC LIMIT 1),'') AS last_workflow_event FROM jobs"
             + where + self._ORDER
         )
         with connect() as conn:

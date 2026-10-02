@@ -33,9 +33,12 @@ class ApplicationService:
         launch_batch_review(mode)
         return {'ok': True, 'message': f'Batch review queued: {mode}'}
 
-    def prefill(self, job_id: int) -> dict[str, Any]:
+    def prefill(self, job_id: int, *, privacy_confirmed: bool = False) -> dict[str, Any]:
         if not self.jobs.exists(job_id):
             raise KeyError(job_id)
         review_verdict = self.jobs.review_verdict(job_id)
-        launch_apply(job_id)
+        if privacy_confirmed:
+            launch_apply(job_id, privacy_confirmed=True)
+        else:
+            launch_apply(job_id)
         return {'ok': True, 'message': 'Browser worker launched', 'review_verdict': review_verdict}

@@ -335,5 +335,8 @@
   "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Previous preparation stopped because of a text encoding error. Retry.",
   "Évaluation du poste": "Job assessment",
   "Évaluation échouée": "Job assessment failed",
-  "Score de matching": "Match score"
+  "Score de matching": "Match score",
+  "Accord à la charte de données requis.": "This recruiting site requires your privacy consent.",
+  "Accepter pour cette candidature et continuer": "Accept for this application and continue",
+  "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?": "Allow this recruiter to process your CV and letter for this application and accept its personal data charter?"
 }

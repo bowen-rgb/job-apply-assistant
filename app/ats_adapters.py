@@ -41,7 +41,8 @@ class BaseAdapter:
             'errors': [],
         }
         fill_exact_selectors(page, self.field_map, profile, report)
-        upload_resume(page, resume_path, self.resume_selectors, report)
+        if self.resume_selectors:
+            upload_resume(page, resume_path, self.resume_selectors, report)
         generic = generic_fill(page, profile, resume_path)
         for key in ('filled', 'actions', 'skipped_sensitive', 'skipped_ambiguous', 'errors'):
             report[key].extend(generic.get(key, []))

@@ -16,6 +16,8 @@ from .form_scanner import instrument_and_scan
 from .profile_store import load_profile_raw, runtime_profile, select_resume_for_job
 from .worker_runtime import check_cancelled, Cancelled
 from .cover_letter import generate_letter, letter_paths, generation_error
+from .application_form import (wait_for_form_scope, consent_pending, accept_confirmed_privacy,
+                               requires_combined_packet, build_application_packet)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -76,7 +78,7 @@ def _required(snapshot: dict) -> tuple[list[dict], list[dict], list[dict]]:
     return unanswered, sensitive, ordinary
 
 
-def main(job_id: int):
+def main(job_id: int, *, privacy_confirmed: bool = False):
     raw_profile = load_profile_raw()
     profile = runtime_profile(raw_profile)
     with connect() as c:
@@ -105,8 +107,17 @@ def main(job_id: int):
                 profile['cover_letter_text'] = letter['letter']
                 profile['cover_letter_path'] = str(letter_paths(job_id)[1])
             check_cancelled()
-            page = context.new_page()
-            page.goto(job['url'], wait_until='domcontentloaded', timeout=45000)
+            # Resume the same job's open dialog after the user accepts its charter.
+            original_url = job['url'].split('?')[0].rstrip('/')
+            page = next((tab for tab in reversed(context.pages)
+                         if not tab.is_closed() and tab.url.split('?')[0].rstrip('/') == original_url), None)
+            if page is None:
+                page = context.new_page()
+                page.goto(job['url'], wait_until='domcontentloaded', timeout=45000)
+            elif any('/oneClick/finalize' in frame.url for frame in page.frames):
+                # A prior attempt imported only the CV. Start a fresh import so
+                # the complete packet is uploaded before the final-submit step.
+                page.reload(wait_until='domcontentloaded')
             page.wait_for_timeout(1000)
             try:
                 html = page.content()
@@ -117,15 +128,44 @@ def main(job_id: int):
             _update_status(job_id, 'preparing', apply_adapter=adapter.info.key, ats=ats)
 
             adapter.prepare(page)
-            page.wait_for_timeout(900)
+            form_scope = wait_for_form_scope(page)
+            if form_scope is None and consent_pending(page) and privacy_confirmed:
+                accept_confirmed_privacy(page)
+                form_scope = wait_for_form_scope(page)
+            if form_scope is None:
+                if consent_pending(page):
+                    _update_status(job_id, 'needs_human')
+                    _record(job_id, 'privacy_consent_required', 'Le site demande votre accord à la charte de données personnelles. Acceptez-la dans la fenêtre de candidature, puis relancez le pré-remplissage.')
+                    return
+                raise ValueError('Le formulaire de candidature n’est pas encore accessible. Aucun document n’a été joint.')
             letter_error = ''
             check_cancelled()
-            check_cancelled()
-            report = adapter.fill(page, profile, resume_path, job)
+            packet = None
+            upload_path = resume_path
+            if profile.get('cover_letter_path') and requires_combined_packet(form_scope):
+                packet = build_application_packet(resume_path, Path(profile['cover_letter_path']),
+                                                 ROOT / 'data' / 'application_packets' / f'job_{job_id}_cv_et_lettre.pdf')
+                upload_path = Path(packet['path'])
+            report = adapter.fill(form_scope, profile, upload_path, job)
+            if packet and 'resume' in report.get('filled', []):
+                report['filled'].append('cover_letter_file')
+                report['actions'].append({'field': 'cover_letter_file', 'strategy': 'combined_cv_letter_pdf',
+                                          'filename': upload_path.name, 'confidence': 100})
+            # Some ATS portals import the CV first, then render the full form.
+            if 'resume' in report.get('filled', []) and ('/consent' in form_scope.url or 'cover_letter_file' not in report.get('filled', [])):
+                page.wait_for_timeout(2500)
+                next_scope = wait_for_form_scope(page, timeout_seconds=45,
+                                                exclude_url=form_scope.url if '/consent' in form_scope.url else None)
+                if next_scope is not None:
+                    form_scope = next_scope
+                    second = adapter.fill(form_scope, profile, upload_path, job)
+                    for key in ('filled', 'actions', 'skipped_sensitive', 'skipped_ambiguous', 'errors'):
+                        report.setdefault(key, []).extend(second.get(key, []))
+                    report['filled'] = list(dict.fromkeys(report.get('filled', [])))
             if letter_error:
                 report['errors'].append('cover_letter: ' + letter_error)
             report['deterministic_passes'] = 1
-            snapshot = instrument_and_scan(page)
+            snapshot = instrument_and_scan(form_scope)
             unanswered, sensitive_unanswered, ordinary_unanswered = _required(snapshot)
 
             # Mature ATS fillers benefit from a second scan/fill pass because
@@ -134,13 +174,13 @@ def main(job_id: int):
             # guards; the agent only runs afterwards if needed.
             if ordinary_unanswered:
                 page.wait_for_timeout(800)
-                second = adapter.fill(page, profile, resume_path, job)
+                second = adapter.fill(form_scope, profile, upload_path, job)
                 if second.get('filled') or second.get('actions'):
                     for key in ('filled','actions','skipped_sensitive','skipped_ambiguous','errors'):
                         report.setdefault(key, []).extend(second.get(key, []))
                     report['filled'] = list(dict.fromkeys(report.get('filled', [])))
                     report['deterministic_passes'] = 2
-                snapshot = instrument_and_scan(page)
+                snapshot = instrument_and_scan(form_scope)
                 unanswered, sensitive_unanswered, ordinary_unanswered = _required(snapshot)
 
             agent_trace = None
@@ -188,6 +228,7 @@ def main(job_id: int):
                 'job_id': job_id,
                 'url': job.get('url', ''),
                 'page_url_after_prepare': page.url,
+                'form_url': form_scope.url,
                 'ats_detected': ats,
                 'adapter': adapter.info.__dict__,
                 'resume': {
@@ -203,6 +244,8 @@ def main(job_id: int):
                     'letter_attached': 'cover_letter_file' in report.get('filled', []),
                     'letter_text_filled': 'cover_letter_text' in report.get('filled', []),
                     'letter_error': letter_error,
+                    'attachment_mode': 'combined_pdf' if packet else 'separate_documents',
+                    'application_packet': packet,
                 },
                 'agent': {
                     'enabled': bool(agent_cfg.get('enabled', True)),
@@ -222,9 +265,15 @@ def main(job_id: int):
             audit_path = audit_dir / f'job_{job_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
             snap_path = snap_dir / f'job_{job_id}.json'
             _write_json(audit_path, audit)
+            if not audit['documents']['letter_attached']:
+                try:
+                    (audit_dir / f'job_{job_id}_form.html').write_text(form_scope.content(), encoding='utf-8')
+                except Exception:
+                    pass
             _write_json(snap_path, snapshot)
 
-            needs_human = bool(unanswered or letter_error or not resume_path or 'resume' not in report.get('filled', []) or (agent_trace and agent_trace.get('result') in {'HANDOFF', 'ERROR'}))
+            letter_missing = bool(profile.get('cover_letter_path') and not {'cover_letter_file', 'cover_letter_text'}.intersection(report.get('filled', [])))
+            needs_human = bool(unanswered or letter_error or letter_missing or not resume_path or 'resume' not in report.get('filled', []) or (agent_trace and agent_trace.get('result') in {'HANDOFF', 'ERROR'}))
             status = 'needs_human' if needs_human else 'prefilled'
             summary = (
                 f'{adapter.info.label}: {len(report.get("filled", []))} deterministic field(s) filled; '
@@ -271,4 +320,4 @@ def main(job_id: int):
 
 
 if __name__ == '__main__':
-    main(int(sys.argv[1]))
+    main(int(sys.argv[1]), privacy_confirmed='--privacy-confirmed' in sys.argv[2:])

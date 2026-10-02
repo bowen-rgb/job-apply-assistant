@@ -335,5 +335,8 @@
   "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Vorbereitung durch einen Zeichenkodierungsfehler unterbrochen. Erneut versuchen.",
   "Évaluation du poste": "Stellenbewertung",
   "Évaluation échouée": "Stellenbewertung fehlgeschlagen",
-  "Score de matching": "Übereinstimmungswert"
+  "Score de matching": "Übereinstimmungswert",
+  "Accord à la charte de données requis.": "Diese Recruiting-Seite benötigt Ihre Datenschutzeinwilligung.",
+  "Accepter pour cette candidature et continuer": "Für diese Bewerbung akzeptieren und fortfahren",
+  "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?": "Diesem Arbeitgeber die Verarbeitung Ihres Lebenslaufs und Anschreibens für diese Bewerbung erlauben und seine Datenschutzcharta akzeptieren?"
 }

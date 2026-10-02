@@ -425,9 +425,9 @@ def review_batch(mode: str = 'strong'):
 
 
 @app.post('/api/jobs/{job_id}/apply')
-def apply(job_id: int):
+def apply(job_id: int, privacy_confirmed: bool = False):
     try:
-        result = application_service.prefill(job_id)
+        result = application_service.prefill(job_id, privacy_confirmed=privacy_confirmed)
     except KeyError:
         raise HTTPException(404, 'job not found')
     except ValueError as exc:

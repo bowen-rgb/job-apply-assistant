@@ -335,5 +335,8 @@
   "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La preparación anterior se interrumpió por un error de codificación. Reintenta.",
   "Évaluation du poste": "Evaluación del puesto",
   "Évaluation échouée": "Evaluación fallida",
-  "Score de matching": "Puntuación de afinidad"
+  "Score de matching": "Puntuación de afinidad",
+  "Accord à la charte de données requis.": "Este sitio de empleo requiere tu consentimiento de privacidad.",
+  "Accepter pour cette candidature et continuer": "Aceptar para esta candidatura y continuar",
+  "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?": "¿Permitir a este empleador tratar tu CV y carta para esta candidatura y aceptar su carta de datos personales?"
 }

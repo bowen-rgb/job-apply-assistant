@@ -335,5 +335,8 @@
   "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "上次准备因字符编码错误中断，修复后可重试。",
   "Évaluation du poste": "岗位评估",
   "Évaluation échouée": "岗位评估失败",
-  "Score de matching": "匹配分数"
+  "Score de matching": "匹配分数",
+  "Accord à la charte de données requis.": "该招聘网站需要你确认个人数据章程。",
+  "Accepter pour cette candidature et continuer": "同意本次申请的数据章程并继续",
+  "Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?": "是否允许该招聘方为本次申请处理你的 CV 和求职信，并接受其个人数据章程？"
 }

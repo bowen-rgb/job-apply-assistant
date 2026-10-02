@@ -86,7 +86,7 @@ def safe_descriptor(page, loc, idx: int) -> tuple[str, str]:
         name = loc.get_attribute('name') or ''
     except Exception:
         pass
-    return label, norm(label + ' ' + name)
+    return label, norm(label + ' ' + name).replace('_', ' ')
 
 
 def _fill_if_empty(loc, value: Any) -> bool:
@@ -215,7 +215,9 @@ def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, r
             if LETTER_RX.search(attrs):
                 continue
             if RESUME_RX.search(attrs) or (files.count() == 1 and re.search(r'\.pdf|application/pdf|\.docx?', attrs, re.I)):
-                inp.set_input_files(str(resume_path))
+                selected = inp.evaluate('(e)=>Array.from(e.files||[]).map(f=>f.name)')
+                if resume_path.name not in selected:
+                    inp.set_input_files(str(resume_path))
                 report['filled'].append('resume')
                 report['actions'].append({'field': 'resume', 'strategy': 'generic_file', 'selector': label[:180], 'confidence': 90})
                 return
@@ -394,6 +396,14 @@ def generic_click_apply(page) -> bool:
     If the page already looks like an application form, do nothing. Final-submit wording is
     intentionally excluded even if some sites also use it as an entry CTA.
     """
+    # Reject optional cookies before they can intercept the application entry.
+    for name in (r'^Continuer sans accepter$', r'^Tout refuser$', r'^Reject all$'):
+        try:
+            button = page.get_by_role('button', name=re.compile(name, re.I)).first
+            if button.count() and button.is_visible():
+                button.click(timeout=2000)
+        except Exception:
+            pass
     try:
         likely_form_fields = page.locator(
             'input[type="email"], input[type="tel"], input[type="file"], '

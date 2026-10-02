@@ -203,6 +203,7 @@ function render(){
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
     ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}
     ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
+    ${j.last_workflow_event==='privacy_consent_required'?`<div class="application-error" role="status">${esc(tr('Accord à la charte de données requis.'))} <button onclick="approvePrivacy(${j.id})">${esc(tr('Accepter pour cette candidature et continuer'))}</button></div>`:''}
     ${reviewDetails(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a></div>
@@ -234,6 +235,15 @@ async function applyJob(id, verdict){
     statusEl.textContent=tr('Préparation de la lettre et du formulaire…'); await load();
   }catch(error){statusEl.textContent=error.message;}
 }
+async function approvePrivacy(id){
+  const job=allJobs.find(j=>j.id===id);
+  if(!job || !confirm(`${job.company||''}\n${job.url}\n\n${tr('Autoriser ce recruteur à traiter votre CV et votre lettre pour cette candidature, et accepter sa charte de données personnelles ?')}`)) return;
+  try{
+    await requestJson(`/api/jobs/${id}/apply?privacy_confirmed=true`,{method:'POST'});
+    await load();
+  }catch(error){statusEl.textContent=error.message;}
+}
+window.approvePrivacy=approvePrivacy;
 async function markApplication(id,status){
   await fetch(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
   statusEl.textContent=status==='submitted'?'Candidature marquée comme envoyée.':'Statut mis à jour.';
