@@ -118,6 +118,8 @@ class JobRepository:
                 (status, tracker, tracker, job_id),
             )
             conn.execute('INSERT INTO applications(job_id,status,note) VALUES(?,?,?)', (job_id, status or 'status_cleared', 'Manual dashboard status change'))
+            if status in {'submitted', 'submitted_verified', 'withdrawn'}:
+                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'running'", (status, job_id))
             if tracker:
                 conn.execute('INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,?,?)', (job_id, tracker, 'Application status changed from dashboard'))
 

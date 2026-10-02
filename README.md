@@ -23,6 +23,12 @@ Start with `start.bat`, then sign in to ChatGPT in the dedicated Chrome window. 
 
 ### Controlled application workflow
 
+The queue now separates **needs input on the recruitment site** from **prefilled, awaiting manual submission**. Each handoff shows CV/letter attachment checks, the number and labels of missing required fields when available, and an application-form link. Keep the prepared tab in the dedicated browser: opening the link in a new tab may not retain unsent form values. After submitting successfully on the recruitment site, use **I sent it on the site** to finish the local queue entry. This button only records your confirmation. Missing or unreadable audit files show an unknown state and require checking the site or preparing again.
+
+**Add strong matches** adds eligible jobs without duplicating entries or retrying failures. **Prepare the next** retains the one-application workflow. **Prepare the batch** processes the jobs queued at the start, sequentially, retaining each successful form for manual submission. Missing input, failure or cancellation pauses the batch. New jobs added while a batch runs wait for the next start. **Retry / prepare again** explicitly requeues an entry; then choose a preparation button. Submitted and withdrawn jobs cannot be requeued or retried. Recording a submission also completes its queue entry.
+
+This local implementation applies [Prefect's interactive workflow handoff](https://docs.prefect.io/v3/advanced/interactive) and [BullMQ's idempotent job pattern](https://docs.bullmq.io/patterns/idempotent-jobs): preparation and human submission have separate states, and retries are explicit. It does not add those systems as dependencies.
+
 Use **Rédiger la lettre** to generate and preview the French letter and download its PDF. It uses the selected CV and the actual job/company information. The ChatGPT letter conversation remains open for inspection. **Pré-remplir** reuses a matching letter, or generates it first; it then fills contact fields and attaches CV/letter to separately identified upload controls. Hidden dropzone inputs are matched with their own nearby text. The final submit control is never clicked.
 
 **Évaluer le poste** is a separate, optional job-fit review. Pre-fill no longer launches a review or AI navigation automatically. Advanced form navigation remains available only when `application.assisted_form_navigation` is explicitly enabled. **Passer** immediately hides the job from ordinary views and removes its pending preparation; **Ignorées → Restaurer** brings it back.

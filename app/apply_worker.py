@@ -256,6 +256,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                     'trace_path': (agent_trace or {}).get('trace_path', ''),
                 },
                 'required_unanswered_count': len(unanswered),
+                'required_unanswered_labels': [f.get('label') or f.get('name') or f.get('type', '') for f in unanswered],
                 'sensitive_or_legal_unanswered_count': len(sensitive_unanswered),
                 'captured_at': now,
                 'final_submit_performed_by_script': False,

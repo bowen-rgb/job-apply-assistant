@@ -10,6 +10,7 @@ from typing import Any
 from .browser import launch_apply
 from .db import connect
 from .worker_runtime import cancel
+from .preparation_summary import preparation_summary
 
 _lock = threading.Lock()
 _stop = threading.Event()
@@ -25,7 +26,7 @@ def _set(**kwargs):
 def status() -> dict[str, Any]:
     with connect() as c:
         counts = {r['status']: r['n'] for r in c.execute('SELECT status,COUNT(*) n FROM application_queue GROUP BY status').fetchall()}
-        rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.review_verdict,j.application_status,j.tracker_stage,
+        rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
                             COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
@@ -35,6 +36,8 @@ def status() -> dict[str, Any]:
     base['counts'] = counts
     base['items'] = [dict(r) for r in rows]
     for item in base['items']:
+        item['preparation'] = preparation_summary(item)
+        item.pop('fill_audit_path', None)
         if item['status'] == 'error' and item['note'] in {'error', 'timeout', ''}:
             item['note'] = item['failure_reason'] or item['note']
     return base
@@ -51,14 +54,29 @@ def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
             ids.append(n)
     with connect() as c:
         for jid in ids:
-            if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped'", (jid,)).fetchone():
+            if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped' AND application_status NOT IN ('submitted','submitted_verified','withdrawn')", (jid,)).fetchone():
                 continue
             c.execute('''INSERT INTO application_queue(job_id,status,priority,updated_at)
                          VALUES(?, 'queued', ?, CURRENT_TIMESTAMP)
                          ON CONFLICT(job_id) DO UPDATE SET
-                           status=CASE WHEN application_queue.status IN ('done','error','cancelled') THEN 'queued' ELSE application_queue.status END,
                            priority=excluded.priority, updated_at=CURRENT_TIMESTAMP''', (jid, priority))
             c.execute("UPDATE jobs SET tracker_stage=CASE WHEN tracker_stage='' THEN 'queued' ELSE tracker_stage END,updated_at=CURRENT_TIMESTAMP WHERE id=?", (jid,))
+    return status()
+
+
+def retry(job_id: int) -> dict[str, Any]:
+    # Explicit retries only: never repeat a submitted application or active task.
+    # https://docs.bullmq.io/patterns/idempotent-jobs
+    with connect() as c:
+        row = c.execute('''SELECT q.status,j.application_status,j.user_action
+                           FROM application_queue q JOIN jobs j ON j.id=q.job_id
+                           WHERE q.job_id=?''', (job_id,)).fetchone()
+        if not row:
+            raise KeyError(job_id)
+        if row['status'] not in {'error', 'cancelled', 'waiting_user'} or row['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'} or row['user_action'] == 'skipped':
+            raise ValueError('Application cannot be retried in its current state')
+        c.execute("UPDATE application_queue SET status='queued',note='',finished_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (job_id,))
+        c.execute("UPDATE jobs SET application_status='',updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
     return status()
 
 
@@ -98,20 +116,25 @@ def _wait_until_prepared(job_id: int, timeout: int = 240, process=None) -> str:
     return last or 'timeout'
 
 
-def _worker():
+def _worker(mode: str = 'one'):
     _set(running=True, started_at=datetime.now(timezone.utc).isoformat(), message='Queue worker running')
     try:
-        while not _stop.is_set():
+        with connect() as c:
+            pending_ids = [r['job_id'] for r in c.execute("SELECT job_id FROM application_queue WHERE status='queued' ORDER BY priority ASC,id ASC").fetchall()]
+        for pending_id in pending_ids:
+            if _stop.is_set():
+                break
             with connect() as c:
-                row = c.execute("SELECT * FROM application_queue WHERE status='queued' ORDER BY priority ASC,id ASC LIMIT 1").fetchone()
+                row = c.execute("SELECT * FROM application_queue WHERE status='queued' AND job_id=?", (pending_id,)).fetchone()
                 if not row:
-                    break
+                    continue
                 jid = int(row['job_id'])
                 c.execute("UPDATE application_queue SET status='running',attempts=attempts+1,started_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
             _set(current_job_id=jid, message=f'Preparing job {jid}')
             if _stop.is_set():
                 remove(jid)
                 break
+            result, qstatus = 'error', 'error'
             try:
                 with connect() as c:
                     existing = c.execute('SELECT application_status,fill_audit_path FROM jobs WHERE id=?', (jid,)).fetchone()
@@ -147,27 +170,36 @@ def _worker():
                         error = c.execute("SELECT note FROM applications WHERE job_id=? AND status IN ('apply_error','cover_letter_error') ORDER BY id DESC LIMIT 1", (jid,)).fetchone()
                         note = error['note'] if error else result
                     c.execute("UPDATE application_queue SET status=?,note=?,finished_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='running'", (qstatus, note, jid))
+                    saved = c.execute('SELECT status FROM application_queue WHERE job_id=?', (jid,)).fetchone()
+                    qstatus = saved['status'] if saved else 'cancelled'
             except Exception as exc:
                 with connect() as c:
                     c.execute("UPDATE application_queue SET status='error',note=?,finished_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='running'", (str(exc)[:500], jid))
-            _set(current_job_id=None, paused=True)
-            # Prepare one application per explicit start, then hand control back.
-            break
+                qstatus = 'error'
+            _set(current_job_id=None)
+            # Successful preparations can await manual submission independently.
+            # Missing input/errors pause the batch, as in Prefect's HITL pattern:
+            # https://docs.prefect.io/v3/advanced/interactive
+            if mode == 'one' or result == 'needs_human' or qstatus in {'error', 'cancelled'}:
+                _set(paused=True)
+                break
     finally:
         _set(running=False, current_job_id=None)
 
 
-def start() -> dict[str, Any]:
+def start(mode: str = 'one') -> dict[str, Any]:
+    if mode not in {'one', 'batch'}:
+        raise ValueError('Invalid queue mode')
     already = False
     with _lock:
         already = bool(_state['running'])
         if not already:
-            _state.update(running=True, paused=False, message='')
+            _state.update(running=True, paused=False, message='', mode=mode)
             _stop.clear()
     if not already:
         with connect() as c:
             c.execute("UPDATE application_queue SET status='error',note='Interrupted: retry explicitly',updated_at=CURRENT_TIMESTAMP WHERE status='running'")
-        threading.Thread(target=_worker, daemon=True, name='application-queue').start()
+        threading.Thread(target=_worker, args=(mode,), daemon=True, name='application-queue').start()
     return status()
 
 

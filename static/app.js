@@ -442,25 +442,52 @@ async function setStage(id,stage){
 async function removeQueue(id){await fetch(`/api/queue/${id}`,{method:'DELETE'});await loadPipeline();await load();}
 window.setStage=setStage;window.removeQueue=removeQueue;
 let pipelineTimer=null;
+function queueItemMarkup(x){
+  const p=x.preparation||{}, d=p.documents||{};
+  const waiting=x.status==='waiting_user';
+  const label=waiting?tr(x.application_status==='needs_human'?'À compléter sur le site':'Pré-remplie · envoi manuel requis'):statusLabel(x.status);
+  const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
+  const url=safeUrl(p.form_url)||safeUrl(x.url);
+  const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
+  const guidance=waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:'';
+  return `<div class="queue-item" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(statusLabels[x.note]?statusLabel(x.note):errorMessage(x.note))}`:''}</div>${checks}${guidance}<div class="queue-actions">${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${waiting?`<button class="primary compact" onclick="confirmQueueSubmitted(${x.job_id})">${esc(tr('J’ai envoyé sur le site'))}</button>`:''}${['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr(waiting?'Remettre en file pour préparer':'Réessayer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
+}
 async function loadPipeline(){
   clearTimeout(pipelineTimer);
   const [pr,qr,ar]=await Promise.all([fetch('/api/pipeline'),fetch('/api/queue'),fetch('/api/analytics')]);
   const jobs=await pr.json(), q=await qr.json(), a=await ar.json();
   el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · ${tr(q.running?'Préparation en cours':'File arrêtée')}`;
   el('queueRunBtn').disabled=q.running||!(q.counts?.queued);
+  el('queueBatchBtn').disabled=q.running||!(q.counts?.queued);
   el('queueStopBtn').disabled=!q.running;
   el('queueRunBtn').textContent=tr(q.running?'Préparation en cours':'Préparer la suivante');
-  el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':'Une candidature à la fois. Vérifiez le résultat avant de continuer.');
+  el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':q.paused?'Préparation en pause. Vérifiez le résultat avant de continuer.':'Les candidatures pré-remplies attendent votre envoi sur le site.');
   if(q.running&&!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(loadPipeline,1500);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(statusLabels[x.note]?statusLabel(x.note):errorMessage(x.note))}`:''}</div>${['error','cancelled'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Réessayer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
+  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(queueItemMarkup).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
   el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
   observeTitles();
 }
-el('queueRunBtn').onclick=async()=>{await requestJson('/api/queue/start',{method:'POST'});await loadPipeline();};
+async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
+el('queueRunBtn').onclick=()=>startPreparation('one');
+el('queueBatchBtn').onclick=()=>startPreparation('batch');
+el('queueAddMatchesBtn').onclick=async()=>{
+  try{
+    await load();
+    const ids=allJobs.filter(j=>matchFilter(j,'keep')&&!['submitted','submitted_verified','withdrawn'].includes(j.application_status)).map(j=>j.id);
+    for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100)})});
+    await loadPipeline();
+    if(!ids.length)el('pipelineStatus').textContent=tr('Aucun match fort à ajouter.');
+  }catch(error){el('pipelineStatus').textContent=error.message;}
+};
 el('queueStopBtn').onclick=async()=>{await requestJson('/api/queue/stop',{method:'POST'});await loadPipeline();};
-async function retryQueue(id){await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id]})});await loadPipeline();}
+async function retryQueue(id){try{await requestJson(`/api/queue/${id}/retry`,{method:'POST'});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}}
+async function confirmQueueSubmitted(id){
+  if(!confirm(tr('Avez-vous déjà envoyé cette candidature sur le site du recruteur ? Ce bouton met uniquement à jour le suivi local.')))return;
+  try{await requestJson(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status:'submitted'})});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}
+}
+window.confirmQueueSubmitted=confirmQueueSubmitted;
 window.retryQueue=retryQueue;
 el('queueClearBtn').onclick=async()=>{await fetch('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
 el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};

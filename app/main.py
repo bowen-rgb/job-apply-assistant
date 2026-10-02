@@ -5,6 +5,7 @@ import tempfile
 from datetime import datetime, timezone
 import urllib.request
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, Response, JSONResponse
@@ -46,6 +47,7 @@ from .cover_letter import letter_paths, save_letter_state
 from .job_translation import translate_jobs, local_title
 from .worker_runtime import launch as launch_worker, cancel as cancel_worker
 from .queue_manager import stop as queue_stop
+from .queue_manager import retry as queue_retry
 
 STATIC = ROOT / 'static'
 
@@ -447,8 +449,18 @@ def add_queue(payload: QueueRequest):
 
 
 @app.post('/api/queue/start')
-def start_queue():
-    return queue_start()
+def start_queue(mode: Literal['one', 'batch'] = 'one'):
+    return queue_start(mode)
+
+
+@app.post('/api/queue/{job_id}/retry')
+def retry_queue(job_id: int):
+    try:
+        return queue_retry(job_id)
+    except KeyError:
+        raise HTTPException(404, 'Queue item not found')
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
 
 
 @app.delete('/api/queue/{job_id}')

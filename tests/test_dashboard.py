@@ -71,3 +71,61 @@ class DashboardMetricTests(unittest.TestCase):
             human.click()
             check_metrics(1, 1)
             self.assertEqual(errors, [])
+
+    def test_queue_explains_handoff_and_batch_retry_submission_actions(self):
+        preparation = dict(audit_available=True, form_url='https://recruiter.test/prepared',
+                           documents={'resume_attached': True, 'letter_attached': False},
+                           required_unanswered=1, missing_fields=['Availability date'])
+        items = [dict(job_id=1, title='Needs input', status='waiting_user',
+                      application_status='needs_human', preparation=preparation),
+                 dict(job_id=2, title='Prepared', status='waiting_user',
+                      application_status='prefilled', preparation={'audit_available': False}),
+                 dict(job_id=3, title='Next job', status='queued')]
+        posts = []
+        with sync_playwright() as playwright, ExitStack() as cleanup:
+            browser = playwright.chromium.launch(headless=True)
+            cleanup.callback(browser.close)
+            page = browser.new_page(locale='zh-CN')
+            errors = []
+            page.on('pageerror', lambda error: errors.append(str(error)))
+
+            def respond(route):
+                path = urlparse(route.request.url).path
+                if path == '/':
+                    route.fulfill(path=str(STATIC / 'index.html'), content_type='text/html')
+                elif path.startswith('/static/'):
+                    route.fulfill(path=str(STATIC / path.removeprefix('/static/')))
+                elif route.request.method == 'POST':
+                    posts.append(route.request.url)
+                    if path.endswith('/application-status'):
+                        items[0]['status'] = 'done'
+                        items[0]['application_status'] = 'submitted'
+                    route.fulfill(json={'ok': True})
+                elif path == '/api/queue':
+                    route.fulfill(json={'items': items, 'counts': {'queued': 1}, 'running': False})
+                elif path == '/api/analytics':
+                    route.fulfill(json={'totals': {}})
+                else:
+                    route.fulfill(json=[] if path in {'/api/jobs', '/api/sources', '/api/pipeline'} else {})
+
+            page.route('**/*', respond)
+            page.goto('http://dashboard.test/')
+            page.locator('#pipelineNav').click()
+            first = page.locator('[data-queue-job="1"]')
+            expect(first).to_contain_text('需在招聘网站补充')
+            expect(first).to_contain_text('简历已附上')
+            expect(first).to_contain_text('尚未填写的必填项： 1')
+            expect(first).to_contain_text('Availability date')
+            expect(first.locator('a')).to_have_attribute('href', preparation['form_url'])
+            expect(page.locator('[data-queue-job="2"]')).to_contain_text('准备记录不可用')
+            with page.expect_request('**/api/queue/start?mode=batch'):
+                page.locator('#queueBatchBtn').click()
+            self.assertTrue(any('/api/queue/start?mode=batch' in url for url in posts))
+            first.locator('button[onclick="retryQueue(1)"]').click()
+            expect(first).to_be_visible()
+            self.assertTrue(any('/api/queue/1/retry' in url for url in posts))
+            page.on('dialog', lambda dialog: dialog.accept())
+            first.locator('button[onclick="confirmQueueSubmitted(1)"]').click()
+            expect(first.locator('.queue')).to_have_text('已完成')
+            expect(first.locator('button[onclick="confirmQueueSubmitted(1)"]')).to_have_count(0)
+            self.assertEqual(errors, [])
