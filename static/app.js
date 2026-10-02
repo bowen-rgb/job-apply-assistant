@@ -138,17 +138,17 @@ async function load(){
   }finally{cards.setAttribute('aria-busy','false');}
 }
 
-function matchFilter(j){
-  if(current==='skipped') return j.user_action==='skipped';
+function matchFilter(j,filter=current){
+  if(filter==='skipped') return j.user_action==='skipped';
   if(j.user_action==='skipped') return false;
-  if(current==='all') return true;
-  if(['keep','review'].includes(current)) return j.decision===current;
-  if(current==='liked') return j.user_action==='liked';
-  if(current==='approved') return j.review_verdict==='APPLY';
-  if(current==='human') return j.review_verdict==='HUMAN_REVIEW';
-  if(current==='queued') return !!j.queue_status && !['done','error','cancelled'].includes(j.queue_status);
-  if(current==='submitted') return ['submitted','submitted_verified'].includes(j.application_status);
-  if(current==='expired') return ['expired','reject'].includes(j.decision) || j.availability_status==='expired' || j.review_verdict==='SKIP';
+  if(filter==='all') return true;
+  if(['keep','review'].includes(filter)) return j.decision===filter;
+  if(filter==='liked') return j.user_action==='liked';
+  if(filter==='approved') return j.review_verdict==='APPLY';
+  if(filter==='human') return j.review_verdict==='HUMAN_REVIEW';
+  if(filter==='queued') return !!j.queue_status && !['done','error','cancelled'].includes(j.queue_status);
+  if(filter==='submitted') return ['submitted','submitted_verified'].includes(j.application_status);
+  if(filter==='expired') return ['expired','reject'].includes(j.decision) || j.availability_status==='expired' || j.review_verdict==='SKIP';
   return true;
 }
 
@@ -187,11 +187,10 @@ function render(){
     if(!q) return true;
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
-  const liked=allJobs.filter(j=>j.user_action==='liked').length;
-  const keep=allJobs.filter(j=>j.decision==='keep'&&j.user_action!=='skipped').length;
-  const approved=allJobs.filter(j=>j.review_verdict==='APPLY').length;
-  const human=allJobs.filter(j=>j.review_verdict==='HUMAN_REVIEW').length;
-  const submitted=allJobs.filter(j=>['submitted','submitted_verified'].includes(j.application_status)).length;
+  const liked=allJobs.filter(j=>matchFilter(j,'liked')).length;
+  const keep=allJobs.filter(j=>matchFilter(j,'keep')).length;
+  const human=allJobs.filter(j=>matchFilter(j,'human')).length;
+  const submitted=allJobs.filter(j=>matchFilter(j,'submitted')).length;
   summary.textContent=`${jobs.length} / ${allJobs.length} ${tr('offres')}`;
   el('jobMetrics').innerHTML=[[tr('Offres'),allJobs.length,'all'],[tr('Match fort'),keep,'keep'],[tr('Aimées'),liked,'liked'],[tr('À vérifier'),human,'human'],[tr('Envoyées'),submitted,'submitted']].map(([label,count,filter])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${count}</b></button>`).join('');
   el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>{current=button.dataset.metricFilter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();});
