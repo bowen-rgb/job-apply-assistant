@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import threading
 import time
+import json
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
@@ -95,8 +97,24 @@ def _worker():
                 c.execute("UPDATE application_queue SET status='running',attempts=attempts+1,started_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
             _set(current_job_id=jid, message=f'Preparing job {jid}')
             try:
-                launch_apply(jid)
-                result = _wait_until_prepared(jid)
+                with connect() as c:
+                    existing = c.execute('SELECT application_status,fill_audit_path FROM jobs WHERE id=?', (jid,)).fetchone()
+                result = existing['application_status'] if existing else 'error'
+                prepared = False
+                if existing and result in {'prefilled', 'needs_human'}:
+                    try:
+                        audit = json.loads(Path(existing['fill_audit_path']).read_text(encoding='utf-8'))
+                        documents = audit.get('documents', {})
+                        prepared = bool(documents.get('resume_attached') and documents.get('letter_generated'))
+                    except (OSError, ValueError, TypeError):
+                        pass
+                if not prepared and result not in {'submitted', 'submitted_verified', 'withdrawn'}:
+                    # Clear stale terminal state before launch so polling cannot
+                    # mistake a previous attempt for completion of this one.
+                    with connect() as c:
+                        c.execute("UPDATE jobs SET application_status='opening',updated_at=CURRENT_TIMESTAMP WHERE id=?", (jid,))
+                    launch_apply(jid)
+                    result = _wait_until_prepared(jid, timeout=600)
                 if result in {'prefilled', 'needs_human'}:
                     qstatus = 'waiting_user'
                 elif result in {'submitted', 'submitted_verified', 'withdrawn'}:

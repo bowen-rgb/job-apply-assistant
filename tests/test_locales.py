@@ -1,5 +1,6 @@
 import json
 import unittest
+import re
 from pathlib import Path
 
 
@@ -19,6 +20,8 @@ class LocaleCatalogTests(unittest.TestCase):
                 self.assertIn('Ouvrir l’offre ↗', translations)
         self.assertEqual(catalogs['zh']['Offres'], '岗位')
         self.assertEqual(catalogs['en']['Offres'], 'Jobs')
+        self.assertFalse(any(re.search('[\u4e00-\u9fff]', value) for value in catalogs['fr'].values()))
+        self.assertEqual(catalogs['fr']['+ File'], 'Ajouter à la file')
 
 
 if __name__ == '__main__':

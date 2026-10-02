@@ -114,6 +114,8 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
         return str(obj.get('verdict', '')).upper().strip() in {'APPLY', 'SKIP', 'HUMAN_REVIEW'}
     if purpose == 'job-agent':
         return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
+    if purpose == 'cover-letter':
+        return isinstance(obj.get('letter'), str) and bool(obj['letter'].strip())
     return True
 
 
@@ -133,7 +135,7 @@ def _extract_json_for_purpose(text: str, purpose: str) -> dict[str, Any] | None:
     return found
 
 
-def _page_json(page, purpose: str) -> dict[str, Any] | None:
+def _page_json(page, purpose: str, previous: list[dict] | None = None) -> dict[str, Any] | None:
     # Fast path: known assistant/turn containers.
     for sel in (
         '[data-message-author-role="assistant"]',
@@ -145,10 +147,10 @@ def _page_json(page, purpose: str) -> dict[str, Any] | None:
         try:
             loc = page.locator(sel)
             n = min(loc.count(), 80)
-            for i in range(max(0, n - 12), n):
+            for i in reversed(range(max(0, n - 12), n)):
                 try:
                     obj = _extract_json_for_purpose(loc.nth(i).inner_text(timeout=1000), purpose)
-                    if obj is not None:
+                    if obj is not None and obj not in (previous or []):
                         return obj
                 except Exception:
                     pass
@@ -178,6 +180,7 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                 raise RuntimeError('ChatGPT prompt box not found. Log in to chatgpt.com in the shared Chrome profile.')
 
             before = _assistant_messages(page)
+            previous_json = [obj for message in before if (obj := _extract_json_for_purpose(message, purpose)) is not None]
             _set_prompt(box, prompt)
             box.press('Enter')
 
@@ -191,7 +194,7 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                 # ChatGPT web changes its message DOM periodically. Prefer a
                 # complete typed JSON object visible anywhere in the recent
                 # conversation over relying on one assistant selector.
-                obj = _page_json(page, purpose)
+                obj = _page_json(page, purpose, previous_json)
                 if obj is not None:
                     return obj
 
@@ -207,15 +210,15 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                 last = response
                 if response and stable >= 2:
                     obj = _extract_json_for_purpose(response, purpose)
-                    if obj is not None:
+                    if obj is not None and obj not in previous_json:
                         return obj
 
-            obj = _page_json(page, purpose)
+            obj = _page_json(page, purpose, previous_json)
             if obj is not None:
                 return obj
             if response:
                 obj = _extract_json_for_purpose(response, purpose)
-                if obj is not None:
+                if obj is not None and obj not in previous_json:
                     return obj
             raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
         finally:

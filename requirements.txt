@@ -6,3 +6,5 @@ beautifulsoup4==4.13.4
 filelock==3.18.0
 python-multipart==0.0.20
 click==8.3.0
+pypdf==6.19.0
+reportlab==5.0.1

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import tempfile
+import subprocess
+import sys
+from datetime import datetime, timezone
 import urllib.request
 from pathlib import Path
 
@@ -40,6 +43,7 @@ from .contracts import (
 )
 from .repositories import JobRepository
 from .services import ApplicationService
+from .cover_letter import letter_paths, save_letter_state
 
 STATIC = ROOT / 'static'
 
@@ -278,6 +282,51 @@ def set_application_status(job_id: int, payload: ApplicationStatus):
 @app.get('/api/jobs/{job_id}/applications')
 def application_history(job_id: int):
     return job_repository.history(job_id)
+
+
+@app.get('/api/jobs/{job_id}/letter')
+def letter_status(job_id: int):
+    if not job_repository.exists(job_id):
+        raise HTTPException(404, 'job not found')
+    metadata, _ = letter_paths(job_id)
+    state = json.loads(metadata.read_text(encoding='utf-8')) if metadata.exists() else {'status': 'missing'}
+    if state.get('status') == 'generating':
+        try:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(state['updated_at'])).total_seconds()
+        except (KeyError, ValueError):
+            age = 601
+        if age > 600:
+            return {'status': 'error', 'error': 'La génération a été interrompue. Réessayez.'}
+    return state
+
+
+@app.post('/api/jobs/{job_id}/letter')
+def create_letter(job_id: int):
+    state = letter_status(job_id)
+    if state.get('status') == 'generating':
+        return {'ok': True, 'status': 'generating'}
+    raw = load_profile_raw()
+    if not active_resume_path(raw):
+        raise HTTPException(400, 'Ajoutez ou activez un CV dans le profil.')
+    if not runtime_profile(raw).get('chatgpt_web_reviewer', {}).get('enabled', True):
+        raise HTTPException(400, 'Activez ChatGPT Web dans le profil.')
+    save_letter_state(job_id, {'status': 'generating'})
+    try:
+        subprocess.Popen([sys.executable, '-m', 'app.cover_letter_worker', str(job_id)], cwd=str(ROOT),
+                         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform.startswith('win') else 0)
+    except Exception as exc:
+        save_letter_state(job_id, {'status': 'error', 'error': str(exc)})
+        raise HTTPException(500, 'Impossible de démarrer la génération.')
+    return {'ok': True, 'status': 'generating'}
+
+
+@app.get('/api/jobs/{job_id}/letter/pdf')
+def download_letter(job_id: int):
+    state = letter_status(job_id)
+    _, pdf = letter_paths(job_id)
+    if state.get('status') != 'ready' or not pdf.is_file():
+        raise HTTPException(404, 'Lettre indisponible')
+    return FileResponse(pdf, media_type='application/pdf', filename=f'lettre_motivation_{job_id}.pdf')
 
 
 @app.get('/api/jobs/{job_id}/audit')

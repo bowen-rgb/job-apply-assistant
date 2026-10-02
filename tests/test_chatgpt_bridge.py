@@ -4,6 +4,11 @@ from app.chatgpt_bridge import _extract_json_for_purpose
 
 
 class ChatGPTBridgeTests(unittest.TestCase):
+    def test_letter_prompt_cannot_be_mistaken_for_response(self):
+        self.assertIsNone(_extract_json_for_purpose('Schéma {"letter":""}', 'cover-letter'))
+        response = _extract_json_for_purpose('Schéma {"letter":""}\n{"letter":"Madame, Monsieur, voici ma candidature."}', 'cover-letter')
+        self.assertTrue(response['letter'].startswith('Madame'))
+
     def test_final_review_ignores_prompt_schema_example(self):
         text = '''
 Return ONLY JSON:

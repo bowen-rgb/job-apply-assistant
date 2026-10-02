@@ -15,6 +15,7 @@ from .db import connect
 from .form_scanner import instrument_and_scan
 from .profile_store import load_profile_raw, runtime_profile, select_resume_for_job
 from .review_launcher import launch_review
+from .cover_letter import generate_letter, letter_paths
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -103,7 +104,18 @@ def main(job_id: int):
 
             adapter.prepare(page)
             page.wait_for_timeout(900)
+            letter_error = ''
+            if raw_profile.get('application', {}).get('generate_cover_letter', True):
+                try:
+                    letter = generate_letter(context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
+                    profile['cover_letter_text'] = letter['letter']
+                    profile['cover_letter_path'] = str(letter_paths(job_id)[1])
+                except Exception as exc:
+                    letter_error = str(exc)
+                    _record(job_id, 'cover_letter_error', letter_error)
             report = adapter.fill(page, profile, resume_path, job)
+            if letter_error:
+                report['errors'].append('cover_letter: ' + letter_error)
             report['deterministic_passes'] = 1
             snapshot = instrument_and_scan(page)
             unanswered, sensitive_unanswered, ordinary_unanswered = _required(snapshot)
@@ -174,6 +186,14 @@ def main(job_id: int):
                     'auto_routed': bool(raw_profile.get('application', {}).get('auto_resume_routing', False)),
                 },
                 'report': report,
+                'documents': {
+                    'resume_available': bool(resume_path and resume_path.is_file()),
+                    'resume_attached': 'resume' in report.get('filled', []),
+                    'letter_generated': bool(profile.get('cover_letter_text')),
+                    'letter_attached': 'cover_letter_file' in report.get('filled', []),
+                    'letter_text_filled': 'cover_letter_text' in report.get('filled', []),
+                    'letter_error': letter_error,
+                },
                 'agent': {
                     'enabled': bool(agent_cfg.get('enabled', True)),
                     'triggered': should_agent,
@@ -194,7 +214,7 @@ def main(job_id: int):
             _write_json(audit_path, audit)
             _write_json(snap_path, snapshot)
 
-            needs_human = bool(sensitive_unanswered or (agent_trace and agent_trace.get('result') in {'HANDOFF', 'ERROR'} and unanswered))
+            needs_human = bool(unanswered or letter_error or not resume_path or 'resume' not in report.get('filled', []) or (agent_trace and agent_trace.get('result') in {'HANDOFF', 'ERROR'}))
             status = 'needs_human' if needs_human else 'prefilled'
             summary = (
                 f'{adapter.info.label}: {len(report.get("filled", []))} deterministic field(s) filled; '

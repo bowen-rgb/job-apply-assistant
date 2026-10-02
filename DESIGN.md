@@ -7,9 +7,9 @@ This is an **operate** dashboard: a calm local control room for finding, reviewi
 ## Visual direction
 
 - **Shape:** one coherent language. Cards and settings panels use a 12–16px radius; controls use 8–10px; pills are reserved for status and compact labels.
-- **Color:** the dark blue surface is the workspace; aqua is the single action accent; green, amber and red communicate success, attention and blocked states. Decorative gradients stay quiet and never compete with job titles or actions.
+- **Color:** warm paper surfaces (`#f6f5f0`, `#fdfcf9`) support daytime reading; forest green (`#305c45`) marks the next action. A slightly darker neutral sidebar separates navigation. Amber and red indicate attention and errors. No decorative gradients.
 - **Typography:** use the system UI stack for fast local rendering and multilingual coverage. Headings are compact with negative tracking; body text stays readable at 13–14px; counts use tabular numerals where available.
-- **Density:** compact cards and a horizontal pipeline support an operator scanning many openings. Spacing still increases at the mobile breakpoint so touch targets remain comfortable.
+- **Density:** compact metric rows, quiet status labels, and collapsible matching details support scanning. The primary pre-fill action leads each card; queue controls spell out their behavior. A single filtered offer gets a wider reading column. The horizontal pipeline stays scrollable and mobile navigation wraps above content.
 - **Motion:** short hover/focus transitions only. `prefers-reduced-motion` disables movement.
 
 ## Interaction rules

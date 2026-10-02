@@ -153,8 +153,13 @@ def fill_exact_selectors(page, mapping: dict[str, list[str]], profile: dict, rep
                 report['errors'].append(f'{key}:{selector}:{exc}'[:300])
 
 
+LETTER_RX = re.compile(r'cover.?letter|lettre|motivation|supporting.?letter', re.I)
+RESUME_RX = re.compile(r'\bcv\b|r[eé]sum[eé]|curriculum', re.I)
+
+
 def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, report: dict) -> None:
     if not resume_path or not resume_path.exists():
+        report['errors'].append('resume: Aucun CV disponible dans le profil')
         return
     tried: set[str] = set()
     for selector in selectors or []:
@@ -164,6 +169,9 @@ def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, r
         try:
             loc = page.locator(selector).first
             if loc.count():
+                descriptor = label_for(page, loc, 0) + ' ' + (loc.get_attribute('name') or '')
+                if LETTER_RX.search(descriptor):
+                    continue
                 loc.set_input_files(str(resume_path))
                 report['filled'].append('resume')
                 report['actions'].append({'field': 'resume', 'strategy': 'ats_selector', 'selector': selector, 'confidence': 100})
@@ -182,13 +190,31 @@ def upload_resume(page, resume_path: Path | None, selectors: list[str] | None, r
                 inp.get_attribute('id') or '',
                 inp.get_attribute('accept') or '',
             ])
-            if re.search(r'\bcv\b|resume|curriculum|\.pdf|application/pdf|\.docx?', attrs, re.I):
+            if LETTER_RX.search(attrs):
+                continue
+            if RESUME_RX.search(attrs) or (files.count() == 1 and re.search(r'\.pdf|application/pdf|\.docx?', attrs, re.I)):
                 inp.set_input_files(str(resume_path))
                 report['filled'].append('resume')
                 report['actions'].append({'field': 'resume', 'strategy': 'generic_file', 'selector': label[:180], 'confidence': 90})
                 return
         except Exception as exc:
             report['errors'].append(f'resume_generic:{exc}'[:300])
+
+
+def upload_cover_letter(page, path: Path | None, report: dict) -> None:
+    if not path or not path.is_file():
+        return
+    files = page.locator('input[type="file"]')
+    for index in range(min(files.count(), 30)):
+        field = files.nth(index)
+        descriptor = label_for(page, field, index) + ' ' + (field.get_attribute('name') or '')
+        if LETTER_RX.search(descriptor):
+            try:
+                field.set_input_files(str(path))
+                report['filled'].append('cover_letter_file')
+                report['actions'].append({'field': 'cover_letter_file', 'strategy': 'label_rule', 'confidence': 95})
+            except Exception as exc:
+                report['errors'].append(f'cover_letter:{exc}'[:300])
 
 
 def generic_fill(page, profile: dict, resume_path: Path | None = None) -> dict[str, Any]:
@@ -245,6 +271,11 @@ def generic_fill(page, profile: dict, resume_path: Path | None = None) -> dict[s
                 continue
 
             matched = False
+            if tag in {'textarea', 'input'} and LETTER_RX.search(desc) and profile.get('cover_letter_text'):
+                if _fill_if_empty(loc, profile['cover_letter_text']):
+                    report['filled'].append('cover_letter_text')
+                    report['actions'].append({'field': 'cover_letter_text', 'strategy': 'job_specific_letter', 'confidence': 95})
+                continue
             for rx, key in FIELD_RULES:
                 if re.search(rx, desc, re.I):
                     value = full_name if key == '__full_name__' else profile.get(key, '')
@@ -270,6 +301,7 @@ def generic_fill(page, profile: dict, resume_path: Path | None = None) -> dict[s
             report['errors'].append(f'field_{i}:{exc}'[:300])
 
     upload_resume(page, resume_path, None, report)
+    upload_cover_letter(page, Path(profile['cover_letter_path']) if profile.get('cover_letter_path') else None, report)
     report['filled'] = list(dict.fromkeys(report['filled']))
     report['skipped_sensitive'] = list(dict.fromkeys(report['skipped_sensitive']))
     report['skipped_ambiguous'] = list(dict.fromkeys(report['skipped_ambiguous']))[:80]

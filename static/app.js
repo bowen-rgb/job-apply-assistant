@@ -25,6 +25,8 @@ const lines=s=>String(s||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);
 const toLines=a=>(a||[]).join('\n');
 const el=id=>document.getElementById(id);
 const tr=key=>Locale.t(key);
+const statusLabels={keep:'Match fort',review:'À vérifier',reject:'Refus',liked:'Aimées',skipped:'Passer',prefilled:'Pré-remplie',needs_human:'À compléter',opening:'Ouverture…',preparing:'Préparation…',queued:'En file',running:'En cours',waiting_user:'À vérifier avant envoi',done:'Terminée',error:'Erreur',prepared:'Préparée',saved:'Sauvegardée',submitted:'Envoyée',submitted_verified:'vérifiée',APPLY:'Candidature conseillée',SKIP:'À écarter',HUMAN_REVIEW:'À vérifier',QUEUED:'En file',RUNNING:'En cours',ERROR:'Erreur'};
+const statusLabel=value=>tr(statusLabels[value]||value);
 
 function showView(which){
   const jobs=which==='jobs', profile=which==='profile', pipeline=which==='pipeline';
@@ -63,9 +65,11 @@ async function load(){
   try{
     const r=await fetch('/api/jobs');
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    allJobs=await r.json();
-    render();
-    const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict));
+    const jobs=await r.json();
+    const changed=JSON.stringify(jobs)!==JSON.stringify(allJobs);
+    allJobs=jobs;
+    if(changed || !cards.children.length)render();
+    const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict)||['opening','preparing'].includes(j.application_status)||j.queue_status==='running');
     if(running && !pollTimer) pollTimer=setInterval(load,3500);
     if(!running && pollTimer){clearInterval(pollTimer);pollTimer=null;}
   }catch(e){
@@ -91,7 +95,7 @@ function reviewBadge(j){
   if(!v) return `<span class="review none">${esc(tr('Pas relu'))}</span>`;
   const cls=v==='APPLY'?'applyok':v==='SKIP'?'skipbad':v==='HUMAN_REVIEW'?'human':v==='ERROR'?'err':'running';
   const conf=j.review_confidence?` · ${j.review_confidence}%`:'';
-  return `<span class="review ${cls}">${esc(v)}${conf}</span>`;
+  return `<span class="review ${cls}">${esc(statusLabel(v))}${conf}</span>`;
 }
 
 function fact(label,value){
@@ -132,11 +136,12 @@ function render(){
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
     <div class="top"><div><div class="title">${esc(j.title||tr('Offre sans titre'))}</div><div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
-    <div class="meta"><span class="tag">${esc(j.decision)}</span>${j.user_action?`<span class="tag user">${esc(j.user_action)}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(j.application_status)}</span>`:''}${j.queue_status?`<span class="tag queue">file: ${esc(j.queue_status)}</span>`:''}${j.tracker_stage?`<span class="tag stage">${esc(j.tracker_stage)}</span>`:''}<span class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
+    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
-    <div class="reason">${esc(j.reason||'')}</div>
+    ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}
     ${reviewDetails(j)}
+    <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a></div>
     <div class="actions five">
       <button class="skip" onclick="decide(${j.id},'skipped')">${esc(tr('Passer'))}</button>
@@ -164,7 +169,8 @@ async function applyJob(id, verdict){
   else if(verdict==='HUMAN_REVIEW'){if(!confirm(tr('Le reviewer demande une vérification humaine. Ouvrir le formulaire ?'))) return;}
   statusEl.textContent='Ouverture du formulaire…';
   const r=await fetch(`/api/jobs/${id}/apply`,{method:'POST'}); const x=await r.json();
-  statusEl.textContent=x.message||'Ouvert'; setTimeout(load,1500);
+  if(!r.ok){statusEl.textContent=x.detail||tr('Erreur');return;}
+  statusEl.textContent=tr('Ouverture du formulaire…'); setTimeout(load,1500);
 }
 async function markApplication(id,status){
   await fetch(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
@@ -172,9 +178,31 @@ async function markApplication(id,status){
   await load();
 }
 async function queueJob(id){
-  await fetch('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id],priority:100})});
-  statusEl.textContent='Ajoutée à la file de pré-remplissage.'; await load();
+  try{
+    await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id],priority:100})});
+    statusEl.textContent=tr('Ajoutée à la file. Cliquez sur « Démarrer la file » pour préparer les candidatures.'); await load();
+  }catch(error){statusEl.textContent=error.message;}
 }
+async function requestJson(url,options={}){
+  const response=await fetch(url,options);const data=await response.json();
+  if(!response.ok)throw new Error(data.detail||tr('Erreur'));
+  return data;
+}
+async function loadLetter(id){
+  const target=el(`letter-${id}`);if(!target)return;
+  try{
+    const state=await requestJson(`/api/jobs/${id}/letter`);
+    if(!target.isConnected)return;
+    if(state.status==='ready')target.innerHTML=`<p class="letter-copy">${esc(state.letter)}</p><a href="/api/jobs/${id}/letter/pdf" target="_blank" rel="noopener">${esc(tr('Télécharger la lettre PDF'))}</a> <button class="ghost compact" onclick="generateLetter(${id})">${esc(tr('Actualiser la lettre'))}</button>`;
+    else if(state.status==='generating'){target.textContent=tr('Génération via ChatGPT en cours…');setTimeout(()=>{if(target.isConnected&&target.closest('details').open)loadLetter(id);},2500);}
+    else target.innerHTML=`<p>${esc(state.error||tr('Une lettre spécifique au poste sera générée à partir de votre CV et de votre profil.'))}</p><button class="primary compact" onclick="generateLetter(${id})">${esc(tr('Générer avec ChatGPT'))}</button>`;
+  }catch(error){target.textContent=error.message;}
+}
+async function generateLetter(id){
+  try{await requestJson(`/api/jobs/${id}/letter`,{method:'POST'});await loadLetter(id);}
+  catch(error){el(`letter-${id}`).textContent=error.message;}
+}
+window.loadLetter=loadLetter;window.generateLetter=generateLetter;
 window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; window.markApplication=markApplication; window.queueJob=queueJob;
 
 async function pollScan(){
@@ -281,6 +309,7 @@ async function loadProfile(){
     searchProfiles=au.search_profiles||[];
     const ag=au.agent_fallback||{};setChecked('agent_enabled',ag.enabled!==false);setValue('agent_max_steps',ag.max_steps??8);setValue('agent_min_confidence',ag.min_action_confidence??82);setChecked('agent_allow_next',ag.allow_next_clicks!==false);setChecked('agent_for_assisted',ag.run_for_agent_assisted_ats!==false);setChecked('agent_for_required',ag.run_when_required_unanswered!==false);setChecked('agent_screenshots',ag.screenshot_each_step===true);setValue('company_boards',toLines(au.company_boards||[]));
     setChecked('auto_resume_routing',loadedProfile.application?.auto_resume_routing===true);
+    setChecked('generate_cover_letter',loadedProfile.application?.generate_cover_letter!==false);
     savedAnswers=(loadedProfile.application?.saved_answers||[]);el('answersList').innerHTML='';savedAnswers.forEach(answerRow);if(!savedAnswers.length)answerRow({});
     renderSourceSettings(); await loadResumes(); el('searchProfilesList').innerHTML=''; searchProfiles.forEach(searchProfileRow); profileStatus.textContent='Profil chargé.';
   }catch(e){profileStatus.textContent='Impossible de charger le profil: '+e;}
@@ -298,7 +327,7 @@ el('saveProfileBtn').onclick=async()=>{
   profile.background={...(profile.background||{}),current_title:el('current_title').value.trim(),current_company:el('current_company').value.trim(),years_experience:el('years_experience').value,school:el('school').value.trim(),degree:el('degree').value.trim(),field_of_study:el('field_of_study').value.trim(),graduation_year:el('graduation_year').value.trim()};
   profile.availability={...(profile.availability||{}),start_date:el('availability_start_date').value,end_date:el('availability_end_date').value,text:el('availability_text').value.trim(),weekends:el('weekends').value,night_shifts:el('night_shifts').value,holiday_work:el('holiday_work').value,hours_per_week_min:el('hours_min').value,hours_per_week_max:el('hours_max').value};
   profile.preferences={...(profile.preferences||{}),roles:lines(el('roles').value),locations:lines(el('locations').value),contracts:lines(el('contracts').value),industries:lines(el('industries').value),include_terms:lines(el('include_terms').value),exclude_terms:lines(el('exclude_terms').value),max_commute_minutes:el('max_commute_minutes').value,min_salary:el('min_salary').value,salary_period:el('salary_period').value,languages:lines(el('languages').value)};
-  profile.application={...(profile.application||{}),saved_answers:readAnswers(),auto_resume_routing:el('auto_resume_routing').checked};
+  profile.application={...(profile.application||{}),saved_answers:readAnswers(),auto_resume_routing:el('auto_resume_routing').checked,generate_cover_letter:el('generate_cover_letter').checked};
   profile.automation={...(profile.automation||{}),enabled_sources:[...document.querySelectorAll('[data-source]:checked')].map(x=>x.dataset.source),search_queries_per_run:Number(el('search_queries_per_run').value||18),search_market:el('search_market').value.trim(),custom_sources:lines(el('custom_sources').value).map(line=>{const p=line.split('|').map(x=>x.trim());return {label:(p.length>1?p[0]:p[0]),domain:(p.length>1?p[1]:p[0])};}).filter(x=>x.domain),max_results_per_query:Number(el('max_results_per_query').value||10),direct_source_pages:Number(el('direct_source_pages').value||3),browser_mode:el('browser_mode').value,chrome_cdp_endpoint:el('chrome_cdp_endpoint').value.trim(),dynamic_fetch_fallback:el('dynamic_fetch_fallback').checked,company_boards:lines(el('company_boards').value),jobspy_enabled:el('jobspy_enabled').checked,jobspy_sites:lines(el('jobspy_sites').value),jobspy_results_wanted:Number(el('jobspy_results_wanted').value||20),jobspy_hours_old:Number(el('jobspy_hours_old').value||168),jobspy_country_indeed:el('jobspy_country_indeed').value.trim(),jobspy_linkedin_fetch_description:el('jobspy_linkedin_fetch_description').checked,dedupe_scope:el('dedupe_scope').value,auto_scan_interval_minutes:Number(el('auto_scan_interval_minutes').value||0),search_profiles:readSearchProfiles(),chatgpt_web_reviewer:{...(profile.automation?.chatgpt_web_reviewer||{}),enabled:el('reviewer_enabled').checked,cdp_endpoint:el('chrome_cdp_endpoint').value.trim()},agent_fallback:{...(profile.automation?.agent_fallback||{}),enabled:el('agent_enabled').checked,max_steps:Number(el('agent_max_steps').value||8),min_action_confidence:Number(el('agent_min_confidence').value||82),allow_next_clicks:el('agent_allow_next').checked,run_for_agent_assisted_ats:el('agent_for_assisted').checked,run_when_required_unanswered:el('agent_for_required').checked,screenshot_each_step:el('agent_screenshots').checked}};
   profileStatus.textContent='Enregistrement…';
   const r=await fetch('/api/profile',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(profile)});
@@ -331,14 +360,14 @@ async function loadPipeline(){
   const jobs=await pr.json(), q=await qr.json(), a=await ar.json();
   el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · worker ${tr(q.running?'actif':'inactif')}`;
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item"><b>${esc(x.title||'')}</b> · ${esc(x.company||'')} <span class="tag queue">${esc(x.status)}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(x.note)}`:''}</div><button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
+  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(x=>`<div class="queue-item"><b>${esc(x.title||'')}</b> · ${esc(x.company||'')} <span class="tag queue">${esc(statusLabel(x.status))}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(x.note)}`:''}</div><button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div>`).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
   el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card"><b>${esc(j.title||'')}</b><div>${esc(j.company||'')}</div><div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
 }
 el('queueRunBtn').onclick=async()=>{await fetch('/api/queue/start',{method:'POST'});el('pipelineStatus').textContent='Worker démarré.';setTimeout(loadPipeline,700);};
 el('queueClearBtn').onclick=async()=>{await fetch('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
-el('startQueueBtn').onclick=async()=>{await fetch('/api/queue/start',{method:'POST'});statusEl.textContent='File de pré-remplissage démarrée.';};
+el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
 
-document.addEventListener('localechange',()=>{render();loadSources();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();Locale.apply();});
+document.addEventListener('localechange',()=>{render();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();Locale.apply();});
 async function init(){await Locale.ready;await loadSources();await load();await pollScan();}
 init();

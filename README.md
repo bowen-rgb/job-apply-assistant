@@ -5,6 +5,18 @@ If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now i
 
 # Job Apply Assistant V8.4
 
+## Application documents and queue fixes
+
+The French interface now translates review controls and application states. The dashboard uses a restrained warm light palette, compact controls and collapsible matching details.
+
+**Ajouter à la file** adds an offer to the preparation list. **Démarrer la file** starts sequential preparation; final submission remains manual. Previously prepared offers without a document audit are prepared again; complete preparations wait for review.
+
+Choose an active CV in **Profil & préférences**. A library containing exactly one available CV also works when an imported profile has lost its selection. CV and cover-letter inputs are identified separately, so a letter upload does not receive a CV.
+
+Pre-fill generates a French cover letter for each offer through the existing ChatGPT Web session using the selected CV, job description and profile. The profile checkbox can disable automatic generation. Expand **Lettre de motivation** on an offer to generate, read, refresh or download its PDF before filling a form. CV text and profile information are sent to the configured ChatGPT session for this feature; generated letters remain in local `data/cover_letters/` and are excluded from Git.
+
+Start with `start.bat`, then sign in to ChatGPT in the dedicated Chrome window. The browser must expose the configured local CDP endpoint (default `127.0.0.1:9222`). PDF and DOCX CVs with readable text support generation; scanned PDFs and legacy DOC files need conversion. Generation errors, missing CV attachment and unanswered required fields produce a human-review state, with document details in the application audit. A generated letter is reused only while the job, profile and CV text are unchanged.
+
 Local-first job discovery, review, tracking and semi-automatic application assistant.
 
 V8.2 is designed as a reusable personal automation tool rather than a script tied to one person, country or profession. Identity, availability, job targets, search campaigns, CVs, sources, reviewer policy and browser automation are editable from the local dashboard.

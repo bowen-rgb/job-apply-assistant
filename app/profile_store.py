@@ -79,6 +79,7 @@ def default_profile() -> dict[str, Any]:
         'application': {
             'active_resume_id': '',
             'cover_letter_path': '',
+            'generate_cover_letter': True,
             'saved_answers': [],
             'custom_fields': [],
             'auto_resume_routing': False,
@@ -334,7 +335,13 @@ def active_resume_path(raw: dict[str, Any] | None = None) -> Path | None:
             return path
     # Backward-friendly fallback for users dropping cv.pdf into root.
     fallback = ROOT / 'cv.pdf'
-    return fallback if fallback.exists() else None
+    if fallback.exists():
+        return fallback
+    # A single library CV is unambiguous even when an imported profile has
+    # lost its active selection. Never guess between multiple documents.
+    available = [RESUME_DIR / row.get('filename', '') for row in _resume_index()]
+    available = [path for path in available if path.is_file()]
+    return available[0] if len(available) == 1 else None
 
 
 

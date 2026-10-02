@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#10202e" />
+  <meta name="theme-color" content="#f6f5f0" />
   <title>Job Apply Assistant V8.4</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link rel="stylesheet" href="/static/dashboard.css" />
@@ -24,7 +24,7 @@
       <button id="searchBtn" class="primary">Scanner le web</button>
       <button id="batchBtn" class="secondary">终审强匹配</button>
       <button id="healthBtn" class="ghost diag">环境检查</button>
-      <button id="startQueueBtn" class="ghost diag">Préparer la file</button>
+      <button id="startQueueBtn" class="ghost diag">Préparer la file</button><p class="queue-help">Ajouter à la file prépare la liste. Démarrer la file lance le pré-remplissage ; l’envoi reste manuel.</p>
 
       <div class="navtitle">File d'offres</div>
       <button data-filter="all" class="filter active">Toutes</button>
@@ -161,7 +161,7 @@
           </div>
           <label class="check topgap"><input id="auto_resume_routing" type="checkbox"> Choisir automatiquement le CV selon les tags du CV et le contenu de l’offre</label>
           <div class="small">Exemples de tags : accueil, logistique, data, mécanique, retail. Sans correspondance, le CV actif reste utilisé.</div>
-          <div id="resumeList" class="resume-list"></div>
+          <div id="resumeList" class="resume-list"></div><label class="check"><input id="generate_cover_letter" type="checkbox"> Générer automatiquement une lettre par offre via ChatGPT</label><p class="small">Le CV sélectionné et les informations du profil sont transmis à votre session ChatGPT pour rédiger la lettre.</p>
         </section>
 
         <section class="settings-card span2">
