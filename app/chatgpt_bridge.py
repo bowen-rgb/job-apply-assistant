@@ -14,6 +14,21 @@ ROOT = Path(__file__).resolve().parent.parent
 CHATGPT_LOCK = FileLock(str(ROOT / 'data' / 'chatgpt-web.lock'))
 
 
+def _diagnostic(page, purpose: str) -> None:
+    """Keep local evidence when the website changes its response layout."""
+    folder = ROOT / 'data' / 'chatgpt_diagnostics'
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        payload = {'url': page.url, 'purpose': purpose,
+                   'assistant_messages': _assistant_messages(page),
+                   'visible_text': page.locator('body').inner_text(timeout=3000),
+                   'html': page.content()}
+        (folder / f'{purpose}.json').write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+        page.screenshot(path=str(folder / f'{purpose}.png'))
+    except Exception:
+        pass
+
+
 def _find_prompt(page):
     selectors = [
         '#prompt-textarea',
@@ -62,8 +77,6 @@ def _assistant_messages(page) -> list[str]:
         '[data-message-author-role="assistant"]',
         'article[data-turn="assistant"]',
         'article:has([data-message-author-role="assistant"])',
-        '[data-testid^="conversation-turn-"]',
-        'main article',
     ]
     for sel in selectors:
         try:
@@ -79,11 +92,30 @@ def _assistant_messages(page) -> list[str]:
                     return out
         except Exception:
             pass
+    # The current ChatGPT layout may expose speaker headings without the older
+    # data attributes. Scope extraction to the assistant's own section.
+    try:
+        headings = page.get_by_text(re.compile(r'^ChatGPT\s*(?:说|說|said|a dit|sagte|dijo|disse)\s*[:：]$', re.I))
+        out = []
+        for index in range(min(headings.count(), 80)):
+            section = headings.nth(index).evaluate('''(e) => {
+                for (let p=e.parentElement, n=0; p && n<5; p=p.parentElement,n++) {
+                    if (p.matches('main,body')) break;
+                    const text=(p.innerText||p.textContent||'').trim();
+                    if (text.length>50 && !/你说[:：]|You said:/.test(text)) return text;
+                }
+                return '';
+            }''')
+            if isinstance(section, str) and section:
+                out.append(section)
+        return out
+    except Exception:
+        pass
     return []
 
 
 def _is_generating(page) -> bool:
-    for rx in [re.compile(r'stop generating', re.I), re.compile(r'arrêter', re.I), re.compile(r'^stop$', re.I), re.compile(r'停止生成|停止输出'), re.compile(r'generation stoppen|detener|parar de gerar', re.I)]:
+    for rx in [re.compile(r'stop generating|stop streaming', re.I), re.compile(r'arrêter', re.I), re.compile(r'^stop$', re.I), re.compile(r'停止生成|停止输出|停止流式传输'), re.compile(r'generation stoppen|detener|parar de gerar', re.I)]:
         try:
             b = page.get_by_role('button', name=rx).first
             if b.count() and b.is_visible():
@@ -155,6 +187,10 @@ def _page_json(page, purpose: str, previous: list[dict] | None = None) -> dict[s
                     pass
         except Exception:
             pass
+    for message in reversed(_assistant_messages(page)):
+        obj = _extract_json_for_purpose(message, purpose)
+        if obj is not None and obj not in (previous or []):
+            return obj
     return None
 
 
@@ -233,6 +269,7 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                 obj = _extract_json_for_purpose(response, purpose)
                 if obj is not None and obj not in previous_json:
                     return obj
+            _diagnostic(page, purpose)
             raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
         except Cancelled:
             # Close only this worker's chat tab, never the candidate's browser.

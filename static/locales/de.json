@@ -332,5 +332,8 @@
   "Évaluer le poste reste une action séparée.": "Die Stellenbewertung ist eine separate Aktion.",
   "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.": "ChatGPT nicht verbunden. start.bat öffnen und im separaten Browser anmelden.",
   "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.": "Browser während der Erstellung geschlossen. Wieder öffnen und erneut versuchen.",
-  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Vorbereitung durch einen Zeichenkodierungsfehler unterbrochen. Erneut versuchen."
+  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Vorbereitung durch einen Zeichenkodierungsfehler unterbrochen. Erneut versuchen.",
+  "Évaluation du poste": "Stellenbewertung",
+  "Évaluation échouée": "Stellenbewertung fehlgeschlagen",
+  "Score de matching": "Übereinstimmungswert"
 }

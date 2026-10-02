@@ -332,5 +332,8 @@
   "Évaluer le poste reste une action séparée.": "岗位评估是独立操作。",
   "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.": "ChatGPT 尚未连接。请打开 start.bat，并在专用浏览器中登录 ChatGPT。",
   "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.": "生成过程中浏览器被关闭。重新打开后重试。",
-  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "上次准备因字符编码错误中断，修复后可重试。"
+  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "上次准备因字符编码错误中断，修复后可重试。",
+  "Évaluation du poste": "岗位评估",
+  "Évaluation échouée": "岗位评估失败",
+  "Score de matching": "匹配分数"
 }

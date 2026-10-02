@@ -332,5 +332,8 @@
   "Évaluer le poste reste une action séparée.": "Job assessment is a separate action.",
   "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.": "ChatGPT is disconnected. Open start.bat and sign in in the dedicated browser.",
   "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.": "The browser was closed during generation. Reopen it and retry.",
-  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Previous preparation stopped because of a text encoding error. Retry."
+  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "Previous preparation stopped because of a text encoding error. Retry.",
+  "Évaluation du poste": "Job assessment",
+  "Évaluation échouée": "Job assessment failed",
+  "Score de matching": "Match score"
 }

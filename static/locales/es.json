@@ -332,5 +332,8 @@
   "Évaluer le poste reste une action séparée.": "La evaluación del puesto es una acción independiente.",
   "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.": "ChatGPT desconectado. Abre start.bat e inicia sesión en el navegador dedicado.",
   "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.": "El navegador se cerró durante la generación. Ábrelo y reintenta.",
-  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La preparación anterior se interrumpió por un error de codificación. Reintenta."
+  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La preparación anterior se interrumpió por un error de codificación. Reintenta.",
+  "Évaluation du poste": "Evaluación del puesto",
+  "Évaluation échouée": "Evaluación fallida",
+  "Score de matching": "Puntuación de afinidad"
 }

@@ -157,7 +157,7 @@ function reviewBadge(j){
   if(!v) return `<span class="review none">${esc(tr('Pas relu'))}</span>`;
   const cls=v==='APPLY'?'applyok':v==='SKIP'?'skipbad':v==='HUMAN_REVIEW'?'human':v==='ERROR'?'err':'running';
   const conf=['APPLY','SKIP','HUMAN_REVIEW'].includes(v)&&j.review_confidence?` · ${j.review_confidence}%`:'';
-  return `<span class="review ${cls}">${esc(statusLabel(v))}${conf}</span>`;
+  return `<span class="review ${cls}" title="${esc(tr('Évaluation du poste'))}">${esc(v==='ERROR'?tr('Évaluation échouée'):statusLabel(v))}${conf}</span>`;
 }
 
 function fact(label,value){
@@ -198,7 +198,7 @@ function render(){
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
     <div class="top"><div>${titleMarkup(j)}<div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
-    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
+    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
     ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}

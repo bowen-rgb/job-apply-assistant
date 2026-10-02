@@ -332,5 +332,8 @@
   "Évaluer le poste reste une action séparée.": "Évaluer le poste reste une action séparée.",
   "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.": "ChatGPT n’est pas connecté. Lancez start.bat puis connectez-vous à ChatGPT dans le navigateur dédié.",
   "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.": "Le navigateur a été fermé pendant la génération. Rouvrez-le puis réessayez.",
-  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez."
+  "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.": "La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.",
+  "Évaluation du poste": "Évaluation du poste",
+  "Évaluation échouée": "Évaluation échouée",
+  "Score de matching": "Score de matching"
 }
