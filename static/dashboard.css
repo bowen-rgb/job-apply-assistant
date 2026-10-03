@@ -41,3 +41,5 @@ body{background:var(--bg);font-family:"Segoe UI",system-ui,-apple-system,sans-se
 #queueControls{display:flex;flex-wrap:wrap;gap:8px;flex:0 1 520px}
 #pipelineView .section-head{flex-wrap:wrap;align-items:flex-start}
 .source-diagnostics{display:grid;gap:8px;margin-top:12px}.source-diagnostic{padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}
+button:disabled{cursor:not-allowed}
+.history-content,.pipeline-card details,.pipeline-card .small{overflow-wrap:anywhere}

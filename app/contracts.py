@@ -56,3 +56,4 @@ class TrackPatch(BaseModel):
     stage: TrackerStage
     note: str = Field(default='', max_length=4000)
     followup_at: str = Field(default='', max_length=80)
+    source: Literal['', 'email', 'recruiter_portal', 'phone', 'manual'] = ''

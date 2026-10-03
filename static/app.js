@@ -97,7 +97,7 @@ function showView(which){
     if(active) el(id).setAttribute('aria-current','page');
   });
   if(profile) loadProfile();
-  if(pipeline) loadPipeline();
+  if(pipeline) loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
 }
 el('jobsNav').onclick=()=>showView('jobs');
 el('profileNav').onclick=()=>showView('profile');
@@ -139,7 +139,14 @@ async function load(){
 }
 
 function matchFilter(j,filter=current){
+  // Explicit field/value filters, like GitHub Projects single-select views:
+  // suitability, AI recommendation, listing availability and recruiter outcome
+  // have separate meanings and must never be merged into one rejection state.
   if(filter==='skipped') return j.user_action==='skipped';
+  if(filter==='expired') return j.decision==='expired' || j.availability_status==='expired';
+  if(filter==='rejected') return j.tracker_stage==='rejected';
+  if(filter==='withdrawn') return j.application_status==='withdrawn' || j.tracker_stage==='withdrawn';
+  if(filter==='submitted') return ['submitted','submitted_verified'].includes(j.application_status);
   if(j.user_action==='skipped') return false;
   if(filter==='all') return true;
   if(['keep','review'].includes(filter)) return j.decision===filter;
@@ -147,10 +154,42 @@ function matchFilter(j,filter=current){
   if(filter==='approved') return j.review_verdict==='APPLY';
   if(filter==='human') return j.review_verdict==='HUMAN_REVIEW';
   if(filter==='queued') return !!j.queue_status && !['done','error','cancelled'].includes(j.queue_status);
-  if(filter==='submitted') return ['submitted','submitted_verified'].includes(j.application_status);
-  if(filter==='expired') return ['expired','reject'].includes(j.decision) || j.availability_status==='expired' || j.review_verdict==='SKIP';
-  return true;
+  if(filter==='unsuitable') return j.decision==='reject';
+  if(filter==='reviewer_skip') return j.review_verdict==='SKIP';
+  return false;
 }
+
+Object.assign(statusLabels,{reject:'Critères incompatibles',rejected:'Refus du recruteur'});
+const safeJobUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
+const hasSubmitted=j=>['submitted','submitted_verified'].includes(j.application_status);
+const preparable=j=>j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
+const filterHelp={
+  all:'Offres visibles, hors offres ignorées. Les compteurs suivent les mêmes filtres que les cartes.',
+  keep:'Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.',
+  review:'Matching local à vérifier. Ce filtre ne représente pas une réponse du recruteur.',
+  human:'Le reviewer IA demande une vérification humaine.',
+  approved:'Le reviewer IA conseille de postuler. Cela ne signifie pas que la candidature est envoyée.',
+  queued:'Candidatures en file, en préparation ou attendant votre envoi manuel.',
+  submitted:'Envoi confirmé dans le suivi local. Les réponses ultérieures du recruteur restent consultables.',
+  expired:'Expiration détectée dans la date limite ou le texte de l’offre. Ouvrez la source pour vérifier son état actuel.',
+  rejected:'Refus du recruteur enregistré dans le suivi. Consultez la source et la note ; les anciens statuts sans preuve restent à confirmer.',
+  unsuitable:'Incompatibilité avec les critères du profil, calculée localement. Ce n’est pas un refus du recruteur.',
+  reviewer_skip:'Le reviewer IA déconseille de postuler. Ce n’est ni une expiration ni un refus du recruteur.',
+  withdrawn:'Candidatures retirées dans le suivi local.',
+  skipped:'Offres ignorées par vous. Restaurer les remet dans les vues de matching.',
+  liked:'Offres que vous avez gardées.'
+};
+const evidenceSources={email:'E-mail du recruteur',recruiter_portal:'Portail de candidature',phone:'Appel du recruteur',manual:'Confirmation manuelle'};
+function evidenceMarkup(j){
+  const expired=matchFilter(j,'expired');
+  const outcome=['screening','interview','offer','rejected','withdrawn'].includes(j.tracker_stage);
+  return `${expired?`<p class="small">${esc(tr('Expiration observée :'))} ${esc(j.valid_through||j.reason||tr('Date ou mention de fermeture dans la source'))}${j.last_checked_at?` · ${esc(tr('Dernière lecture :'))} ${esc(j.last_checked_at)}`:''}</p>`:''}${outcome?`<p class="small">${esc(tr(stageLabels[j.tracker_stage]))} · ${esc(tr(evidenceSources[j.tracker_source]||'Source non renseignée : statut à confirmer'))}${j.tracker_note?` · ${esc(j.tracker_note)}`:''}</p>`:''}<details ontoggle="if(this.open) loadHistory(${j.id},this)"><summary>${esc(tr('Historique et sources du suivi'))}</summary><div class="history-content"></div></details>`;
+}
+async function loadHistory(id,panel){
+  try{const events=await requestJson(`/api/jobs/${id}/stage-events`);panel.querySelector('.history-content').innerHTML=events.length?events.map(x=>`<p class="small">${esc(x.created_at||'')} · ${esc(tr(stageLabels[x.stage]||x.stage))} · ${esc(tr(evidenceSources[x.source]||'Confirmation manuelle'))}${x.note?` · ${esc(x.note)}`:''}</p>`).join(''):`<p class="small">${esc(tr('Aucune réponse du recruteur enregistrée.'))}</p>`;}
+  catch(error){panel.querySelector('.history-content').textContent=error.message;}
+}
+window.loadHistory=loadHistory;
 
 function reviewBadge(j){
   const v=j.review_verdict||'';
@@ -183,16 +222,18 @@ function reviewDetails(j){
 function render(){
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
-  const jobs=allJobs.filter(j=>matchFilter(j)).filter(j=>!src || j.provider_key===src).filter(j=>{
+  const scopedJobs=allJobs.filter(j=>!src || j.provider_key===src).filter(j=>{
     if(!q) return true;
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
-  const liked=allJobs.filter(j=>matchFilter(j,'liked')).length;
-  const keep=allJobs.filter(j=>matchFilter(j,'keep')).length;
-  const human=allJobs.filter(j=>matchFilter(j,'human')).length;
-  const submitted=allJobs.filter(j=>matchFilter(j,'submitted')).length;
-  summary.textContent=`${jobs.length} / ${allJobs.length} ${tr('offres')}`;
-  el('jobMetrics').innerHTML=[[tr('Offres'),allJobs.length,'all'],[tr('Match fort'),keep,'keep'],[tr('Aimées'),liked,'liked'],[tr('À vérifier'),human,'human'],[tr('Envoyées'),submitted,'submitted']].map(([label,count,filter])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${count}</b></button>`).join('');
+  const jobs=scopedJobs.filter(j=>matchFilter(j));
+  const liked=scopedJobs.filter(j=>matchFilter(j,'liked')).length;
+  const keep=scopedJobs.filter(j=>matchFilter(j,'keep')).length;
+  const human=scopedJobs.filter(j=>matchFilter(j,'human')).length;
+  const submitted=scopedJobs.filter(j=>matchFilter(j,'submitted')).length;
+  el('filterHelp').textContent=tr(filterHelp[current]||'');
+  summary.textContent=`${jobs.length} ${tr('offres affichées')} · ${allJobs.length} ${tr('offres enregistrées')}`;
+  el('jobMetrics').innerHTML=[[tr('Offres'),scopedJobs.filter(j=>matchFilter(j,'all')).length,'all'],[tr('Match fort'),keep,'keep'],[tr('Aimées'),liked,'liked'],[tr('Reviewer: humain'),human,'human'],[tr('Envoyées'),submitted,'submitted']].map(([label,count,filter])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${count}</b></button>`).join('');
   el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>{current=button.dataset.metricFilter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();});
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
@@ -204,29 +245,30 @@ function render(){
     ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
     ${j.last_workflow_event==='privacy_consent_required'?`<div class="application-error" role="status">${esc(tr('Accord à la charte de données requis.'))} <button onclick="approvePrivacy(${j.id})">${esc(tr('Accepter pour cette candidature et continuer'))}</button></div>`:''}
     ${reviewDetails(j)}
+    ${evidenceMarkup(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
-    <div class="linkrow"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a></div>
-    <p class="workflow-help">${esc(tr("Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
+    <div class="linkrow">${safeJobUrl(j.url)?`<a href="${esc(safeJobUrl(j.url))}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a>`:''}</div>
+    <p class="workflow-help">${esc(tr(!preparable(j)?'Préparation indisponible dans cet état. Consultez le statut et l’historique.':j.queue_status?'Gérez la préparation et les reprises depuis Pipeline & file.':"Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
       <button class="primary letter-action" onclick="openLetter(${j.id})">${esc(tr("Rédiger la lettre"))}</button>
       <button class="skip" onclick="decide(${j.id},'${j.user_action==='skipped'?'clear_user_action':'skipped'}')">${esc(tr(j.user_action==='skipped'?'Restaurer':'Passer'))}</button>
-      <button class="like" onclick="decide(${j.id},'liked')">${esc(tr('Garder'))}</button>
+      <button class="like" onclick="decide(${j.id},'${j.user_action==='liked'?'clear_user_action':'liked'}')">${esc(tr(j.user_action==='liked'?'Ne plus garder':'Garder'))}</button>
       <button class="reviewbtn" onclick="reviewJob(${j.id})">${esc(tr("Évaluer le poste"))}</button>
-      ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" onclick="applyJob(${j.id},'${esc(j.review_verdict||'')}')">${esc(tr('Pré-remplir'))}</button>`}
-      <button class="ghost" onclick="queueJob(${j.id})">${esc(tr('+ File'))}</button>
+      ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" ${preparable(j)&&!['queued','running','waiting_user'].includes(j.queue_status)?'':'disabled'} onclick="applyJob(${j.id})">${esc(tr('Pré-remplir'))}</button>`}
+      <button class="ghost" ${preparable(j)&&!j.queue_status?'':'disabled'} onclick="queueJob(${j.id})">${esc(tr(j.queue_status?'File:':'+ File'))}${j.queue_status?` ${esc(statusLabel(j.queue_status))}`:''}</button>
     </div>
-    <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(tr('Envoyée'))}${j.application_status==='submitted_verified'?` · ${esc(tr('vérifiée'))}`:''}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
+    <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(tr('Envoyée'))}${j.application_status==='submitted_verified'?` · ${esc(tr('vérifiée'))}`:''}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${hasSubmitted(j)?`<button class="ghost compact" onclick="setStage(${j.id},'rejected')">${esc(tr('Enregistrer un refus du recruteur'))}</button>`:''}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
   </article>`).join('');
   observeTitles();
 }
 
 async function decide(id,d){
-  await requestJson(`/api/jobs/${id}/decision`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:d})});
-  await load();
+  try{await requestJson(`/api/jobs/${id}/decision`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:d})});await load();}
+  catch(error){statusEl.textContent=error.message;}
 }
 async function reviewJob(id){
   statusEl.textContent=tr('Évaluation du poste en cours…');
-  const r=await fetch(`/api/jobs/${id}/review`,{method:'POST'}); const x=await r.json();
-  statusEl.textContent=x.message||'Reviewer queued'; await load();
+  try{await requestJson(`/api/jobs/${id}/review`,{method:'POST'});await load();}
+  catch(error){statusEl.textContent=error.message;}
 }
 async function applyJob(id, verdict){
   try{
@@ -244,14 +286,16 @@ async function approvePrivacy(id){
 }
 window.approvePrivacy=approvePrivacy;
 async function markApplication(id,status){
-  await fetch(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
-  statusEl.textContent=status==='submitted'?'Candidature marquée comme envoyée.':'Statut mis à jour.';
-  await load();
+  if(status==='submitted'&&!confirm(tr('Confirmez-vous avoir envoyé cette candidature sur le site du recruteur ? Le pré-remplissage seul ne constitue pas un envoi.')))return;
+  try{await requestJson(`/api/jobs/${id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
+    statusEl.textContent=tr('Candidature marquée comme envoyée.');await load();}
+  catch(error){statusEl.textContent=error.message;}
 }
 async function queueJob(id){
   try{
     await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id],priority:100})});
-    statusEl.textContent=tr('Ajoutée à la file. Cliquez sur « Démarrer la file » pour préparer les candidatures.'); await load();
+    await load();const job=allJobs.find(j=>j.id===id);
+    statusEl.textContent=tr(job?.queue_status?'Ajoutée à la file. Cliquez sur « Préparer la suivante ».':'Cette candidature ne peut pas être ajoutée à la file.');
   }catch(error){statusEl.textContent=error.message;}
 }
 async function requestJson(url,options={}){
@@ -277,7 +321,7 @@ async function openLetter(id){
     catch(error){el(`letter-${id}`).textContent=error.message;}
   }
 }
-async function stopApplication(id){await requestJson(`/api/jobs/${id}/stop`,{method:'POST'});await load();await loadLetter(id);}
+async function stopApplication(id){try{await requestJson(`/api/jobs/${id}/stop`,{method:'POST'});await load();await loadLetter(id);}catch(error){statusEl.textContent=error.message;}}
 window.stopApplication=stopApplication;
 window.openLetter=openLetter;
 async function generateLetter(id){
@@ -305,15 +349,15 @@ async function pollScan(){
 
 for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');current=b.dataset.filter;render();};
 qInput.oninput=render; sourceSelect.onchange=render;
-el('searchBtn').onclick=async()=>{statusEl.textContent='Démarrage du scan…';const r=await fetch('/api/search',{method:'POST'});const x=await r.json();statusEl.textContent=x.running?'Scan lancé':'Scan déjà actif';await pollScan();};
+el('searchBtn').onclick=async()=>{statusEl.textContent=tr('Démarrage du scan…');const x=await requestJson('/api/search',{method:'POST'});statusEl.textContent=tr(x.running?'Scan lancé':'Scan déjà actif');await pollScan();};
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
-el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;const r=await fetch('/api/review/batch?mode=strong',{method:'POST'});const x=await r.json();statusEl.textContent=x.message||tr('Batch review lancé');setTimeout(load,1000);};
+el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;await requestJson('/api/review/batch?mode=strong',{method:'POST'});statusEl.textContent=tr('Batch review lancé');setTimeout(load,1000);};
 async function refreshAutomationStatus(){
   try{const h=await requestJson('/api/health');el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'ChatGPT déconnecté : ouvrez start.bat puis connectez-vous dans le navigateur dédié.')].join(' · ');}
   catch(error){el('automationStatus').textContent=error.message;}
 }
 el('healthBtn').onclick=refreshAutomationStatus;
-el('clearBtn').onclick=async()=>{if(!confirm(tr('Supprimer toutes les offres locales ?')))return;await fetch('/api/jobs',{method:'DELETE'});await load();};
+el('clearBtn').onclick=async()=>{if(!confirm(tr('Supprimer toutes les offres locales ?')))return;try{await requestJson('/api/jobs',{method:'DELETE'});await load();}catch(error){statusEl.textContent=error.message;}};
 
 function setValue(id,v){const x=el(id);if(x)x.value=v??'';}
 function setChecked(id,v){const x=el(id);if(x)x.checked=!!v;}
@@ -337,15 +381,14 @@ async function loadResumes(){
   if(!xs.length){box.innerHTML=`<div class="small">${esc(tr('Aucun CV dans la bibliothèque locale.'))}</div>`;return;}
   box.innerHTML=xs.map(x=>`<div class="resume-item resume-edit"><div class="resume-fields"><input id="resume-label-${esc(x.id)}" value="${esc(x.label||x.original_name)}" aria-label="Nom du CV"><input id="resume-tags-${esc(x.id)}" value="${esc((x.tags||[]).join(', '))}" placeholder="tags: accueil, logistique…" aria-label="Tags du CV"><div class="resume-meta">${esc(x.original_name)} · ${(x.size/1024).toFixed(0)} KB</div></div><div class="resume-actions">${x.active?'<span class="active-pill">ACTIF</span>':`<button type="button" onclick="activateResume('${esc(x.id)}')">Activer</button>`}<button type="button" onclick="saveResumeMeta('${esc(x.id)}')">Enregistrer</button><button type="button" onclick="deleteResume('${esc(x.id)}')">Supprimer</button></div></div>`).join('');
 }
-async function activateResume(id){await fetch(`/api/resumes/${id}/activate`,{method:'POST'});await loadResumes();profileStatus.textContent='CV actif modifié.';}
+async function activateResume(id){try{await requestJson(`/api/resumes/${id}/activate`,{method:'POST'});await loadResumes();profileStatus.textContent=tr('CV actif modifié.');}catch(error){profileStatus.textContent=error.message;}}
 async function saveResumeMeta(id){
   const label=el(`resume-label-${id}`)?.value?.trim()||'';
   const tags=lines(el(`resume-tags-${id}`)?.value||'');
-  const r=await fetch(`/api/resumes/${id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({label,tags})});
-  profileStatus.textContent=r.ok?'Métadonnées CV enregistrées.':'Erreur lors de la mise à jour du CV.';
-  if(r.ok) await loadResumes();
+  try{await requestJson(`/api/resumes/${id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({label,tags})});profileStatus.textContent=tr('Métadonnées CV enregistrées.');await loadResumes();}
+  catch(error){profileStatus.textContent=error.message;}
 }
-async function deleteResume(id){if(!confirm(tr('Supprimer ce CV de la bibliothèque locale ?')))return;await fetch(`/api/resumes/${id}`,{method:'DELETE'});await loadResumes();}
+async function deleteResume(id){if(!confirm(tr('Supprimer ce CV de la bibliothèque locale ?')))return;try{await requestJson(`/api/resumes/${id}`,{method:'DELETE'});await loadResumes();}catch(error){profileStatus.textContent=error.message;}}
 window.activateResume=activateResume;window.saveResumeMeta=saveResumeMeta;window.deleteResume=deleteResume;
 el('uploadResumeBtn').onclick=async()=>{
   const file=el('resumeFile').files[0]; if(!file){profileStatus.textContent='Choisis un fichier CV.';return;}
@@ -436,13 +479,23 @@ el('profileImportFile').onchange=async()=>{
 };
 
 
-const stageLabels={saved:'Sauvegardée',queued:'En file',prepared:'Préparée',submitted:'Envoyée',screening:'Screening',interview:'Entretien',offer:'Offre',rejected:'Refus',withdrawn:'Retirée'};
+const stageLabels={saved:'Sauvegardée',queued:'En file',prepared:'Préparée',submitted:'Envoyée',screening:'Screening',interview:'Entretien',offer:'Offre',rejected:'Refus du recruteur',withdrawn:'Retirée'};
 async function setStage(id,stage){
-  const note=prompt(tr('Note (optionnelle) :'),''); if(note===null)return;
-  await fetch(`/api/jobs/${id}/track`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({stage,note,followup_at:''})});
-  await loadPipeline(); await load();
+  const external=['screening','interview','offer','rejected'].includes(stage);
+  let source='manual';
+  if(stage==='submitted'&&!confirm(tr('Confirmez-vous avoir envoyé cette candidature sur le site du recruteur ? Le pré-remplissage seul ne constitue pas un envoi.'))){await loadPipeline();return;}
+  if(external){
+    const choice=prompt(tr('Source du résultat : 1 = e-mail, 2 = portail de candidature, 3 = appel, 4 = confirmation manuelle'), '');
+    if(choice===null){await loadPipeline();return;}
+    source={'1':'email','2':'recruiter_portal','3':'phone','4':'manual'}[choice?.trim()];
+    if(!source){await loadPipeline();el('pipelineStatus').textContent=tr('Choisissez une source valide.');statusEl.textContent=tr('Choisissez une source valide.');return;}
+  }
+  const note=prompt(tr(external?'Indiquez la date du message et le résultat confirmé par le recruteur (obligatoire).':'Note (optionnelle) :'),'');
+  if(note===null){await loadPipeline();return;}
+  try{await requestJson(`/api/jobs/${id}/track`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({stage,note,source,followup_at:''})});await loadPipeline();await load();}
+  catch(error){await loadPipeline();el('pipelineStatus').textContent=error.message;statusEl.textContent=error.message;}
 }
-async function removeQueue(id){await fetch(`/api/queue/${id}`,{method:'DELETE'});await loadPipeline();await load();}
+async function removeQueue(id){try{await requestJson(`/api/queue/${id}`,{method:'DELETE'});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}}
 window.setStage=setStage;window.removeQueue=removeQueue;
 let pipelineTimer=null;
 function queueItemMarkup(x){
@@ -457,8 +510,7 @@ function queueItemMarkup(x){
 }
 async function loadPipeline(){
   clearTimeout(pipelineTimer);
-  const [pr,qr,ar]=await Promise.all([fetch('/api/pipeline'),fetch('/api/queue'),fetch('/api/analytics')]);
-  const jobs=await pr.json(), q=await qr.json(), a=await ar.json();
+  const [jobs,q,a]=await Promise.all([requestJson('/api/pipeline'),requestJson('/api/queue'),requestJson('/api/analytics')]);
   el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('file:')} ${Object.values(q.counts||{}).reduce((x,y)=>x+y,0)} · ${tr(q.running?'Préparation en cours':'File arrêtée')}`;
   el('queueRunBtn').disabled=q.running||!(q.counts?.queued);
   el('queueBatchBtn').disabled=q.running||!(q.counts?.queued);
@@ -469,7 +521,7 @@ async function loadPipeline(){
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
   el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(queueItemMarkup).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select></div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
   observeTitles();
 }
 async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
@@ -478,7 +530,7 @@ el('queueBatchBtn').onclick=()=>startPreparation('batch');
 el('queueAddMatchesBtn').onclick=async()=>{
   try{
     await load();
-    const ids=allJobs.filter(j=>matchFilter(j,'keep')&&!['submitted','submitted_verified','withdrawn'].includes(j.application_status)).map(j=>j.id);
+    const ids=allJobs.filter(j=>matchFilter(j,'keep')&&preparable(j)&&!j.queue_status).map(j=>j.id);
     for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100)})});
     await loadPipeline();
     if(!ids.length)el('pipelineStatus').textContent=tr('Aucun match fort à ajouter.');
@@ -492,10 +544,19 @@ async function confirmQueueSubmitted(id){
 }
 window.confirmQueueSubmitted=confirmQueueSubmitted;
 window.retryQueue=retryQueue;
-el('queueClearBtn').onclick=async()=>{await fetch('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
+el('queueClearBtn').onclick=async()=>{await requestJson('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
 el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
 
-document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline();refreshAutomationStatus();Locale.apply();});
+// Each static async action reports failures beside its view, including network
+// errors. Do not claim success until the server accepted the mutation.
+for(const button of document.querySelectorAll('button[id]')){
+  const action=button.onclick;if(!action)continue;
+  button.onclick=async function(event){
+    try{await action.call(this,event);}
+    catch(error){const target=this.closest('#profileView')?profileStatus:this.closest('#pipelineView')?el('pipelineStatus'):statusEl;target.textContent=error.message;}
+  };
+}
+document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
 async function init(){await Locale.ready;await loadSources();await load();await pollScan();await refreshAutomationStatus();}
 init();
 setInterval(refreshAutomationStatus,15000);

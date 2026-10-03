@@ -60,11 +60,11 @@ class JobRepository:
 
     def stats(self) -> dict[str, Any]:
         query = """SELECT
-            COUNT(*) AS total,
-            COALESCE(SUM(CASE WHEN decision='keep' THEN 1 ELSE 0 END),0) AS keep_n,
+            COALESCE(SUM(CASE WHEN user_action<>'skipped' THEN 1 ELSE 0 END),0) AS total,
+            COALESCE(SUM(CASE WHEN decision='keep' AND user_action<>'skipped' THEN 1 ELSE 0 END),0) AS keep_n,
             COALESCE(SUM(CASE WHEN user_action='liked' THEN 1 ELSE 0 END),0) AS liked_n,
-            COALESCE(SUM(CASE WHEN review_verdict='APPLY' THEN 1 ELSE 0 END),0) AS apply_n,
-            COALESCE(SUM(CASE WHEN review_verdict='HUMAN_REVIEW' THEN 1 ELSE 0 END),0) AS human_n,
+            COALESCE(SUM(CASE WHEN review_verdict='APPLY' AND user_action<>'skipped' THEN 1 ELSE 0 END),0) AS apply_n,
+            COALESCE(SUM(CASE WHEN review_verdict='HUMAN_REVIEW' AND user_action<>'skipped' THEN 1 ELSE 0 END),0) AS human_n,
             COALESCE(SUM(CASE WHEN decision='expired' OR availability_status='expired' THEN 1 ELSE 0 END),0) AS expired_n,
             COALESCE(SUM(CASE WHEN application_status IN ('submitted','submitted_verified') THEN 1 ELSE 0 END),0) AS submitted_n
             FROM jobs"""
@@ -110,6 +110,9 @@ class JobRepository:
         with connect() as conn:
             if not self._exists_in(conn, job_id):
                 raise KeyError(job_id)
+            previous = conn.execute('SELECT application_status FROM jobs WHERE id=?', (job_id,)).fetchone()['application_status']
+            if status in {'submitted', 'submitted_verified'} and previous in {'submitted', 'submitted_verified'}:
+                return  # Repeated confirmation must not erase an interview or rejection.
             tracker = 'submitted' if status in {'submitted', 'submitted_verified'} else ('prepared' if status in {'prefilled', 'needs_human'} else '')
             conn.execute(
                 "UPDATE jobs SET application_status=?, "
@@ -136,19 +139,52 @@ class JobRepository:
     def pipeline(self) -> list[dict[str, Any]]:
         query = """SELECT jobs.*, COALESCE((SELECT status FROM application_queue q WHERE q.job_id=jobs.id),'') AS queue_status
                    FROM jobs
-                     WHERE user_action<>'skipped' AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
+                     WHERE (user_action<>'skipped' OR application_status IN ('submitted','submitted_verified','withdrawn') OR tracker_stage IN ('rejected','screening','interview','offer')) AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
                    ORDER BY COALESCE(last_application_at,updated_at) DESC"""
         with connect() as conn:
             return [dict(row) for row in conn.execute(query).fetchall()]
 
-    def track(self, job_id: int, stage: str, note: str = '', followup_at: str = '') -> None:
+    def track(self, job_id: int, stage: str, note: str = '', followup_at: str = '', source: str = '') -> None:
         if stage not in TRACK_STAGES:
             raise ValueError('invalid tracker stage')
         with connect() as conn:
             if not self._exists_in(conn, job_id):
                 raise KeyError(job_id)
-            conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note[:4000], followup_at[:80], job_id))
-            conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at) VALUES(?,?,?,?)', (job_id, stage, note[:4000], followup_at[:80]))
+            job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+            external = stage in {'screening', 'interview', 'offer', 'rejected'}
+            if external:
+                if job['application_status'] not in {'submitted', 'submitted_verified'}:
+                    raise ValueError('Confirm submission before recording a recruiter response')
+                if source not in {'email', 'recruiter_portal', 'phone', 'manual'} or not note.strip():
+                    raise ValueError('A recruiter response requires its source and a confirmation note')
+            if stage == 'withdrawn' and job['application_status'] not in {'submitted', 'submitted_verified', 'withdrawn'}:
+                raise ValueError('Confirm submission before recording a withdrawal')
+            if stage == 'queued':
+                queue = conn.execute('SELECT status FROM application_queue WHERE job_id=?', (job_id,)).fetchone()
+                if not queue or queue['status'] not in {'queued', 'running', 'waiting_user'}:
+                    raise ValueError('Add the job to the preparation queue first')
+            if stage == 'prepared' and job['application_status'] not in {'prefilled', 'needs_human'}:
+                raise ValueError('Prepare the application before marking it prepared')
+            if stage == 'submitted':
+                conn.execute("UPDATE jobs SET application_status='submitted',last_application_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
+                conn.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'submitted',?)", (job_id, 'Manual confirmation from pipeline'))
+            if stage == 'withdrawn':
+                conn.execute("UPDATE jobs SET application_status='withdrawn' WHERE id=?", (job_id,))
+            if stage in {'submitted', 'withdrawn', 'rejected'}:
+                conn.execute("UPDATE application_queue SET status='done',note=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'running'", (stage, job_id))
+            conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,tracker_source=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note.strip()[:4000], source, followup_at[:80], job_id))
+            conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at,source) VALUES(?,?,?,?,?)', (job_id, stage, note.strip()[:4000], followup_at[:80], source))
+
+    def assert_preparable(self, job_id: int) -> None:
+        with connect() as conn:
+            job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+        if not job:
+            raise KeyError(job_id)
+        if (job['user_action'] == 'skipped' or job['decision'] == 'expired'
+                or job['availability_status'] == 'expired'
+                or job['tracker_stage'] in {'rejected', 'withdrawn'}
+                or job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn', 'opening', 'preparing', 'preparing_letter'}):
+            raise ValueError('Application cannot be prepared in its current state')
 
     def audit_path(self, job_id: int, column: str) -> str:
         if column not in {'fill_audit_path', 'agent_trace_path'}:

@@ -497,7 +497,7 @@ def pipeline():
 @app.put('/api/jobs/{job_id}/track')
 def track(job_id: int, payload: TrackPatch):
     try:
-        job_repository.track(job_id, payload.stage, payload.note, payload.followup_at)
+        job_repository.track(job_id, payload.stage, payload.note, payload.followup_at, payload.source)
     except KeyError:
         raise HTTPException(404, 'job not found')
     except ValueError as exc:

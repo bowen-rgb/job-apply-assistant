@@ -81,6 +81,9 @@ class QueueControlTests(unittest.TestCase):
             with self.subTest(result=result):
                 with db.connect() as c:
                     c.execute('DELETE FROM application_queue')
+                    # The mocked worker never persists its completion state.
+                    # Reset jobs as well as queue rows between independent cases.
+                    c.execute("UPDATE jobs SET application_status='',tracker_stage=''")
                 queue.enqueue([1, 2])
                 with patch.object(queue, 'launch_apply') as launch, patch.object(queue, '_wait_until_prepared', return_value=result):
                     queue._worker('batch')

@@ -36,7 +36,11 @@
       <button data-filter="queued" class="filter">Dans la file</button>
       <button data-filter="submitted" class="filter">Candidatures envoyées</button>
       <button data-filter="skipped" class="filter">Ignorées</button>
-      <button data-filter="expired" class="filter">Expirées / rejetées</button>
+      <button data-filter="expired" class="filter">Offres expirées</button>
+      <button data-filter="rejected" class="filter">Refus du recruteur</button>
+      <button data-filter="unsuitable" class="filter">Critères incompatibles</button>
+      <button data-filter="reviewer_skip" class="filter">Reviewer : déconseillées</button>
+      <button data-filter="withdrawn" class="filter">Candidatures retirées</button>
       <div class="sep"></div>
       <div class="reviewer-box">
         <div class="reviewer-title">Lettre de motivation</div>
@@ -59,6 +63,7 @@
         <div id="status" class="status" role="status" aria-live="polite"></div>
       </header>
       <section id="jobMetrics" class="metric-grid" aria-label="Résumé des offres"></section>
+      <p id="filterHelp" class="small" role="status"></p>
       <p class="small">Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.</p>
       <button id="rescoreBtn" class="ghost compact">Recalculer les correspondances</button>
 
@@ -82,6 +87,7 @@
       <section id="analyticsCards" class="metric-grid"></section>
       <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Préparez une offre ou toute la file. Le lot s’arrête si une candidature demande votre intervention. Ouvrez ensuite chaque formulaire pour vérifier et envoyer.</p></div><div id="queueControls"><button id="queueAddMatchesBtn" class="ghost compact">Ajouter les matchs forts</button> <button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueBatchBtn" class="primary compact">Préparer tout le lot</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
+      <p class="small">Les réponses du recruteur sont enregistrées par vous depuis un e-mail, le portail de candidature ou un appel. Aucun verdict IA ne constitue un refus du recruteur.</p>
     </section>
 
     <section id="profileView" class="hidden">

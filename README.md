@@ -217,6 +217,35 @@ charter pauses the workflow until the user explicitly accepts for that applicati
 
 Local data is stored under `data/` and `profile.json`. CV files are placed under `data/resumes/`. Do not commit personal profile/CV/database files to a public repository.
 
+## Dashboard states and recruiter evidence
+
+Dashboard filters use explicit field/value comparisons, following the
+[GitHub Projects filtering pattern](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects).
+Local matching (`decision=reject`) means incompatible candidate criteria. AI
+`SKIP` means a recommendation to skip. Neither is a recruiter rejection.
+Expired listings use their deadline (`JobPosting.validThrough`) or an explicit
+closure notice, independently of matching. A failed fetch or missing deadline
+leaves availability unknown; a matching score never certifies that a listing
+is still open. Expiration evidence is a snapshot: open the original listing or
+scan again to check its current state.
+
+Record recruiter responses from an email, the application portal or a phone
+call using the pipeline stage selector, or “Record recruiter rejection” on a
+submitted card. The application must first be confirmed submitted. A response
+requires a source and a note containing the message date and confirmed result.
+The dashboard stores the source, note and recording timestamp and exposes the
+stage history. Old manually set stages without a source are shown as requiring
+confirmation. This app does not read a mailbox or ATS account automatically.
+
+Counters follow the same filters as cards, including text/source restrictions.
+Ignoring a listing hides it from matching views but preserves submitted and
+recruiter-outcome history. Saving toggles on/off. Submitted, withdrawn, rejected,
+expired or ignored records cannot be prepared again; queue retries are explicit.
+Pipeline “queued” and “prepared” stages require an actual queue item or completed
+prefill rather than creating a fictional worker result. Manually confirming
+submission in either view updates the same application state. Actions report
+server failures instead of displaying a success message.
+
 ## Tests
 
 ```bat

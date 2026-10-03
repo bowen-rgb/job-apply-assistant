@@ -62,6 +62,15 @@ def evaluate(job: dict, profile: dict):
     reasons: list[str] = []
     flags: list[str] = []
 
+    # Availability is independent of suitability: an expired incompatible job
+    # is still expired. validThrough is the listing deadline, not contract end.
+    expired_phrase = re.search(r"offre (?:n.est )?plus disponible|offre expiree|poste pourvu|candidatures? (?:close|fermee)|position has been filled", t, re.I)
+    valid = _iso_date(job.get('valid_through', ''))
+    if expired_phrase:
+        return -95, 'expired', f'expired_phrase:{expired_phrase.group(0)}', ['expired']
+    if valid and valid < date.today():
+        return -90, 'expired', f'expired:{valid.isoformat()}', ['expired']
+
     # Hard contract conflict. Avoid blanket keyword exclusion because a CDD listing can
     # mention CDI in boilerplate or company text.
     allowed_contracts = [norm(x) for x in profile.get('contracts', [])]
@@ -97,10 +106,6 @@ def evaluate(job: dict, profile: dict):
     elif holiday:
         flags.append('holiday_requirement')
 
-    expired_phrase = re.search(r"offre (?:n.est )?plus disponible|offre expir[eé]e|poste pourvu|candidatures? (?:close|ferm[eé]e)|position has been filled", t, re.I)
-    if expired_phrase:
-        return -95, 'expired', f'expired_phrase:{expired_phrase.group(0)}', ['expired']
-
     max_end = _iso_date(profile.get('max_end_date', ''))
     end = _iso_date(job.get('end_date', ''))
     valid = _iso_date(job.get('valid_through', ''))
@@ -108,8 +113,6 @@ def evaluate(job: dict, profile: dict):
     today = date.today()
     if end and max_end and end > max_end:
         return -100, 'reject', f'end_after_max:{end.isoformat()}', ['end_date_conflict']
-    if valid and valid < today:
-        return -90, 'expired', f'expired:{valid.isoformat()}', ['expired']
 
     score = 0
     configured_roles = profile.get('preferred_roles', [])

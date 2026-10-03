@@ -81,3 +81,9 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 6. Queue state, application status and recruiting pipeline stage are separate concepts.
 7. Repeated scans and repeated applications are auditable and resumable.
 8. Missing facts trigger human review rather than invention.
+
+## Dashboard state semantics
+
+- [GitHub Projects: filtering views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects): independently filter explicit field values. Implemented locally; no GitHub source code is copied.
+- [Schema.org: validThrough](https://schema.org/validThrough): interpret a job listing's deadline separately from contract end dates and recruiter responses.
+- Recruiter outcomes are confirmed local records with provenance and timestamped history, not inferred from AI recommendations or failed discovery requests.

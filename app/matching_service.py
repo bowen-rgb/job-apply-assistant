@@ -41,6 +41,6 @@ def rescore_jobs(profile):
             c.execute('''UPDATE jobs SET score=?,decision=?,reason=?,body=?,employment_type=?,start_date=?,end_date=?,
                          availability_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?''',
                       (score, decision, reason, job['body'], job['employment_type'], job['start_date'], job['end_date'],
-                       'expired' if decision == 'expired' else 'active', job['id']))
+                       'expired' if decision == 'expired' else 'unknown', job['id']))
             counts[decision] += 1
     return {'updated': len(rows), 'decisions': dict(counts)}

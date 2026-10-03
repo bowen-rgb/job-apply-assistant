@@ -179,6 +179,7 @@ def _ensure_columns(conn):
         'last_application_at': "TEXT DEFAULT ''",
         'tracker_stage': "TEXT DEFAULT ''",
         'tracker_note': "TEXT DEFAULT ''",
+        'tracker_source': "TEXT DEFAULT ''",
         'next_followup_at': "TEXT DEFAULT ''",
         'review_verdict': "TEXT DEFAULT ''",
         'review_confidence': 'INTEGER DEFAULT 0',
@@ -207,6 +208,9 @@ def init_db():
     with connect() as c:
         c.executescript(SCHEMA)
         _ensure_columns(c)
+        event_cols = {r['name'] for r in c.execute('PRAGMA table_info(application_stage_events)').fetchall()}
+        if 'source' not in event_cols:
+            c.execute("ALTER TABLE application_stage_events ADD COLUMN source TEXT DEFAULT ''")
         scan_cols = {r['name'] for r in c.execute('PRAGMA table_info(scans)').fetchall()}
         if 'diagnostics_json' not in scan_cols:
             c.execute("ALTER TABLE scans ADD COLUMN diagnostics_json TEXT DEFAULT '[]'")

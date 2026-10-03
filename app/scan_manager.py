@@ -168,7 +168,7 @@ def _upsert_hit(hit, profile: dict, report=None) -> tuple[str, int | None]:
     if fetch_error:
         marker = 'unverified_prefetched' if pre else 'unverified_search_snippet'
         reason = (reason + '; ' if reason else '') + marker
-    availability = 'expired' if decision == 'expired' else 'active'
+    availability = 'expired' if decision == 'expired' else 'unknown'
     scope = str(profile.get('dedupe_scope') or 'title_company_location')
     dedupe_key = build_job_dedupe_key(title=title, company=company, location=location, scope=scope)
     campaign_id = str(profile.get('search_profile_id') or 'default')
@@ -215,7 +215,7 @@ def _upsert_hit(hit, profile: dict, report=None) -> tuple[str, int | None]:
             score, decision, reason, _flags = evaluate(merged_payload, profile)
             if fetch_error:
                 reason += '; unverified_prefetched' if pre else '; unverified_search_snippet'
-            availability = 'expired' if decision == 'expired' else 'active'
+            availability = 'expired' if decision == 'expired' else 'unknown'
             c.execute(
                 """UPDATE jobs SET
                    url=?, canonical_url=?, fingerprint=?, dedupe_key=?, source_variants_json=?,
