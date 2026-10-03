@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS scans (
   inserted INTEGER DEFAULT 0,
   updated INTEGER DEFAULT 0,
   errors INTEGER DEFAULT 0,
+  diagnostics_json TEXT DEFAULT '[]',
   note TEXT DEFAULT '',
   started_at TEXT DEFAULT CURRENT_TIMESTAMP,
   finished_at TEXT DEFAULT ''
@@ -206,6 +207,9 @@ def init_db():
     with connect() as c:
         c.executescript(SCHEMA)
         _ensure_columns(c)
+        scan_cols = {r['name'] for r in c.execute('PRAGMA table_info(scans)').fetchall()}
+        if 'diagnostics_json' not in scan_cols:
+            c.execute("ALTER TABLE scans ADD COLUMN diagnostics_json TEXT DEFAULT '[]'")
         c.execute('CREATE INDEX IF NOT EXISTS idx_jobs_fingerprint ON jobs(fingerprint)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_jobs_dedupe_key ON jobs(dedupe_key)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_jobs_canonical_url ON jobs(canonical_url)')

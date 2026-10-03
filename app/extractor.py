@@ -15,6 +15,9 @@ FRENCH_MONTHS = {
     'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8, 'aout': 8,
     'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12, 'decembre': 12,
 }
+FRENCH_MONTHS.update(dict(zip(
+    ('january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'), range(1, 13))))
+MONTH_PATTERN = '|'.join(FRENCH_MONTHS)
 
 
 @dataclass
@@ -153,15 +156,15 @@ def _extract_context_date(text: str, keywords: tuple[str, ...]) -> str:
     low = text.lower()
     # numeric forms near a keyword
     for kw in keywords:
-        for m in re.finditer(re.escape(kw), low):
-            chunk = text[max(0, m.start()-30): min(len(text), m.end()+90)]
+        for m in re.finditer(r'(?<!\w)' + re.escape(kw) + r'(?!\w)', low):
+            chunk = text[m.end(): min(len(text), m.end()+70)]
             d = re.search(r'\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b', chunk)
             if d:
                 try:
                     return date(int(d.group(3)), int(d.group(2)), int(d.group(1))).isoformat()
                 except ValueError:
                     pass
-            fm = re.search(r'\b(\d{1,2})\s+(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+(20\d{2})\b', chunk, re.I)
+            fm = re.search(r'\b(\d{1,2})\s+(' + MONTH_PATTERN + r')\s+(20\d{2})\b', chunk, re.I)
             if fm:
                 month = FRENCH_MONTHS[fm.group(2).lower()]
                 try:
@@ -169,6 +172,26 @@ def _extract_context_date(text: str, keywords: tuple[str, ...]) -> str:
                 except ValueError:
                     pass
     return ''
+
+
+def extract_date_range(text: str) -> tuple[str, str]:
+    numeric = re.search(r'\bdu\s+(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\s+au\s+(\d{1,2})[/-](\d{1,2})[/-](20\d{2})', text or '', re.I)
+    if numeric:
+        a, ma, ya, b, mb, yb = map(int, numeric.groups())
+        try:
+            return date(ya, ma, a).isoformat(), date(yb, mb, b).isoformat()
+        except ValueError:
+            pass
+    pattern = r'\bdu\s+(\d{1,2})(?:\s+(' + MONTH_PATTERN + r')\s+(20\d{2}))?\s+au\s+(\d{1,2})\s+(' + MONTH_PATTERN + r')\s+(20\d{2})\b'
+    match = re.search(pattern, text or '', re.I)
+    if match:
+        a, month_a, year_a, b, month_b, year_b = match.groups()
+        try:
+            return (date(int(year_a or year_b), FRENCH_MONTHS[(month_a or month_b).lower()], int(a)).isoformat(),
+                    date(int(year_b), FRENCH_MONTHS[month_b.lower()], int(b)).isoformat())
+        except ValueError:
+            pass
+    return '', ''
 
 
 def _heuristic_contract(text: str) -> str:
@@ -200,16 +223,20 @@ def extract_job_document(html: str, url: str, fallback_title: str = '', fallback
     description = _clean_html_text(job.get('description') or '')
 
     # Page body is still valuable when JSON-LD is partial.
-    for tag in soup(['script', 'style', 'noscript', 'svg']):
+    for tag in soup(['script', 'style', 'noscript', 'svg', 'nav', 'header', 'footer']):
         tag.decompose()
-    text = re.sub(r'\n{3,}', '\n\n', soup.get_text('\n', strip=True))
-    combined = '\n'.join(x for x in [title, fallback_snippet, description, text] if x)
+    content = soup.select_one('main, article, [role="main"]') or soup
+    text = re.sub(r'\n{3,}', '\n\n', content.get_text('\n', strip=True))
+    # JSON-LD describes this offer; page chrome and related offers are not evidence.
+    combined = '\n'.join(x for x in [title, description or text, fallback_snippet] if x)
 
     if not employment:
         employment = _heuristic_contract(combined)
 
     start_date = _normalize_date(job.get('jobStartDate') or job.get('startDate'))
     end_date = _normalize_date(job.get('jobEndDate') or job.get('endDate'))
+    range_start, range_end = extract_date_range(combined)
+    start_date, end_date = start_date or range_start, end_date or range_end
     if not start_date:
         start_date = _extract_context_date(combined, ('début', 'debut', 'à partir du', 'a partir du', 'du'))
     if not end_date:
@@ -228,7 +255,7 @@ def extract_job_document(html: str, url: str, fallback_title: str = '', fallback
     fingerprint = hashlib.sha256(fp_seed.encode('utf-8', errors='ignore')).hexdigest()[:24]
 
     keep_json = {}
-    for key in ('@type', 'title', 'name', 'hiringOrganization', 'jobLocation', 'employmentType', 'datePosted', 'validThrough', 'jobStartDate', 'baseSalary'):
+    for key in ('@type', 'title', 'name', 'hiringOrganization', 'jobLocation', 'employmentType', 'datePosted', 'validThrough', 'jobStartDate', 'jobEndDate', 'endDate', 'baseSalary'):
         if key in job:
             keep_json[key] = job[key]
 

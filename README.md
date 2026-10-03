@@ -7,6 +7,14 @@ If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now i
 
 ## Application documents and queue fixes
 
+### Matching and source diagnostics
+
+Weekends and night shifts marked **Yes / Flexible** mean those shifts are possible in addition to daytime and weekdays. They do not restrict discovery to those schedules, and the AI review prompt now states that meaning explicitly. Preferred keywords rank candidates locally; source searches no longer require every preferred phrase or exclude vacancies merely because a site menu mentions CDI. Role matching handles common French feminine/masculine forms. Structured job descriptions take precedence over page navigation and related vacancies; local strong matches indicate relevance while missing dates still require checking before applying. Confirmed contract/end-date conflicts remain excluded.
+
+Existing local matches are recalculated when the server starts. **Recalculate matches** updates scores from stored records without fetching or changing saved/skipped jobs, application history or review verdicts. Legacy Plany page chrome and recommendation dates are removed during recalculation. A scan in progress must finish before using the button.
+
+Expand **Source diagnostics** under the scan progress to see attempted searches, raw results before deduplication and errors for each campaign/source/method. A successful search with zero results differs from a blocked request, missing dependency or query omitted by the configured budget. Diagnostics persist for the last completed scan. Search sources run before the potentially long JobSpy sweep; JobSpy failures are isolated and reported per site. City One's current public detail URLs and Bing destination redirects are recognized. Search results that point to France Travail, HelloWork or Indeed public listing pages are followed to bounded sets of detail links; those listing pages are never stored as individual vacancies. Connections and result counts can still change with site availability and verification challenges; the [JobSpy upstream documentation](https://github.com/speedyapply/JobSpy) describes its board-specific limitations.
+
 ### Job-title language
 
 Switching the interface language also displays translated job titles in offer cards and the application pipeline. The original title stays underneath for verification. Common recruitment titles and contract terms use a local glossary; other visible titles are translated on demand through MyMemory and cached locally. Only the public job title is sent to that service. Provider failures keep the original title visible. The source title, candidate profile, matching and application documents are unchanged. Search supports translated titles already available locally.

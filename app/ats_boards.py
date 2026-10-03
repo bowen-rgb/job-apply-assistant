@@ -95,15 +95,24 @@ def _lever(cfg: BoardConfig) -> Iterable[dict]:
         }
 
 
-def discover_boards(rows) -> Iterable[dict]:
+def discover_boards(rows, report=None) -> Iterable[dict]:
+    from .discovery_diagnostics import emit
     for cfg in parse_board_configs(rows):
+        source = cfg.ats + '_board'
+        emit(report, source, 'board', 'running', query=cfg.board)
         try:
+            count = 0
             if cfg.ats == 'greenhouse':
-                yield from _gh(cfg)
+                found = _gh(cfg)
             elif cfg.ats == 'ashby':
-                yield from _ashby(cfg)
+                found = _ashby(cfg)
             elif cfg.ats == 'lever':
-                yield from _lever(cfg)
-        except Exception:
+                found = _lever(cfg)
+            for row in found:
+                count += 1
+                yield row
+            emit(report, source, 'board', 'success' if count else 'empty', results=count)
+        except Exception as exc:
+            emit(report, source, 'board', 'failed', error=str(exc))
             # One broken/renamed company board must not abort the global scan.
             continue

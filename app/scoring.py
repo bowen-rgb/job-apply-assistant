@@ -1,5 +1,6 @@
 from __future__ import annotations
 import re
+import json
 import unicodedata
 from datetime import date
 
@@ -7,7 +8,7 @@ from datetime import date
 def norm(s: str) -> str:
     s = unicodedata.normalize('NFD', s or '')
     s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Mn')
-    return s.lower()
+    return s.lower().replace('’', "'").replace('ʼ', "'")
 
 
 def _iso_date(s: str) -> date | None:
@@ -38,7 +39,11 @@ def _role_hits(text: str, profile: dict) -> list[str]:
     hits = []
     for role in profile.get('preferred_roles', []):
         r = norm(role)
-        if r and r in t:
+        variants = {r, r.replace('employee', 'employe'), r.replace('serveuse', 'serveur'),
+                    r.replace('vendeuse', 'vendeur'), r.replace('caissiere', 'caissier'),
+                    r.replace('preparatrice', 'preparateur'), r.replace('hotesse', 'hote')}
+        role_text = re.sub(r'hote[.(]sse\)?', 'hote', t)
+        if r and any(v and re.search(r'(?<!\w)' + re.escape(v) + r'(?!\w)', role_text) for v in variants):
             hits.append(role)
     aliases = profile.get('role_aliases', {})
     for canonical, vals in aliases.items():
@@ -50,10 +55,10 @@ def _role_hits(text: str, profile: dict) -> list[str]:
 
 
 def evaluate(job: dict, profile: dict):
-    title = job.get('title', '')
+    title = job.get('title') or ''
     body = job.get('text') or job.get('body', '') or job.get('description', '')
     snippet = job.get('snippet', '')
-    t = norm('\n'.join([title, body, snippet, job.get('employment_type', ''), job.get('location', '')]))
+    t = norm('\n'.join(str(value or '') for value in [title, body, snippet, job.get('employment_type'), job.get('location')]))
     reasons: list[str] = []
     flags: list[str] = []
 
@@ -62,7 +67,9 @@ def evaluate(job: dict, profile: dict):
     allowed_contracts = [norm(x) for x in profile.get('contracts', [])]
     employment = norm(job.get('employment_type', ''))
     if employment and allowed_contracts:
-        if 'cdi' in employment and not any('cdi' == c for c in allowed_contracts):
+        fixed = any(re.search(r'\b' + re.escape(c) + r'\b', employment) for c in allowed_contracts)
+        fixed = fixed or ('temporary' in employment and any(c in {'cdd', 'interim', 'mission', 'extra'} for c in allowed_contracts))
+        if re.search(r'\b(?:cdi|permanent)\b', employment) and not fixed and not any('cdi' == c for c in allowed_contracts):
             return -100, 'reject', 'contract_conflict:CDI', ['hard_contract_conflict']
         if ('stage' in employment or 'alternance' in employment) and not any(x in employment for x in allowed_contracts):
             return -95, 'reject', f'contract_conflict:{job.get("employment_type", "")}', ['hard_contract_conflict']
@@ -70,10 +77,18 @@ def evaluate(job: dict, profile: dict):
     # Explicit exclusion terms other than generic holiday words.
     for term in profile.get('exclude_terms', []):
         nt = norm(term)
-        if not nt or nt in {'noel', 'christmas', 'fetes de fin d annee'}:
+        if not nt or nt in {'cdi', 'cdd', 'stage', 'alternance', 'noel', 'christmas', 'fetes de fin d annee'}:
             continue
         if nt in t:
             return -100, 'reject', f'excluded:{term}', ['hard_exclusion']
+
+    # A contract mention in navigation/company boilerplate does not describe this job.
+    # With unclassified employment, require explicit job/contract wording.
+    contract_text = norm(title + '\n' + body)
+    explicit_cdi = re.search(r'\b(?:contrat|poste|emploi|recrutement)\s+(?:(?:en|de|a)\s+)?cdi\b|\bcdi\s*[-–:]', contract_text)
+    if explicit_cdi and 'cdi' not in allowed_contracts and (allowed_contracts or any(norm(x) == 'cdi' for x in profile.get('exclude_terms', []))):
+        if not re.search(r'\b(?:cdd|interim|extra)\b', employment):
+            return -100, 'reject', 'contract_conflict:CDI', ['hard_contract_conflict']
 
     holiday = _holiday_conflict(body + '\n' + title)
     holiday_pref = str((profile.get('availability') or {}).get('holiday_work', 'flexible')).lower()
@@ -100,7 +115,7 @@ def evaluate(job: dict, profile: dict):
     configured_roles = profile.get('preferred_roles', [])
     roles = _role_hits(title + '\n' + body, profile)
     if roles:
-        score += min(42, 18 + 9 * min(3, len(roles)))
+        score += min(42, 21 + 9 * min(3, len(roles)))
         reasons.append('role:' + ','.join(roles[:3]))
     elif configured_roles:
         flags.append('role_not_explicit')
@@ -110,6 +125,8 @@ def evaluate(job: dict, profile: dict):
     for c in configured_contracts:
         if norm(c) in t:
             contract_hits.append(c)
+    if not contract_hits and 'temporary' in employment and any(norm(c) in {'cdd', 'interim', 'mission', 'extra'} for c in configured_contracts):
+        contract_hits.append('TEMPORARY')
     if contract_hits:
         score += min(25, 13 + 6 * min(2, len(contract_hits)))
         reasons.append('contract:' + ','.join(contract_hits[:2]))
@@ -127,7 +144,8 @@ def evaluate(job: dict, profile: dict):
         reasons.append('industry:' + ','.join(industry_hits[:2]))
 
     configured_locations = profile.get('locations', [])
-    loc_hits = [x for x in configured_locations if norm(x) in t]
+    location_text = norm(job.get('location') or '') or t
+    loc_hits = [x for x in configured_locations if norm(x) in location_text]
     if loc_hits:
         score += min(15, 8 + 4 * min(2, len(loc_hits)))
         reasons.append('location:' + ','.join(loc_hits[:2]))
@@ -139,7 +157,6 @@ def evaluate(job: dict, profile: dict):
         reasons.append('end_date:' + end.isoformat())
     elif max_end:
         flags.append('end_date_missing')
-        score -= 6
 
     if posted:
         age = (today - posted).days
@@ -154,13 +171,17 @@ def evaluate(job: dict, profile: dict):
         reasons.append('date_posted_unparsed')
     if job.get('salary'):
         score += 2
-    if job.get('structured_json'):
+    try:
+        structured = json.loads(job.get('structured_json') or '{}')
+    except (ValueError, TypeError):
+        structured = {}
+    if isinstance(structured, dict) and structured.get('@type') == 'JobPosting':
         score += 4
         reasons.append('structured_jobposting')
 
     # Penalize clearly long durations when no exact end date was found.
     if not end:
-        m = re.search(r'\b(\d{1,2})\s*mois\b', t)
+        m = re.search(r'\b(?:cdd|contrat|mission|duree)[^\n.]{0,25}?\b(\d{1,2})\s*mois\b', t)
         if m:
             months = int(m.group(1))
             if months >= 4:
@@ -172,7 +193,9 @@ def evaluate(job: dict, profile: dict):
                 reasons.append(f'short_duration:{months}m')
 
     score = max(-100, min(100, score))
-    if score >= 65 and ('end_date_missing' not in flags or not max_end):
+    # Local relevance and final eligibility are separate: unknown dates need review,
+    # but should not hide otherwise relevant jobs from the strong-match view.
+    if score >= 65 and (not configured_roles or roles) and (not configured_locations or loc_hits):
         decision = 'keep'
     elif score >= 38:
         decision = 'review'

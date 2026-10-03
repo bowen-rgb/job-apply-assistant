@@ -48,6 +48,7 @@ from .job_translation import translate_jobs, local_title
 from .worker_runtime import launch as launch_worker, cancel as cancel_worker
 from .queue_manager import stop as queue_stop
 from .queue_manager import retry as queue_retry
+from .matching_service import rescore_jobs
 
 STATIC = ROOT / 'static'
 
@@ -77,6 +78,7 @@ application_service = ApplicationService(job_repository)
 def startup():
     init_db()
     load_profile_raw()
+    rescore_jobs(runtime_profile())
     start_scheduler()
 
 
@@ -294,6 +296,13 @@ def set_decision(job_id: int, payload: Decision):
     except KeyError:
         raise HTTPException(404, 'job not found')
     return {'ok': True}
+
+
+@app.post('/api/jobs/rescore')
+def rescore_existing_jobs():
+    if scan_status().get('running'):
+        raise HTTPException(409, 'Wait for the current scan to finish before recalculating matches')
+    return rescore_jobs(runtime_profile())
 
 
 @app.post('/api/jobs/{job_id}/application-status')

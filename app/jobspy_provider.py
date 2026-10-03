@@ -13,6 +13,7 @@ import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable
+from .discovery_diagnostics import emit
 
 
 RUNNER = r'''
@@ -66,6 +67,8 @@ def _invoke(payload: dict[str, Any], timeout: int) -> list[dict[str, Any]]:
         [sys.executable, '-c', RUNNER, json.dumps(payload, ensure_ascii=False)],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
         check=False,
     )
@@ -73,7 +76,10 @@ def _invoke(payload: dict[str, Any], timeout: int) -> list[dict[str, Any]]:
         raise RuntimeError((p.stderr or '').strip()[-1200:] or 'JobSpy subprocess failed')
     if not p.stdout.strip():
         return []
-    return json.loads(p.stdout)
+    rows = json.loads(p.stdout)
+    if not rows and any(word in (p.stderr or "").lower() for word in ("error", "429", "captcha", "blocked")):
+        raise RuntimeError((p.stderr or "").strip()[-1200:])
+    return rows
 
 
 def _run_retry(payload: dict[str, Any], timeout: int) -> list[dict[str, Any]]:
@@ -94,7 +100,7 @@ def _run_retry(payload: dict[str, Any], timeout: int) -> list[dict[str, Any]]:
     return []
 
 
-def discover(profile: dict[str, Any]) -> Iterable[JobSpyResult]:
+def discover(profile: dict[str, Any], report=None) -> Iterable[JobSpyResult]:
     if not profile.get('jobspy_enabled', False) or not available():
         return
     sites = [str(x).strip().lower() for x in profile.get('jobspy_sites', []) if str(x).strip()]
@@ -109,60 +115,73 @@ def discover(profile: dict[str, Any]) -> Iterable[JobSpyResult]:
     country = str(profile.get('jobspy_country_indeed') or profile.get('country') or 'worldwide').strip()
     timeout = max(30, min(240, int(profile.get('jobspy_timeout_seconds', 90))))
     linkedin_desc = bool(profile.get('jobspy_linkedin_fetch_description', False))
+    failures = {site: 0 for site in sites}
+    suspended = set()
 
-    for role in roles[:8]:
+    for role in roles[:12]:
         for location in locations[:5]:
-            payload = {
-                'sites': sites,
-                'search_term': role,
-                'google_search_term': f'{role} jobs {location}'.strip(),
-                'location': location,
-                'results_wanted': results_wanted,
-                'hours_old': hours_old,
-                'country_indeed': country,
-                'linkedin_fetch_description': linkedin_desc,
-            }
-            try:
-                rows = _run_retry(payload, timeout)
-            except Exception:
-                continue
-            for row in rows:
-                title = _text(row.get('title') or row.get('TITLE'))
-                company = _text(row.get('company') or row.get('company_name') or row.get('COMPANY'))
-                job_url = _text(row.get('job_url_direct') or row.get('job_url') or row.get('JOB_URL'))
-                if not title or not job_url:
+            for requested_site in sites:
+                if requested_site in suspended:
                     continue
-                site = _text(row.get('site') or row.get('SITE')).lower() or 'unknown'
-                location_text = _text(row.get('location') or row.get('LOCATION'))
-                desc = _text(row.get('description') or row.get('DESCRIPTION'))
-                job_type = _text(row.get('job_type'))
-                salary_bits = [
-                    _text(row.get('min_amount')),
-                    _text(row.get('max_amount')),
-                    _text(row.get('currency')),
-                    _text(row.get('interval')),
-                ]
-                salary = ' '.join(x for x in salary_bits if x)
-                date_posted = _text(row.get('date_posted') or row.get('DATE_POSTED'))[:10]
-                prefetched = {
-                    'title': title,
-                    'company': company,
-                    'location': location_text,
-                    'body': desc,
-                    'description': desc,
-                    'employment_type': job_type,
-                    'date_posted': date_posted,
-                    'salary': salary,
-                    'structured_json': '',
-                    'fetch_mode': 'jobspy',
+                payload = {
+                    'sites': [requested_site],
+                    'search_term': role,
+                    'google_search_term': f'{role} jobs {location}'.strip(),
+                    'location': location,
+                    'results_wanted': results_wanted,
+                    'hours_old': hours_old,
+                    'country_indeed': country,
+                    'linkedin_fetch_description': linkedin_desc,
                 }
-                snippet = ' · '.join(x for x in [company, location_text, job_type] if x)
-                yield JobSpyResult(
-                    url=job_url,
-                    title=title,
-                    snippet=snippet,
-                    source=site,
-                    provider_key=f'jobspy_{site}',
-                    query=f'jobspy:{role}:{location}',
-                    prefetched=prefetched,
-                )
+                emit(report, 'jobspy_' + requested_site, 'jobspy', 'running', query=f'{role} / {location}')
+                try:
+                    rows = _run_retry(payload, timeout)
+                except Exception as exc:
+                    failures[requested_site] += 1
+                    emit(report, 'jobspy_' + requested_site, 'jobspy', 'failed', error=str(exc))
+                    if failures[requested_site] >= 3:
+                        suspended.add(requested_site)
+                        emit(report, 'jobspy_' + requested_site, 'jobspy', 'suspended')
+                    continue
+                failures[requested_site] = 0
+                emit(report, 'jobspy_' + requested_site, 'jobspy', 'success' if rows else 'empty', results=len(rows))
+                for row in rows:
+                    title = _text(row.get('title') or row.get('TITLE'))
+                    company = _text(row.get('company') or row.get('company_name') or row.get('COMPANY'))
+                    job_url = _text(row.get('job_url_direct') or row.get('job_url') or row.get('JOB_URL'))
+                    if not title or not job_url:
+                        continue
+                    site = _text(row.get('site') or row.get('SITE')).lower() or 'unknown'
+                    location_text = _text(row.get('location') or row.get('LOCATION'))
+                    desc = _text(row.get('description') or row.get('DESCRIPTION'))
+                    job_type = _text(row.get('job_type'))
+                    salary_bits = [
+                        _text(row.get('min_amount')),
+                        _text(row.get('max_amount')),
+                        _text(row.get('currency')),
+                        _text(row.get('interval')),
+                    ]
+                    salary = ' '.join(x for x in salary_bits if x)
+                    date_posted = _text(row.get('date_posted') or row.get('DATE_POSTED'))[:10]
+                    prefetched = {
+                        'title': title,
+                        'company': company,
+                        'location': location_text,
+                        'body': desc,
+                        'description': desc,
+                        'employment_type': job_type,
+                        'date_posted': date_posted,
+                        'salary': salary,
+                        'structured_json': '',
+                        'fetch_mode': 'jobspy',
+                    }
+                    snippet = ' · '.join(x for x in [company, location_text, job_type] if x)
+                    yield JobSpyResult(
+                        url=job_url,
+                        title=title,
+                        snippet=snippet,
+                        source=site,
+                        provider_key=f'jobspy_{site}',
+                        query=f'jobspy:{role}:{location}',
+                        prefetched=prefetched,
+                    )

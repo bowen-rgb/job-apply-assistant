@@ -59,11 +59,14 @@
         <div id="status" class="status" role="status" aria-live="polite"></div>
       </header>
       <section id="jobMetrics" class="metric-grid" aria-label="Résumé des offres"></section>
+      <p class="small">Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.</p>
+      <button id="rescoreBtn" class="ghost compact">Recalculer les correspondances</button>
 
       <section id="scanPanel" class="scanpanel hidden">
         <div class="scanrow"><strong id="scanText">Scan…</strong><span id="scanCounts"></span></div>
         <div class="progress"><div id="progressBar"></div></div>
         <div id="scanCurrent" class="small"></div>
+        <details><summary>Diagnostic des sources</summary><p class="small">Résultats de découverte avant déduplication. Une source sans résultat n’est pas forcément déconnectée.</p><div id="sourceDiagnostics"></div></details>
       </section>
 
       <section class="toolbar">
@@ -128,6 +131,7 @@
             <label class="wide">Texte libre<textarea id="availability_text" rows="3" placeholder="Ex. Disponible immédiatement jusqu'au…"></textarea></label>
             <label>Week-ends<select id="weekends"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
             <label>Travail de nuit<select id="night_shifts"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
+            <p class="small wide">Oui ou Flexible signifie que ces horaires sont possibles, sans exclure les journées ni les jours de semaine.</p>
             <label>Jours fériés / fêtes<select id="holiday_work"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
             <label>Heures / semaine min<input id="hours_min" type="number" min="0"></label>
             <label>Heures / semaine max<input id="hours_max" type="number" min="0"></label>

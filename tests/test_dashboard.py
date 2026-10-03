@@ -129,3 +129,33 @@ class DashboardMetricTests(unittest.TestCase):
             expect(first.locator('.queue')).to_have_text('已完成')
             expect(first.locator('button[onclick="confirmQueueSubmitted(1)"]')).to_have_count(0)
             self.assertEqual(errors, [])
+
+    def test_source_diagnostics_distinguish_empty_failed_and_omitted_searches(self):
+        diagnostics = [dict(source='hellowork', campaign='Paris', method='web:bing', state='empty', attempts=1, results=0, errors=0),
+                       dict(source='france_travail', campaign='Paris', method='web:duckduckgo', state='failed', attempts=1, results=0, errors=1, last_error='Verification required'),
+                       dict(source='staffme', campaign='Paris', method='web', state='not_run', attempts=0, results=0, errors=0)]
+        with sync_playwright() as playwright, ExitStack() as cleanup:
+            browser = playwright.chromium.launch(headless=True)
+            cleanup.callback(browser.close)
+            page = browser.new_page(locale='zh-CN')
+            def respond(route):
+                path = urlparse(route.request.url).path
+                if path == '/':
+                    route.fulfill(path=str(STATIC / 'index.html'), content_type='text/html')
+                elif path.startswith('/static/'):
+                    route.fulfill(path=str(STATIC / path.removeprefix('/static/')))
+                elif path == '/api/search/status':
+                    route.fulfill(json=dict(scan_id=1, running=False, source_diagnostics=diagnostics, found=0, fetched=0, inserted=0, updated=0, errors=1))
+                else:
+                    route.fulfill(json=[] if path in {'/api/jobs', '/api/sources'} else {})
+            page.route('**/*', respond)
+            page.goto('http://dashboard.test/')
+            page.locator('#scanPanel summary').click()
+            panel = page.locator('#sourceDiagnostics')
+            expect(panel).to_contain_text('搜索已完成，未发现岗位')
+            expect(panel).to_contain_text('请求失败或被拦截')
+            expect(panel).to_contain_text('未执行：达到查询数量上限')
+            expect(panel).to_contain_text('Verification required')
+            with page.expect_request('**/api/jobs/rescore'):
+                page.locator('#rescoreBtn').click()
+            expect(page.locator('#status')).to_have_text('匹配已重新计算。')

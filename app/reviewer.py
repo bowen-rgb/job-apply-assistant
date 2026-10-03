@@ -86,6 +86,7 @@ Decision rules:
 4. Never infer or answer protected/sensitive personal questions (health/disability, race/ethnicity, religion, political views, union membership, sexual orientation, criminal history).
 5. Do not make a legally binding declaration on the candidate's behalf.
 6. Be cautious about dates. If the end date is not actually established, do not pretend it is known.
+7. Weekends/night_shifts set to yes or flexible mean the candidate CAN also work those shifts. They do not exclude daytime or weekdays. Include terms are preferences, not mandatory words in the vacancy. Only explicit restrictions establish a schedule conflict.
 
 Return ONLY one JSON object, no markdown, with exactly this schema:
 {{

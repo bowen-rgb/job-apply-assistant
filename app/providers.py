@@ -61,7 +61,7 @@ DIRECT_SEEDS: tuple[DirectSeedSpec, ...] = (
     DirectSeedSpec(
         'cityone',
         'https://www.cityone.fr/rejoignez-nous/?_sfm_geo_region=Ile-de-France&sf_paged={page}',
-        r'^https?://(?:www\.)?cityone\.fr/job/',
+        r'^https?://(?:www\.)?cityone\.fr/(?:job/|rejoignez-nous/[^/?]+-\d+)',
         3,
     ),
 )
@@ -123,7 +123,7 @@ def enabled_direct_seeds(profile: dict) -> list[DirectSeedSpec]:
     return [s for s in DIRECT_SEEDS if s.provider_key in wanted]
 
 
-def _role_expr(profile: dict, max_roles: int = 5) -> str:
+def _role_expr(profile: dict, max_roles: int = 12) -> str:
     roles = [r.strip() for r in profile.get('preferred_roles', []) if str(r).strip()]
     if not roles:
         return ''
@@ -170,18 +170,19 @@ def build_queries(profile: dict) -> list[tuple[str, str]]:
 
     # Global discovery catches employer career sites and smaller agencies.
     include_terms = [x.strip() for x in profile.get('include_terms', []) if str(x).strip()]
-    extra = ' '.join(f'"{x}"' for x in include_terms[:3])
+    extra = '(' + ' OR '.join(f'"{x}"' for x in include_terms[:3]) + ')' if include_terms else ''
     base = ' '.join(x for x in [role_expr, contract_expr, location_expr, industry_expr, extra, exclude_expr, '(job OR emploi OR careers)'] if x).strip()
-    queries.extend([
-        ('global', base),
-        ('global', ' '.join(x for x in [role_expr, location_expr, industry_expr, exclude_expr, '(recrutement OR hiring OR careers)'] if x)),
-        ('global', ' '.join(x for x in [role_expr, contract_expr, location_expr, exclude_expr, 'job'] if x)),
-    ])
-
     # One focused query per source gives broad coverage without exploding query count.
     for src in enabled_sources(profile):
-        focused = ' '.join(x for x in [f'site:{src.domain}', role_expr, contract_expr, location_expr, exclude_expr, '(job OR emploi)'] if x)
+        focused = ' '.join(x for x in [f'site:{src.domain}', role_expr, location_expr, '(job OR emploi)'] if x)
         queries.append((src.key, focused))
+
+    # Optional keywords and contract details rank results locally, rather than
+    # requiring every indexed page to repeat the candidate's wording.
+    queries.extend([
+        ('global', ' '.join(x for x in [role_expr, location_expr, '(recrutement OR hiring OR careers)'] if x)),
+        ('global', base),
+    ])
 
     cap = int(profile.get('search_queries_per_run', 18))
     return queries[:max(1, cap)]

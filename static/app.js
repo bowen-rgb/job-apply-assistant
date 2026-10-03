@@ -294,6 +294,8 @@ async function pollScan(){
       scanPanel.classList.remove('hidden'); scanText.textContent=tr(s.running?'Scan en cours':'Dernier scan terminé');
       scanCounts.textContent=`${s.found} ${tr('vus')} · ${s.fetched} ${tr('lus')} · ${s.inserted} ${tr('nouveaux')} · ${s.updated} ${tr('mis à jour')} · ${s.errors} ${tr('erreurs')}`;
       scanCurrent.textContent=s.running?`${s.current_campaign?`[${s.current_campaign}] `:''}${s.current_source||''} ${s.current_title||''}`:(s.message||'');
+      const labels={pending:'En attente',running:'En cours',success:'Résultats trouvés',partial:'Résultats partiels',empty:'Recherche réussie, aucun résultat',failed:'Échec ou blocage',unavailable:'Indisponible',suspended:'Source suspendue après plusieurs échecs',not_run:'Non exécutée : limite de requêtes'};
+      el('sourceDiagnostics').innerHTML=(s.source_diagnostics||[]).length?`<div class="source-diagnostics">${s.source_diagnostics.map(x=>`<div class="source-diagnostic"><b>${esc(sourceLabels[x.source]||x.source)}</b> · ${esc(x.campaign)} · ${esc(x.method)}<div>${esc(tr(labels[x.state]||x.state))} · ${esc(tr('Requêtes :'))} ${x.attempts} · ${esc(tr('Résultats :'))} ${x.results} · ${esc(tr('Erreurs :'))} ${x.errors}</div>${x.last_error?`<div class="application-error">${esc(x.last_error)}</div>`:''}</div>`).join('')}</div>`:esc(tr('Aucun diagnostic enregistré pour ce scan. Relancez un scan après la mise à jour.'));
       const denom=Math.max(1,s.found); progressBar.style.width=`${Math.min(100,Math.round((s.fetched/denom)*100))}%`;
     }
     if(s.running){if(!scanTimer) scanTimer=setInterval(pollScan,1500); await load();}
@@ -304,6 +306,7 @@ async function pollScan(){
 for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');current=b.dataset.filter;render();};
 qInput.oninput=render; sourceSelect.onchange=render;
 el('searchBtn').onclick=async()=>{statusEl.textContent='Démarrage du scan…';const r=await fetch('/api/search',{method:'POST'});const x=await r.json();statusEl.textContent=x.running?'Scan lancé':'Scan déjà actif';await pollScan();};
+el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
 el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;const r=await fetch('/api/review/batch?mode=strong',{method:'POST'});const x=await r.json();statusEl.textContent=x.message||tr('Batch review lancé');setTimeout(load,1000);};
 async function refreshAutomationStatus(){
   try{const h=await requestJson('/api/health');el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'ChatGPT déconnecté : ouvrez start.bat puis connectez-vous dans le navigateur dédié.')].join(' · ');}
