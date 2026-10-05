@@ -12,6 +12,7 @@ from .agent_fallback import run_agent_loop
 from .ats import detect_ats
 from .ats_adapters import get_adapter
 from .db import connect
+from .human_review import can_prepare
 from .form_scanner import instrument_and_scan
 from .profile_store import load_profile_raw, runtime_profile, select_resume_for_job
 from .worker_runtime import check_cancelled, Cancelled
@@ -86,6 +87,13 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
         if not row:
             raise ValueError('job not found')
         job = dict(row)
+
+    # Recheck in the worker as well: a new AI review may have started after
+    # the HTTP handler/queue accepted the launch.
+    if not can_prepare(job):
+        _record(job_id, 'apply_error', 'Human confirmation required')
+        _update_status(job_id, 'error')
+        raise ValueError('Human confirmation required')
 
     resume_path, resume_meta = select_resume_for_job(job, raw_profile)
     profile['resume_path'] = str(resume_path) if resume_path else ''

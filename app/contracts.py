@@ -42,6 +42,11 @@ class ApplicationStatus(BaseModel):
     status: ApplicationStatusValue
 
 
+class HumanReview(BaseModel):
+    status: Literal['approved', 'declined', 'pending']
+    review_token: str = Field(min_length=64, max_length=64)
+
+
 class QueueRequest(BaseModel):
     job_ids: list[int] = Field(min_length=1, max_length=200)
     priority: int = Field(default=100, ge=0, le=1000)

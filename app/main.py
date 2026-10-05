@@ -35,6 +35,7 @@ from .profile_store import (
 )
 from .contracts import (
     ApplicationStatus,
+    HumanReview,
     Decision,
     QueueRequest,
     ResumePatch,
@@ -312,6 +313,22 @@ def set_application_status(job_id: int, payload: ApplicationStatus):
     except KeyError:
         raise HTTPException(404, 'job not found')
     return {'ok': True}
+
+
+@app.post('/api/jobs/{job_id}/human-review')
+def confirm_human_review(job_id: int, payload: HumanReview):
+    try:
+        job_repository.confirm_review(job_id, payload.status, payload.review_token)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
+    return {'ok': True}
+
+
+@app.get('/api/jobs/{job_id}/human-review-events')
+def human_review_events(job_id: int):
+    return job_repository.human_review_history(job_id)
 
 
 @app.get('/api/jobs/{job_id}/applications')

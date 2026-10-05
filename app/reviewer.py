@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import uuid
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -301,8 +302,8 @@ def review_via_chatgpt_web(job_id: int, form_snapshot: dict[str, Any] | None = N
 
     with connect() as c:
         c.execute(
-            '''UPDATE jobs SET review_verdict=?, review_confidence=?, review_summary=?, review_json=?, reviewed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?''',
-            (result['verdict'], result['confidence'], result['summary'], json.dumps(result, ensure_ascii=False), job_id),
+            '''UPDATE jobs SET review_verdict=?, review_confidence=?, review_summary=?, review_json=?, review_revision=?, reviewed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?''',
+            (result['verdict'], result['confidence'], result['summary'], json.dumps(result, ensure_ascii=False), uuid.uuid4().hex, job_id),
         )
         c.execute(
             'INSERT INTO applications(job_id,status,note) VALUES(?,?,?)',

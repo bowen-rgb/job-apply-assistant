@@ -87,3 +87,5 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 - [GitHub Projects: filtering views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects): independently filter explicit field values. Implemented locally; no GitHub source code is copied.
 - [Schema.org: validThrough](https://schema.org/validThrough): interpret a job listing's deadline separately from contract end dates and recruiter responses.
 - Recruiter outcomes are confirmed local records with provenance and timestamped history, not inferred from AI recommendations or failed discovery requests.
+- [Prefect interactive workflows](https://docs.prefect.io/v3/advanced/interactive): pause automated preparation until explicit human input; implemented independently with the existing SQLite queue.
+- [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches): bind confirmation to reviewed content and dismiss stale decisions after changes; no GitHub code is copied.

@@ -186,6 +186,10 @@ def _ensure_columns(conn):
         'review_summary': "TEXT DEFAULT ''",
         'review_json': "TEXT DEFAULT ''",
         'reviewed_at': "TEXT DEFAULT ''",
+        'review_revision': "TEXT DEFAULT ''",
+        'human_review_status': "TEXT DEFAULT ''",
+        'human_review_fingerprint': "TEXT DEFAULT ''",
+        'human_reviewed_at': "TEXT DEFAULT ''",
     }
     for name, decl in wanted.items():
         if name not in cols:
@@ -211,6 +215,10 @@ def init_db():
         event_cols = {r['name'] for r in c.execute('PRAGMA table_info(application_stage_events)').fetchall()}
         if 'source' not in event_cols:
             c.execute("ALTER TABLE application_stage_events ADD COLUMN source TEXT DEFAULT ''")
+        c.execute('''CREATE TABLE IF NOT EXISTS human_review_events (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,job_id INTEGER NOT NULL,
+                     status TEXT NOT NULL,review_token TEXT NOT NULL,
+                     created_at TEXT DEFAULT CURRENT_TIMESTAMP)''')
         scan_cols = {r['name'] for r in c.execute('PRAGMA table_info(scans)').fetchall()}
         if 'diagnostics_json' not in scan_cols:
             c.execute("ALTER TABLE scans ADD COLUMN diagnostics_json TEXT DEFAULT '[]'")

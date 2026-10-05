@@ -152,7 +152,9 @@ function matchFilter(j,filter=current){
   if(['keep','review'].includes(filter)) return j.decision===filter;
   if(filter==='liked') return j.user_action==='liked';
   if(filter==='approved') return j.review_verdict==='APPLY';
-  if(filter==='human') return j.review_verdict==='HUMAN_REVIEW';
+  if(filter==='human') return needsHumanConfirmation(j);
+  if(filter==='confirmed') return humanStatus(j)==='approved' && reviewActionable(j);
+  if(filter==='human_declined') return humanStatus(j)==='declined';
   if(filter==='queued') return !!j.queue_status && !['done','error','cancelled'].includes(j.queue_status);
   if(filter==='unsuitable') return j.decision==='reject';
   if(filter==='reviewer_skip') return j.review_verdict==='SKIP';
@@ -162,12 +164,18 @@ function matchFilter(j,filter=current){
 Object.assign(statusLabels,{reject:'Critères incompatibles',rejected:'Refus du recruteur'});
 const safeJobUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
 const hasSubmitted=j=>['submitted','submitted_verified'].includes(j.application_status);
-const preparable=j=>j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
+const humanStatus=j=>['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)?(j.human_review_status||'pending'):'not_required';
+const reviewActionable=j=>!hasSubmitted(j) && j.application_status!=='withdrawn' && !['rejected','withdrawn'].includes(j.tracker_stage) && !matchFilter(j,'expired');
+const needsHumanConfirmation=j=>humanStatus(j)==='pending' && reviewActionable(j);
+const reviewAllowsPreparation=j=>!['QUEUED','RUNNING'].includes(j.review_verdict) && (!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||humanStatus(j)==='approved');
+const preparable=j=>reviewAllowsPreparation(j) && j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
 const filterHelp={
   all:'Offres visibles, hors offres ignorées. Les compteurs suivent les mêmes filtres que les cartes.',
   keep:'Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.',
   review:'Matching local à vérifier. Ce filtre ne représente pas une réponse du recruteur.',
-  human:'Le reviewer IA demande une vérification humaine.',
+  human:'Les recommandations IA vertes et orange attendent toutes votre confirmation. Vérifiez le poste puis autorisez la préparation.',
+  confirmed:'Postes confirmés par vous pour préparer une candidature. La confirmation ne soumet rien sur le site.',
+  human_declined:'Postes que vous avez choisi de ne pas préparer après lecture. Ce n’est pas un refus du recruteur.',
   approved:'Le reviewer IA conseille de postuler. Cela ne signifie pas que la candidature est envoyée.',
   queued:'Candidatures en file, en préparation ou attendant votre envoi manuel.',
   submitted:'Envoi confirmé dans le suivi local. Les réponses ultérieures du recruteur restent consultables.',
@@ -186,10 +194,24 @@ function evidenceMarkup(j){
   return `${expired?`<p class="small">${esc(tr('Expiration observée :'))} ${esc(j.valid_through||j.reason||tr('Date ou mention de fermeture dans la source'))}${j.last_checked_at?` · ${esc(tr('Dernière lecture :'))} ${esc(j.last_checked_at)}`:''}</p>`:''}${outcome?`<p class="small">${esc(tr(stageLabels[j.tracker_stage]))} · ${esc(tr(evidenceSources[j.tracker_source]||'Source non renseignée : statut à confirmer'))}${j.tracker_note?` · ${esc(j.tracker_note)}`:''}</p>`:''}<details ontoggle="if(this.open) loadHistory(${j.id},this)"><summary>${esc(tr('Historique et sources du suivi'))}</summary><div class="history-content"></div></details>`;
 }
 async function loadHistory(id,panel){
-  try{const events=await requestJson(`/api/jobs/${id}/stage-events`);panel.querySelector('.history-content').innerHTML=events.length?events.map(x=>`<p class="small">${esc(x.created_at||'')} · ${esc(tr(stageLabels[x.stage]||x.stage))} · ${esc(tr(evidenceSources[x.source]||'Confirmation manuelle'))}${x.note?` · ${esc(x.note)}`:''}</p>`).join(''):`<p class="small">${esc(tr('Aucune réponse du recruteur enregistrée.'))}</p>`;}
+  try{const [events,reviews]=await Promise.all([requestJson(`/api/jobs/${id}/stage-events`),requestJson(`/api/jobs/${id}/human-review-events`)]);
+    const labels={approved:'Confirmée par vous',declined:'Écartée par vous',pending:'À confirmer par vous'};
+    panel.querySelector('.history-content').innerHTML=(reviews||[]).map(x=>`<p class="small">${esc(x.created_at||'')} · ${esc(tr(labels[x.status]||x.status))}</p>`).join('')+(events.length?events.map(x=>`<p class="small">${esc(x.created_at||'')} · ${esc(tr(stageLabels[x.stage]||x.stage))} · ${esc(tr(evidenceSources[x.source]||'Confirmation manuelle'))}${x.note?` · ${esc(x.note)}`:''}</p>`).join(''):`<p class="small">${esc(tr('Aucune réponse du recruteur enregistrée.'))}</p>`);}
   catch(error){panel.querySelector('.history-content').textContent=error.message;}
 }
 window.loadHistory=loadHistory;
+
+function humanReviewMarkup(j){
+  if(!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict))return '';
+  const state=humanStatus(j), labels={pending:'À confirmer par vous',approved:'Confirmée par vous',declined:'Écartée par vous'};
+  return `<section class="human-review-panel ${esc(state)}" data-human-review="${j.id}"><strong>${esc(tr(labels[state]||labels.pending))}</strong>${state==='pending'?`<p>${esc(tr('Même une recommandation IA verte doit être lue par vous. Vérifiez les dates, horaires, trajet et les questions du reviewer.'))}</p>`:''}${state!=='pending'&&j.human_reviewed_at?`<p class="small">${esc(j.human_reviewed_at)}</p>`:''}${reviewActionable(j)?`<div class="queue-actions">${state!=='approved'?`<button class="primary compact" onclick="confirmHumanReview(${j.id},'approved')">${esc(tr('J’ai vérifié : autoriser la préparation'))}</button>`:''}${state!=='declined'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'declined')">${esc(tr('Ne pas préparer ce poste'))}</button>`:''}${state!=='pending'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'pending')">${esc(tr('Revenir à vérifier'))}</button>`:''}</div>`:''}</section>`;
+}
+async function confirmHumanReview(id,state){
+  const job=allJobs.find(j=>j.id===id);if(!job)return;
+  try{await requestJson(`/api/jobs/${id}/human-review`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status:state,review_token:job.human_review_token})});await load();}
+  catch(error){statusEl.textContent=error.message;await load();}
+}
+window.confirmHumanReview=confirmHumanReview;
 
 function reviewBadge(j){
   const v=j.review_verdict||'';
@@ -245,10 +267,11 @@ function render(){
     ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
     ${j.last_workflow_event==='privacy_consent_required'?`<div class="application-error" role="status">${esc(tr('Accord à la charte de données requis.'))} <button onclick="approvePrivacy(${j.id})">${esc(tr('Accepter pour cette candidature et continuer'))}</button></div>`:''}
     ${reviewDetails(j)}
+    ${humanReviewMarkup(j)}
     ${evidenceMarkup(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow">${safeJobUrl(j.url)?`<a href="${esc(safeJobUrl(j.url))}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a>`:''}</div>
-    <p class="workflow-help">${esc(tr(!preparable(j)?'Préparation indisponible dans cet état. Consultez le statut et l’historique.':j.queue_status?'Gérez la préparation et les reprises depuis Pipeline & file.':"Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
+    <p class="workflow-help">${esc(tr(!reviewAllowsPreparation(j)?'Confirmez d’abord la revue IA dans le bloc ci-dessus.':!preparable(j)?'Préparation indisponible dans cet état. Consultez le statut et l’historique.':j.queue_status?'Gérez la préparation et les reprises depuis Pipeline & file.':"Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
       <button class="primary letter-action" onclick="openLetter(${j.id})">${esc(tr("Rédiger la lettre"))}</button>
       <button class="skip" onclick="decide(${j.id},'${j.user_action==='skipped'?'clear_user_action':'skipped'}')">${esc(tr(j.user_action==='skipped'?'Restaurer':'Passer'))}</button>
       <button class="like" onclick="decide(${j.id},'${j.user_action==='liked'?'clear_user_action':'liked'}')">${esc(tr(j.user_action==='liked'?'Ne plus garder':'Garder'))}</button>
@@ -300,7 +323,7 @@ async function queueJob(id){
 }
 async function requestJson(url,options={}){
   const response=await fetch(url,options);const data=await response.json();
-  if(!response.ok)throw new Error(data.detail||tr('Erreur'));
+  if(!response.ok)throw new Error(errorMessage(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail||tr('Erreur'))));
   return data;
 }
 async function loadLetter(id){
@@ -337,7 +360,7 @@ async function pollScan(){
     if(s.running || s.scan_id){
       scanPanel.classList.remove('hidden'); scanText.textContent=tr(s.running?'Scan en cours':'Dernier scan terminé');
       scanCounts.textContent=`${s.found} ${tr('vus')} · ${s.fetched} ${tr('lus')} · ${s.inserted} ${tr('nouveaux')} · ${s.updated} ${tr('mis à jour')} · ${s.errors} ${tr('erreurs')}`;
-      scanCurrent.textContent=s.running?`${s.current_campaign?`[${s.current_campaign}] `:''}${s.current_source||''} ${s.current_title||''}`:(s.message||'');
+      scanCurrent.textContent=s.running?`${s.current_campaign?`[${s.current_campaign}] `:''}${s.current_source||''} ${s.current_title||''}`:tr(s.message||'');
       const labels={pending:'En attente',running:'En cours',success:'Résultats trouvés',partial:'Résultats partiels',empty:'Recherche réussie, aucun résultat',failed:'Échec ou blocage',unavailable:'Indisponible',suspended:'Source suspendue après plusieurs échecs',not_run:'Non exécutée : limite de requêtes'};
       el('sourceDiagnostics').innerHTML=(s.source_diagnostics||[]).length?`<div class="source-diagnostics">${s.source_diagnostics.map(x=>`<div class="source-diagnostic"><b>${esc(sourceLabels[x.source]||x.source)}</b> · ${esc(x.campaign)} · ${esc(x.method)}<div>${esc(tr(labels[x.state]||x.state))} · ${esc(tr('Requêtes :'))} ${x.attempts} · ${esc(tr('Résultats :'))} ${x.results} · ${esc(tr('Erreurs :'))} ${x.errors}</div>${x.last_error?`<div class="application-error">${esc(x.last_error)}</div>`:''}</div>`).join('')}</div>`:esc(tr('Aucun diagnostic enregistré pour ce scan. Relancez un scan après la mise à jour.'));
       const denom=Math.max(1,s.found); progressBar.style.width=`${Math.min(100,Math.round((s.fetched/denom)*100))}%`;
@@ -505,7 +528,7 @@ function queueItemMarkup(x){
   const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
   const url=safeUrl(p.form_url)||safeUrl(x.url);
   const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
-  const guidance=waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:'';
+  const guidance=waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('Cette préparation attend votre confirmation du résultat IA.'))} <button class="ghost compact" onclick="openHumanConfirmation()">${esc(tr('Voir les postes à confirmer'))}</button></p>`:'';
   return `<div class="queue-item" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(statusLabels[x.note]?statusLabel(x.note):errorMessage(x.note))}`:''}</div>${checks}${guidance}<div class="queue-actions">${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${waiting?`<button class="primary compact" onclick="confirmQueueSubmitted(${x.job_id})">${esc(tr('J’ai envoyé sur le site'))}</button>`:''}${['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr(waiting?'Remettre en file pour préparer':'Réessayer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
 }
 async function loadPipeline(){
@@ -517,6 +540,7 @@ async function loadPipeline(){
   el('queueStopBtn').disabled=!q.running;
   el('queueRunBtn').textContent=tr(q.running?'Préparation en cours':'Préparer la suivante');
   el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':q.paused?'Préparation en pause. Vérifiez le résultat avant de continuer.':'Les candidatures pré-remplies attendent votre envoi sur le site.');
+  if(q.message==='Human confirmation required')el('pipelineStatus').textContent=tr('Cette préparation attend votre confirmation du résultat IA.');
   if(q.running&&!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(loadPipeline,1500);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
   el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(queueItemMarkup).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
@@ -530,12 +554,14 @@ el('queueBatchBtn').onclick=()=>startPreparation('batch');
 el('queueAddMatchesBtn').onclick=async()=>{
   try{
     await load();
-    const ids=allJobs.filter(j=>matchFilter(j,'keep')&&preparable(j)&&!j.queue_status).map(j=>j.id);
+    const ids=allJobs.filter(j=>matchFilter(j,'confirmed')&&preparable(j)&&!j.queue_status).map(j=>j.id);
     for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100)})});
     await loadPipeline();
-    if(!ids.length)el('pipelineStatus').textContent=tr('Aucun match fort à ajouter.');
+    if(!ids.length)el('pipelineStatus').textContent=tr('Aucun poste confirmé à ajouter. Vérifiez les recommandations IA dans la vue de confirmation humaine.');
   }catch(error){el('pipelineStatus').textContent=error.message;}
 };
+function openHumanConfirmation(){showView('jobs');current='human';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();}
+window.openHumanConfirmation=openHumanConfirmation;
 el('queueStopBtn').onclick=async()=>{await requestJson('/api/queue/stop',{method:'POST'});await loadPipeline();};
 async function retryQueue(id){try{await requestJson(`/api/queue/${id}/retry`,{method:'POST'});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}}
 async function confirmQueueSubmitted(id){

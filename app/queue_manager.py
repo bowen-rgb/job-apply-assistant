@@ -11,6 +11,7 @@ from .browser import launch_apply
 from .db import connect
 from .worker_runtime import cancel
 from .preparation_summary import preparation_summary
+from .human_review import annotate, can_prepare
 
 _lock = threading.Lock()
 _stop = threading.Event()
@@ -27,6 +28,8 @@ def status() -> dict[str, Any]:
     with connect() as c:
         counts = {r['status']: r['n'] for r in c.execute('SELECT status,COUNT(*) n FROM application_queue GROUP BY status').fetchall()}
         rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
+                            j.review_revision,j.reviewed_at,j.review_summary,j.review_json,j.body,j.employment_type,j.start_date,j.end_date,j.valid_through,
+                            j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,
                             COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
@@ -34,10 +37,12 @@ def status() -> dict[str, Any]:
     with _lock:
         base = dict(_state)
     base['counts'] = counts
-    base['items'] = [dict(r) for r in rows]
+    base['items'] = [annotate(dict(r)) for r in rows]
     for item in base['items']:
         item['preparation'] = preparation_summary(item)
         item.pop('fill_audit_path', None)
+        for field in ('body', 'review_json', 'human_review_fingerprint'):
+            item.pop(field, None)
         if item['status'] == 'error' and item['note'] in {'error', 'timeout', ''}:
             item['note'] = item['failure_reason'] or item['note']
     return base
@@ -54,6 +59,9 @@ def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
             ids.append(n)
     with connect() as c:
         for jid in ids:
+            job = c.execute('SELECT * FROM jobs WHERE id=?', (jid,)).fetchone()
+            if not job or not can_prepare(dict(job)):
+                continue
             if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped' AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter') AND tracker_stage NOT IN ('rejected','withdrawn') AND decision<>'expired' AND availability_status<>'expired'", (jid,)).fetchone():
                 continue
             c.execute('''INSERT INTO application_queue(job_id,status,priority,updated_at)
@@ -68,11 +76,13 @@ def retry(job_id: int) -> dict[str, Any]:
     # Explicit retries only: never repeat a submitted application or active task.
     # https://docs.bullmq.io/patterns/idempotent-jobs
     with connect() as c:
-        row = c.execute('''SELECT q.status,j.application_status,j.user_action,j.decision,j.availability_status,j.tracker_stage
+        row = c.execute('''SELECT j.*,q.status
                            FROM application_queue q JOIN jobs j ON j.id=q.job_id
                            WHERE q.job_id=?''', (job_id,)).fetchone()
         if not row:
             raise KeyError(job_id)
+        if not can_prepare(dict(row)):
+            raise ValueError('Confirm the AI review yourself before preparing this application')
         if row['status'] not in {'error', 'cancelled', 'waiting_user'} or row['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'} or row['user_action'] == 'skipped':
             raise ValueError('Application cannot be retried in its current state')
         if row['decision'] == 'expired' or row['availability_status'] == 'expired' or row['tracker_stage'] in {'rejected', 'withdrawn'}:
@@ -135,6 +145,10 @@ def _worker(mode: str = 'one'):
                 if not job or job['user_action'] == 'skipped' or job['decision'] == 'expired' or job['availability_status'] == 'expired' or job['tracker_stage'] in {'rejected', 'withdrawn'}:
                     c.execute("UPDATE application_queue SET status='cancelled',note='Ineligible for preparation',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
                     continue
+                if not can_prepare(dict(job)):
+                    c.execute("UPDATE application_queue SET note='Human confirmation required',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
+                    _set(paused=True, message='Human confirmation required')
+                    break
                 c.execute("UPDATE application_queue SET status='running',attempts=attempts+1,started_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
             _set(current_job_id=jid, message=f'Preparing job {jid}')
             if _stop.is_set():

@@ -10,6 +10,7 @@ from typing import Any
 
 from ..contracts import TRACK_STAGES
 from ..db import connect
+from ..human_review import annotate, can_prepare, confirmation_status, review_token, REVIEWABLE
 
 
 class JobRepository:
@@ -56,7 +57,7 @@ class JobRepository:
             + where + self._ORDER
         )
         with connect() as conn:
-            return [dict(row) for row in conn.execute(query, tuple(args)).fetchall()]
+            return [annotate(dict(row)) for row in conn.execute(query, tuple(args)).fetchall()]
 
     def stats(self) -> dict[str, Any]:
         query = """SELECT
@@ -69,7 +70,13 @@ class JobRepository:
             COALESCE(SUM(CASE WHEN application_status IN ('submitted','submitted_verified') THEN 1 ELSE 0 END),0) AS submitted_n
             FROM jobs"""
         with connect() as conn:
-            return dict(conn.execute(query).fetchone())
+            result = dict(conn.execute(query).fetchone())
+            result['human_n'] = sum(confirmation_status(dict(j)) == 'pending' and j['user_action'] != 'skipped'
+                                    and j['application_status'] not in {'submitted', 'submitted_verified', 'withdrawn'}
+                                    and j['tracker_stage'] not in {'rejected', 'withdrawn'}
+                                    and j['decision'] != 'expired' and j['availability_status'] != 'expired'
+                                    for j in conn.execute('SELECT * FROM jobs'))
+            return result
 
     def review_verdict(self, job_id: int) -> str:
         with connect() as conn:
@@ -180,11 +187,34 @@ class JobRepository:
             job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
         if not job:
             raise KeyError(job_id)
+        if not can_prepare(dict(job)):
+            raise ValueError('Confirm the AI review yourself before preparing this application')
         if (job['user_action'] == 'skipped' or job['decision'] == 'expired'
                 or job['availability_status'] == 'expired'
                 or job['tracker_stage'] in {'rejected', 'withdrawn'}
                 or job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn', 'opening', 'preparing', 'preparing_letter'}):
             raise ValueError('Application cannot be prepared in its current state')
+
+    def confirm_review(self, job_id: int, status: str, token: str) -> None:
+        with connect() as conn:
+            row = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+            if not row:
+                raise KeyError(job_id)
+            job = dict(row)
+            if status not in {'approved', 'declined', 'pending'} or job['review_verdict'] not in REVIEWABLE:
+                raise ValueError('Wait for a completed AI review before confirming')
+            if token != review_token(job):
+                raise ValueError('The review or listing changed. Reload and check the latest result')
+            conn.execute('''UPDATE jobs SET human_review_status=?,human_review_fingerprint=?,
+                            human_reviewed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?''',
+                         (status, token, job_id))
+            conn.execute('INSERT INTO human_review_events(job_id,status,review_token) VALUES(?,?,?)', (job_id, status, token))
+            if status != 'approved':
+                conn.execute("UPDATE application_queue SET status='cancelled',note='Human confirmation required',updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='queued'", (job_id,))
+
+    def human_review_history(self, job_id: int) -> list[dict]:
+        with connect() as conn:
+            return [dict(r) for r in conn.execute('SELECT * FROM human_review_events WHERE job_id=? ORDER BY id DESC', (job_id,))]
 
     def audit_path(self, job_id: int, column: str) -> str:
         if column not in {'fill_audit_path', 'agent_trace_path'}:
@@ -195,6 +225,7 @@ class JobRepository:
 
     def clear(self) -> None:
         with connect() as conn:
+            conn.execute('DELETE FROM human_review_events')
             conn.execute('DELETE FROM application_queue')
             conn.execute('DELETE FROM application_stage_events')
             conn.execute('DELETE FROM applications')

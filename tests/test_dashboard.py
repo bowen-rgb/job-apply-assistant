@@ -11,6 +11,69 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class DashboardMetricTests(unittest.TestCase):
+    def test_human_confirmation_covers_both_ai_results_and_bulk_queues_only_confirmed_jobs(self):
+        from app.human_review import annotate, review_token
+        jobs=[dict(id=i,title=f'Review {i}',url=f'https://example.test/{i}',decision='keep' if i==1 else 'review',
+                   user_action='',application_status='',review_verdict='APPLY' if i==1 else 'HUMAN_REVIEW',
+                   review_revision='first',score=90,body='Check schedule',queue_status='') for i in [1,2]]
+        queued=[]
+        requests=[]
+        with sync_playwright() as playwright, ExitStack() as cleanup:
+            browser=playwright.chromium.launch(headless=True)
+            cleanup.callback(browser.close)
+            page=browser.new_page(locale='zh-CN')
+            errors=[]
+            page.on('pageerror',lambda e:errors.append(str(e)))
+            def respond(route):
+                path=urlparse(route.request.url).path
+                if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
+                elif path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')))
+                elif path=='/api/jobs':route.fulfill(json=[annotate(j) for j in jobs])
+                elif path.endswith('/human-review'):
+                    id=int(path.split('/')[3]);job=next(j for j in jobs if j['id']==id)
+                    payload=json.loads(route.request.post_data)
+                    self.assertEqual(payload['review_token'],review_token(job))
+                    job.update(human_review_status=payload['status'],human_review_fingerprint=payload['review_token'],human_reviewed_at='2026-10-05 10:00:00')
+                    route.fulfill(json={'ok':True})
+                elif path=='/api/queue':
+                    if route.request.method=='POST':
+                        payload=json.loads(route.request.post_data);requests.append(payload['job_ids'])
+                        for id in payload['job_ids']:
+                            job=next(j for j in jobs if j['id']==id);job['queue_status']='queued';queued.append(id)
+                    route.fulfill(json={'items':[dict(annotate(next(j for j in jobs if j['id']==id)),job_id=id,status='queued') for id in queued],'counts':{'queued':len(queued)},'running':False})
+                elif path=='/api/analytics':route.fulfill(json={'totals':{}})
+                else:route.fulfill(json=[] if path in {'/api/sources','/api/pipeline'} else {})
+            page.route('**/*',respond)
+            page.goto('http://dashboard.test/')
+            page.locator('[data-metric-filter="human"]').click()
+            expect(page.locator('#cards .card')).to_have_count(2)
+            expect(page.locator('#cards .apply:disabled')).to_have_count(2)
+            page.locator('button[onclick="confirmHumanReview(1,\'approved\')"]').click()
+            expect(page.locator('[data-metric-filter="human"] b')).to_have_text('1')
+            page.locator('.filter[data-filter="confirmed"]').click()
+            expect(page.locator('#cards .apply')).to_be_enabled()
+            page.locator('button[onclick="confirmHumanReview(1,\'pending\')"]').click()
+            expect(page.locator('#cards .card')).to_have_count(0)
+            page.locator('[data-metric-filter="human"]').click()
+            expect(page.locator('#cards .card')).to_have_count(2)
+            page.locator('button[onclick="confirmHumanReview(1,\'declined\')"]').click()
+            expect(page.locator('#cards .card')).to_have_count(1)
+            page.locator('button[onclick="confirmHumanReview(2,\'approved\')"]').click()
+            expect(page.locator('[data-metric-filter="human"] b')).to_have_text('0')
+            page.locator('.filter[data-filter="human_declined"]').click()
+            expect(page.locator('#cards')).to_contain_text('Review 1')
+            expect(page.locator('#cards .apply')).to_be_disabled()
+            page.locator('#pipelineNav').click()
+            page.locator('#queueAddMatchesBtn').click()
+            expect(page.locator('#queueList')).to_contain_text('Review 2')
+            self.assertEqual(requests,[[2]])  # Orange accepted by the user, not the unconfirmed strong match.
+            jobs[1]['review_revision']='second'
+            page.reload()
+            page.locator('[data-metric-filter="human"]').click()
+            expect(page.locator('#cards')).to_contain_text('Review 2')
+            expect(page.locator('#cards .apply')).to_be_disabled()
+            self.assertEqual(errors,[])
+
     def test_every_filter_uses_its_own_state_and_search_metrics_match_cards(self):
         jobs = [dict(id=i, title=f'Job {i}', url=f'https://example.test/{i}', decision='low',
                      application_status='', user_action='', review_verdict='', queue_status='',
@@ -26,7 +89,7 @@ class DashboardMetricTests(unittest.TestCase):
         jobs[8].update(queue_status='error')
         jobs[9].update(application_status='submitted', user_action='skipped', provider_key='two')
         expected = {'all':[1,2,3,4,5,6,8,9], 'keep':[4], 'review':[5], 'liked':[4],
-                    'approved':[4], 'human':[5], 'queued':[6], 'submitted':[3,10],
+                    'approved':[4], 'human':[4,5], 'confirmed':[], 'human_declined':[], 'queued':[6], 'submitted':[3,10],
                     'skipped':[7,10], 'expired':[2], 'rejected':[3], 'unsuitable':[1],
                     'reviewer_skip':[1], 'withdrawn':[8]}
         with sync_playwright() as playwright, ExitStack() as cleanup:
@@ -138,20 +201,22 @@ class DashboardMetricTests(unittest.TestCase):
             human = page.locator('[data-metric-filter="human"]')
             human.click()
 
-            def check_metrics(count, submitted):
+            def check_metrics(count, keep, submitted):
                 expect(human.locator('b')).to_have_text(str(count))
-                expect(page.locator('[data-metric-filter="keep"] b')).to_have_text(str(count))
+                expect(page.locator('[data-metric-filter="keep"] b')).to_have_text(str(keep))
                 expect(page.locator('[data-metric-filter="submitted"] b')).to_have_text(str(submitted))
                 expect(page.locator('#cards .card')).to_have_count(count)
 
-            check_metrics(2, 1)  # Five skipped reviews must not inflate the count to seven.
+            check_metrics(1, 2, 1)  # Skipped and already-submitted reviews need no new confirmation.
+            page.locator('[data-metric-filter="keep"]').click()
             page.locator('#cards .card').filter(has_text='Job 1').locator('.skip').click()
-            check_metrics(1, 1)
+            human.click()
+            check_metrics(1, 1, 1)
             page.reload()
             page.locator('[data-metric-filter="human"]').click()
-            check_metrics(1, 1)
+            check_metrics(1, 1, 1)
             page.locator('#cards .skip').click()
-            check_metrics(0, 1)  # Ignoring a listing must preserve submission history.
+            check_metrics(0, 0, 1)  # Ignoring a listing must preserve submission history.
             expect(page.locator('#cards .empty')).to_be_visible()
 
             page.locator('.filter[data-filter="skipped"]').click()
@@ -159,7 +224,7 @@ class DashboardMetricTests(unittest.TestCase):
             page.locator('#cards .card').filter(has_text='Job 1').locator('.skip').click()
             expect(page.locator('#cards .card')).to_have_count(6)
             human.click()
-            check_metrics(1, 1)
+            check_metrics(0, 1, 1)
             self.assertEqual(errors, [])
 
     def test_queue_explains_handoff_and_batch_retry_submission_actions(self):

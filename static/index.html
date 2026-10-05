@@ -33,6 +33,8 @@
       <button data-filter="liked" class="filter">Aimées</button>
       <button data-filter="approved" class="filter">Reviewer: APPLY</button>
       <button data-filter="human" class="filter">Reviewer: humain</button>
+      <button data-filter="confirmed" class="filter">Confirmées par vous</button>
+      <button data-filter="human_declined" class="filter">Écartées par vous</button>
       <button data-filter="queued" class="filter">Dans la file</button>
       <button data-filter="submitted" class="filter">Candidatures envoyées</button>
       <button data-filter="skipped" class="filter">Ignorées</button>
@@ -85,7 +87,7 @@
     <section id="pipelineView" class="hidden">
       <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status" role="status" aria-live="polite"></div></header>
       <section id="analyticsCards" class="metric-grid"></section>
-      <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Préparez une offre ou toute la file. Le lot s’arrête si une candidature demande votre intervention. Ouvrez ensuite chaque formulaire pour vérifier et envoyer.</p></div><div id="queueControls"><button id="queueAddMatchesBtn" class="ghost compact">Ajouter les matchs forts</button> <button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueBatchBtn" class="primary compact">Préparer tout le lot</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
+      <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Préparez une offre ou toute la file. Le lot s’arrête si une candidature demande votre intervention. Ouvrez ensuite chaque formulaire pour vérifier et envoyer.</p></div><div id="queueControls"><button id="queueAddMatchesBtn" class="ghost compact">Ajouter les postes confirmés</button> <button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueBatchBtn" class="primary compact">Préparer tout le lot</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
       <p class="small">Les réponses du recruteur sont enregistrées par vous depuis un e-mail, le portail de candidature ou un appel. Aucun verdict IA ne constitue un refus du recruteur.</p>
     </section>

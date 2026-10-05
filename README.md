@@ -246,6 +246,29 @@ prefill rather than creating a fictional worker result. Manually confirming
 submission in either view updates the same application state. Actions report
 server failures instead of displaying a success message.
 
+## Human confirmation after AI review
+
+Both `APPLY` (green) and `HUMAN_REVIEW` (orange) appear in the human-confirmation
+inbox until you explicitly allow preparation or decline it. The AI verdict is
+preserved separately from the human decision. Confirmed and declined jobs have
+their own views, and confirmation can be undone. Submitted, expired, withdrawn
+and ignored jobs do not inflate the pending-confirmation counter.
+
+“Queue confirmed jobs” selects only your confirmed, eligible jobs, including
+orange recommendations you have checked. Individual preparation, enqueue,
+retry, the batch worker and the application worker all enforce confirmation
+for completed green/orange AI reviews. A legacy queue pauses when it reaches an
+unconfirmed job. Final submission remains manual on the recruiter's website;
+confirmation permits preparation only.
+
+Confirmation is bound to the reviewed recommendation and listing content.
+Rerunning AI review or changing job details invalidates an older approval, while
+an unchanged scan timestamp does not. A stale browser confirmation returns a
+conflict instead of approving unseen changes. Decisions are timestamped in the
+tracking history. This independently implements the human-input pause pattern
+from [Prefect](https://docs.prefect.io/v3/advanced/interactive) and the stale-review
+principle from [GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches), without adding either as a dependency.
+
 ## Tests
 
 ```bat
