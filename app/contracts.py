@@ -47,6 +47,14 @@ class HumanReview(BaseModel):
     review_token: str = Field(min_length=64, max_length=64)
 
 
+class ReviewExport(BaseModel):
+    format: Literal['html', 'xlsx'] = 'html'
+    language: Literal['zh', 'fr', 'en', 'de', 'es', 'pt'] = 'zh'
+    scope: Literal['pending', 'visible'] = 'pending'
+    job_ids: list[int] = Field(default_factory=list, max_length=1000)
+    translate_text: bool = True
+
+
 class QueueRequest(BaseModel):
     job_ids: list[int] = Field(min_length=1, max_length=200)
     priority: int = Field(default=100, ge=0, le=1000)

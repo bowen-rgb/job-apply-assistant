@@ -68,6 +68,19 @@
       <p id="filterHelp" class="small" role="status"></p>
       <p class="small">Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.</p>
       <button id="rescoreBtn" class="ghost compact">Recalculer les correspondances</button>
+      <details class="review-export-panel"><summary>Exporter pour vérification</summary>
+        <p class="small">HTML pour lire et imprimer ; Excel pour filtrer les postes et noter les avis. Le destinataire n’a pas besoin du serveur local.</p>
+        <div class="export-controls">
+          <label>Contenu<select id="reviewExportScope"><option value="pending">Tous les postes à confirmer</option><option value="visible">Vue affichée avec ses filtres</option></select></label>
+          <label>Format<select id="reviewExportFormat"><option value="html">HTML</option><option value="xlsx">Excel (.xlsx)</option></select></label>
+          <label>Langue du fichier<select id="reviewExportLanguage"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="reviewExportTranslate" checked>Traduire les résumés et questions via ChatGPT, en conservant les originaux</label>
+        <p class="small">La traduction utilise le navigateur ChatGPT déjà configuré. Si elle est indisponible, le fichier conserve les originaux avec une indication explicite.</p>
+        <p id="reviewExportCount" class="small"></p>
+        <div class="queue-actions"><button id="reviewExportBtn" class="primary compact">Créer le fichier</button><button id="reviewExportCancelBtn" class="ghost compact" hidden>Annuler l’export</button><a id="reviewExportDownload" class="ghost compact" hidden>Télécharger le fichier</a></div>
+        <p id="reviewExportStatus" class="small" role="status" aria-live="polite"></p>
+      </details>
 
       <section id="scanPanel" class="scanpanel hidden">
         <div class="scanrow"><strong id="scanText">Scan…</strong><span id="scanCounts"></span></div>

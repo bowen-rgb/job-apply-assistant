@@ -21,6 +21,16 @@ Switching the interface language also displays translated job titles in offer ca
 
 The French interface now translates review controls and application states. The dashboard uses a restrained warm light palette, compact controls and collapsible matching details.
 
+### Share human-review results
+
+On the jobs page, expand **Export for human review**. Choose either all jobs awaiting your confirmation (both recommended and uncertain AI verdicts) or the currently displayed jobs after filtering/searching. Choose standalone **HTML** for reading, printing and sharing, or **Excel (.xlsx)** for filtering and entering feedback. Then select Chinese, French, English, German, Spanish or Portuguese and generate/download the file. The recipient does not need this app or access to its local server.
+
+Reports include original job links, AI conclusions, reasons, risks, questions to verify, available job facts and original review text. Excel adds reviewer-feedback dropdowns and editable comment columns. The export freezes the selected records when generation starts; later local changes do not silently alter the report. An exported opinion does not approve a job, submit an application or update the local database. Record final confirmations in the app.
+
+Report headings use the selected language locally. With **Translate review text via ChatGPT** enabled, non-French exports translate titles and review text through the configured, signed-in ChatGPT browser session; original text stays available. These requests include the selected review text, not the full CV or candidate profile. Translation runs in the background with progress and cancellation, and successful translations are cached locally. Disabled, unavailable or incomplete translation keeps the original text with an explicit warning. French exports retain the original French reviews. Excel marks cells exceeding its text limit; use HTML to read those texts in full.
+
+Private snapshots/files stay under `data/review_exports/`, and translations under `data/review_translation_cache/`; both are excluded from Git. File generation uses [Odoo's filtered, explicit-column export pattern](https://github.com/odoo/odoo/blob/19.0/addons/web/controllers/export.py), independently implemented with [XlsxWriter tables](https://xlsxwriter.readthedocs.io/worksheet.html#worksheet-add-table). HTML contains its own styles and has no scripts or local-server dependency.
+
 **Ajouter à la file** adds an offer to the preparation list. **Préparer la suivante** prepares one application and then pauses for the candidate to inspect it; final submission remains manual. **Arrêter** cancels the current preparation cooperatively and retains the remaining queue. Failed and cancelled entries require an explicit retry. Previously prepared offers without a document audit are prepared again; complete preparations wait for review.
 
 Choose an active CV in **Profil & préférences**. A library containing exactly one available CV also works when an imported profile has lost its selection. CV and cover-letter inputs are identified separately, so a letter upload does not receive a CV.

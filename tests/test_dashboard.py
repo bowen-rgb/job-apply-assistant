@@ -11,6 +11,52 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class DashboardMetricTests(unittest.TestCase):
+    def test_review_export_controls_language_filtered_scope_download_and_cancel(self):
+        jobs=[dict(id=1,title='One',url='https://example.test/1',decision='keep',review_verdict='APPLY',human_review_status='pending',provider_key='one',score=90),
+              dict(id=2,title='Two',url='https://example.test/2',decision='review',review_verdict='HUMAN_REVIEW',human_review_status='pending',provider_key='two',score=50),
+              dict(id=3,title='Done',decision='keep',review_verdict='APPLY',human_review_status='pending',application_status='submitted',score=90)]
+        state={'id':'a'*32,'status':'ready','format':'xlsx','language':'fr','message':'Export prêt.','total':1,'completed':1}
+        payloads=[]
+        with sync_playwright() as p,ExitStack() as cleanup:
+            browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
+            page=browser.new_page(locale='zh-CN')
+            errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+            def respond(route):
+                path=urlparse(route.request.url).path
+                if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
+                elif path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')))
+                elif path=='/api/jobs':route.fulfill(json=jobs)
+                elif path=='/api/sources':route.fulfill(json=[dict(key='one',label='Source one',enabled=True),dict(key='two',label='Source two',enabled=True)])
+                elif path=='/api/review-exports':payloads.append(json.loads(route.request.post_data));route.fulfill(json=state)
+                elif path.endswith('/cancel'):state.update(status='cancelled',message='Export annulé.');route.fulfill(json=state)
+                elif path.startswith('/api/review-exports/'):route.fulfill(json=state)
+                else:route.fulfill(json={})
+            page.route('**/*',respond)
+            page.goto('http://dashboard.test/')
+            page.locator('.review-export-panel summary').click()
+            expect(page.locator('#reviewExportCount')).to_have_text('2 个岗位将导出')
+            page.locator('[data-metric-filter="human"]').click()
+            page.locator('#sourceSelect').select_option('one')
+            page.locator('#reviewExportScope').select_option('visible')
+            expect(page.locator('#reviewExportCount')).to_have_text('1 个岗位将导出')
+            page.locator('#reviewExportLanguage').select_option('fr')
+            page.locator('#reviewExportFormat').select_option('xlsx')
+            page.locator('#reviewExportTranslate').uncheck()
+            page.locator('#reviewExportBtn').click()
+            expect(page.locator('#reviewExportDownload')).to_be_visible()
+            self.assertEqual(payloads[0],dict(scope='visible',job_ids=[1],format='xlsx',language='fr',translate_text=False))
+            expect(page.locator('#reviewExportDownload')).to_have_attribute('href',f'/api/review-exports/{"a"*32}/download')
+            expect(page.locator('#reviewExportDownload')).to_contain_text('FR · XLSX')
+            state.update(status='running',message='Traduction des textes de revue via ChatGPT…')
+            page.locator('#reviewExportBtn').click()
+            expect(page.locator('#reviewExportCancelBtn')).to_be_visible()
+            expect(page.locator('#reviewExportBtn')).to_be_disabled()
+            page.locator('#reviewExportCancelBtn').click()
+            expect(page.locator('#reviewExportStatus')).to_have_text('导出已取消。')
+            expect(page.locator('#reviewExportDownload')).to_be_hidden()
+            expect(page.locator('#reviewExportBtn')).to_be_enabled()
+            self.assertEqual(errors,[])
+
     def test_human_confirmation_covers_both_ai_results_and_bulk_queues_only_confirmed_jobs(self):
         from app.human_review import annotate, review_token
         jobs=[dict(id=i,title=f'Review {i}',url=f'https://example.test/{i}',decision='keep' if i==1 else 'review',

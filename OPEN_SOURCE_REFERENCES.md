@@ -82,6 +82,13 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 7. Repeated scans and repeated applications are auditable and resumable.
 8. Missing facts trigger human review rather than invention.
 
+## Human-review exports
+
+- [Odoo 19 export controller](https://github.com/odoo/odoo/blob/19.0/addons/web/controllers/export.py): reviewed the actual `ExportXlsxWriter` and export-selection implementation. Adapted the filtered-selection, explicit-field and in-memory workbook patterns independently; no Odoo source is copied or vendored.
+- [XlsxWriter tables](https://xlsxwriter.readthedocs.io/worksheet.html#worksheet-add-table): used the library for real XLSX files with column filters, frozen headers, wrapped text and editable reviewer feedback.
+- [XlsxWriter workbook options](https://xlsxwriter.readthedocs.io/workbook.html#constructor): disabled automatic formulas and URL conversion for untrusted source/review text; job links are explicitly validated and written as hyperlinks.
+- Reports are frozen local snapshots, with localized headings, optional review-text translation, retained originals and explicit translation failures. Comments in exported files do not change local approvals or application states.
+
 ## Dashboard state semantics
 
 - [GitHub Projects: filtering views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects): independently filter explicit field values. Implemented locally; no GitHub source code is copied.

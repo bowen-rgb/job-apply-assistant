@@ -149,6 +149,8 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
         return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
     if purpose == 'cover-letter':
         return isinstance(obj.get('letter'), str) and bool(obj['letter'].strip())
+    if purpose == 'review-export-translation':
+        return isinstance(obj.get('translations'),dict) and bool(obj['translations'])
     return True
 
 

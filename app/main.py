@@ -36,6 +36,7 @@ from .profile_store import (
 from .contracts import (
     ApplicationStatus,
     HumanReview,
+    ReviewExport,
     Decision,
     QueueRequest,
     ResumePatch,
@@ -50,6 +51,7 @@ from .worker_runtime import launch as launch_worker, cancel as cancel_worker
 from .queue_manager import stop as queue_stop
 from .queue_manager import retry as queue_retry
 from .matching_service import rescore_jobs
+from .review_exports import create_export, read_state as export_state, download as export_download, cancel_export
 
 STATIC = ROOT / 'static'
 
@@ -98,6 +100,44 @@ def index():
 @app.post('/api/jobs/translate-titles')
 def translate_job_titles(payload: TitleTranslationRequest):
     return {'language': payload.language, 'translations': translate_jobs(job_repository.titles(payload.job_ids), payload.language)}
+
+
+@app.post('/api/review-exports')
+def start_review_export(payload: ReviewExport):
+    rows=job_repository.list()
+    if payload.scope=='pending':
+        rows=[j for j in rows if j['human_review_status']=='pending' and j['user_action']!='skipped'
+              and j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
+              and j['tracker_stage'] not in {'rejected','withdrawn'}
+              and j['decision']!='expired' and j['availability_status']!='expired']
+    else:
+        if not payload.job_ids:raise HTTPException(400,'Aucun poste à exporter dans cette sélection.')
+        by_id={j['id']:j for j in rows}
+        if any(id not in by_id for id in payload.job_ids):raise HTTPException(409,'La sélection a changé. Rechargez la liste avant d’exporter.')
+        rows=[by_id[id] for id in dict.fromkeys(payload.job_ids)]
+    try:return create_export(rows,payload.language,payload.format,payload.translate_text)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+
+@app.get('/api/review-exports/{export_id}')
+def review_export_status(export_id: str):
+    try:return export_state(export_id)
+    except KeyError:raise HTTPException(404,'Export introuvable.')
+
+
+@app.post('/api/review-exports/{export_id}/cancel')
+def stop_review_export(export_id: str):
+    try:return cancel_export(export_id)
+    except KeyError:raise HTTPException(404,'Export introuvable.')
+
+
+@app.get('/api/review-exports/{export_id}/download')
+def download_review_export(export_id: str):
+    try:path,state=export_download(export_id)
+    except KeyError:raise HTTPException(404,'Export introuvable.')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+    media='text/html; charset=utf-8' if state['format']=='html' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return FileResponse(path,media_type=media,filename=f'job-review-{state["created_at"][:10]}-{state["language"]}.{state["format"]}')
 
 
 @app.get('/api/profile')

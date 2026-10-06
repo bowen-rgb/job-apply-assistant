@@ -1,4 +1,6 @@
 let allJobs=[];
+let visibleJobIds=[];
+let reviewExportId=null,reviewExportTimer=null,reviewExportBusy=false;
 let current='all';
 let pollTimer=null;
 let scanTimer=null;
@@ -249,6 +251,8 @@ function render(){
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
   const jobs=scopedJobs.filter(j=>matchFilter(j));
+  visibleJobIds=jobs.map(j=>j.id);
+  updateExportCount();
   const liked=scopedJobs.filter(j=>matchFilter(j,'liked')).length;
   const keep=scopedJobs.filter(j=>matchFilter(j,'keep')).length;
   const human=scopedJobs.filter(j=>matchFilter(j,'human')).length;
@@ -562,6 +566,42 @@ el('queueAddMatchesBtn').onclick=async()=>{
 };
 function openHumanConfirmation(){showView('jobs');current='human';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();}
 window.openHumanConfirmation=openHumanConfirmation;
+function updateExportCount(){
+  const count=el('reviewExportScope').value==='visible'?visibleJobIds.length:allJobs.filter(j=>matchFilter(j,'human')).length;
+  el('reviewExportCount').textContent=`${count} ${tr('postes dans le fichier')}`;
+  el('reviewExportBtn').disabled=reviewExportBusy||count===0;
+}
+el('reviewExportScope').onchange=updateExportCount;
+async function pollReviewExport(){
+  clearTimeout(reviewExportTimer);
+  if(!reviewExportId)return;
+  try{
+    const state=await requestJson(`/api/review-exports/${reviewExportId}`);
+    reviewExportBusy=['queued','running'].includes(state.status);
+    el('reviewExportCancelBtn').hidden=!reviewExportBusy;
+    el('reviewExportStatus').textContent=`${tr(state.message||'Préparation de l’export…')}${reviewExportBusy?` ${state.completed||0} / ${state.total}`:''}${state.untranslated?` · ${state.untranslated} ${tr('postes avec texte original faute de traduction')}`:''}`;
+    el('reviewExportDownload').hidden=state.status!=='ready';
+    if(state.status==='ready'){
+      el('reviewExportDownload').href=`/api/review-exports/${reviewExportId}/download`;
+      el('reviewExportDownload').textContent=`${tr('Télécharger le fichier')} · ${(state.language||'').toUpperCase()} · ${(state.format||'').toUpperCase()}`;
+    }
+    updateExportCount();
+    if(reviewExportBusy)reviewExportTimer=setTimeout(pollReviewExport,1500);
+  }catch(error){reviewExportBusy=false;el('reviewExportCancelBtn').hidden=true;el('reviewExportStatus').textContent=error.message;updateExportCount();}
+}
+el('reviewExportBtn').onclick=async()=>{
+  reviewExportBusy=true;updateExportCount();el('reviewExportDownload').hidden=true;
+  el('reviewExportStatus').textContent=tr('Préparation de l’export…');
+  try{
+    await load();
+    const state=await requestJson('/api/review-exports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({format:el('reviewExportFormat').value,language:el('reviewExportLanguage').value,scope:el('reviewExportScope').value,job_ids:el('reviewExportScope').value==='visible'?visibleJobIds:[],translate_text:el('reviewExportTranslate').checked})});
+    reviewExportId=state.id;localStorage.setItem('jaa-review-export',reviewExportId);await pollReviewExport();
+  }catch(error){reviewExportBusy=false;el('reviewExportStatus').textContent=error.message;updateExportCount();}
+};
+el('reviewExportCancelBtn').onclick=async()=>{
+  try{await requestJson(`/api/review-exports/${reviewExportId}/cancel`,{method:'POST'});await pollReviewExport();}
+  catch(error){el('reviewExportStatus').textContent=error.message;}
+};
 el('queueStopBtn').onclick=async()=>{await requestJson('/api/queue/stop',{method:'POST'});await loadPipeline();};
 async function retryQueue(id){try{await requestJson(`/api/queue/${id}/retry`,{method:'POST'});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}}
 async function confirmQueueSubmitted(id){
@@ -583,6 +623,6 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;await loadSources();await load();await pollScan();await refreshAutomationStatus();}
+async function init(){await Locale.ready;el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
