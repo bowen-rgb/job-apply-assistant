@@ -546,5 +546,6 @@
   "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "此申请已投递或已结束。请查看历史记录，无需重新准备或重复投递。",
   "Lien du poste invalide. Consultez la source du poste.": "岗位链接无效。请查看岗位来源。",
   "Historique de la préparation": "自动准备历史",
-  "Échec de préparation (historique)": "过去的准备失败记录"
+  "Échec de préparation (historique)": "过去的准备失败记录",
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "未检测到专用浏览器。辅助功能需运行 start.bat；仍可手动投递。"
 }

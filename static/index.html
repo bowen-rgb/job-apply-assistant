@@ -7,6 +7,7 @@
   <title>Job Apply Assistant V8.4</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link rel="stylesheet" href="/static/dashboard.css" />
+  <link rel="stylesheet" href="/static/guide.css" />
 </head>
 <body>
 <a class="skip-link" href="#mainContent">Passer au contenu principal</a>
@@ -15,6 +16,7 @@
     <div class="brand"><span class="brand-mark" aria-hidden="true">JA</span><span>Job Apply Assistant <small>WORKSPACE · V8.4</small></span></div>
     <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
     <nav class="primary-nav" aria-label="Sections">
+      <button id="guideNav" class="navmain">Premiers pas</button>
       <button id="jobsNav" class="navmain active" aria-current="page">Offres</button>
       <button id="profileNav" class="navmain">Profil & préférences</button>
       <button id="pipelineNav" class="navmain">Pipeline & file</button>
@@ -56,6 +58,8 @@
 
   <main id="mainContent" tabindex="-1">
     <div id="automationStatus" class="automation-status" role="status"></div>
+    <section id="guideView" class="hidden" aria-labelledby="guideTitle"></section>
+    <div id="welcomeGuide" class="guide-welcome"></div>
     <section id="jobsView">
       <header>
         <div>
@@ -271,6 +275,8 @@
   </main>
 </div>
 <script src="/static/locale.js"></script>
+<script src="/static/guide-text.js"></script>
+<script src="/static/guide.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

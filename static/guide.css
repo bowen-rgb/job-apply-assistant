@@ -1,0 +1,15 @@
+.guide-welcome,.guide-readiness,.guide-page-help,.guide-trouble{padding:16px 20px;margin:0 0 20px;border:1px solid var(--line,#d4dccf);border-radius:12px;background:#eef3e9}
+.guide-welcome button,.guide-readiness button,.guide-page-help button{margin:4px 8px 4px 0}
+.guide-paths{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}
+.guide-paths article,.guide-tasks li{padding:20px;border:1px solid #d4dccf;border-radius:12px;background:#fff}
+.guide-paths h2,.guide-tasks h2{font-size:20px;margin:0 0 12px}
+.guide-paths p,.guide-tasks p,.guide-page-help p,.guide-trouble p{line-height:1.65}
+.guide-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-left:28px}
+.guide-page-help summary,.guide-trouble summary{cursor:pointer;font-weight:600}
+.guide-readiness p{margin:6px 0}
+#guideView button,.guide-welcome button,.guide-page-help button{border:1px solid #92a58b;background:#fff;width:auto;text-align:left}
+#guideView button:hover,.guide-welcome button:hover,.guide-page-help button:hover{background:#e3ecdd}
+.guide-paths button,.guide-welcome [data-guide-target="guide"]{background:#305f47!important;color:#fff}
+.resume-actions a{display:inline-block;padding:8px;border:1px solid #d4dccf;border-radius:8px}
+@media(max-width:900px){.guide-paths,.guide-tasks{grid-template-columns:1fr}}
+@media print{body:has(#guideView:not(.hidden)) aside,body:has(#guideView:not(.hidden)) #automationStatus,body:has(#guideView:not(.hidden)) button{display:none!important}body:has(#guideView:not(.hidden)) .shell{display:block}#guideView article,#guideView li{break-inside:avoid}#guideView details{display:block}#guideView details>*{display:block}}

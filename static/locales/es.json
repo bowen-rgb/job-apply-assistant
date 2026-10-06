@@ -546,5 +546,6 @@
   "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Esta solicitud ya fue enviada o cerrada. Consulta el historial en vez de prepararla otra vez.",
   "Lien du poste invalide. Consultez la source du poste.": "Enlace de oferta no válido. Consulta su fuente.",
   "Historique de la préparation": "Historial de preparación",
-  "Échec de préparation (historique)": "Fallo de preparación anterior"
+  "Échec de préparation (historique)": "Fallo de preparación anterior",
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navegador dedicado no detectado. Abra start.bat para la asistencia; aún puede postular manualmente."
 }

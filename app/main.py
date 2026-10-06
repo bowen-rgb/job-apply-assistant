@@ -179,6 +179,18 @@ def resumes():
     return list_resumes()
 
 
+@app.get('/api/resumes/{resume_id}/download')
+def download_resume(resume_id: str):
+    from .profile_store import RESUME_DIR
+    row = next((row for row in list_resumes() if row['id'] == resume_id), None)
+    if row is None:
+        raise HTTPException(404, 'CV not found')
+    path = (RESUME_DIR / row['filename']).resolve()
+    if not path.is_relative_to(RESUME_DIR.resolve()) or not path.is_file():
+        raise HTTPException(404, 'CV not found')
+    return FileResponse(path, filename=Path(row['original_name']).name)
+
+
 @app.post('/api/resumes/upload')
 async def upload_resume(file: UploadFile = File(...), label: str = Form('')):
     name = file.filename or 'resume.pdf'

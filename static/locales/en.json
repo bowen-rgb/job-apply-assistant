@@ -546,5 +546,6 @@
   "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "This application is already submitted or closed. Consult its history instead of preparing it again.",
   "Lien du poste invalide. Consultez la source du poste.": "Invalid job link. Check its source.",
   "Historique de la préparation": "Preparation history",
-  "Échec de préparation (historique)": "Past preparation failure"
+  "Échec de préparation (historique)": "Past preparation failure",
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Dedicated browser not detected. Run start.bat for assistance; manual applications remain available."
 }

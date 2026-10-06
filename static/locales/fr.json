@@ -546,5 +546,6 @@
   "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.",
   "Lien du poste invalide. Consultez la source du poste.": "Lien du poste invalide. Consultez la source du poste.",
   "Historique de la préparation": "Historique de la préparation",
-  "Échec de préparation (historique)": "Échec de préparation (historique)"
+  "Échec de préparation (historique)": "Échec de préparation (historique)",
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible."
 }

@@ -1,4 +1,8 @@
 
+## First-time users / Première utilisation / 第一次使用
+
+Open **Premiers pas / Start here / 从这里开始** in the sidebar and select your language. Choose manual application, assisted preparation, or recording an application already sent. Each page has contextual help. Print the in-app guide or save it as PDF, or read the [French / Chinese user guide](USER_GUIDE.md).
+
 ## Windows V8.2 dependency fix
 
 If V8.1 stopped with `error: resolution-too-deep`, use V8.2. The installer now installs core, JobSpy, and Scrapling in separate steps and uses `scrapling[fetchers]` rather than the much larger optional `scrapling[all]` dependency graph. See `FIX_V8_2.md`.

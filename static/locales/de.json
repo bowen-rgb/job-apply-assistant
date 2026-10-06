@@ -546,5 +546,6 @@
   "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Diese Bewerbung wurde bereits gesendet oder abgeschlossen. Lesen Sie den Verlauf, statt sie erneut vorzubereiten.",
   "Lien du poste invalide. Consultez la source du poste.": "Ungültiger Stellenlink. Prüfen Sie die Quelle.",
   "Historique de la préparation": "Vorbereitungsverlauf",
-  "Échec de préparation (historique)": "Früherer Vorbereitungsfehler"
+  "Échec de préparation (historique)": "Früherer Vorbereitungsfehler",
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Eigener Browser nicht erkannt. Für die Assistenz start.bat starten; manuelle Bewerbungen bleiben möglich."
 }

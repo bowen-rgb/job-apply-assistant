@@ -89,18 +89,21 @@ async function translateVisibleTitles(){
 
 function showView(which){
   const jobs=which==='jobs', profile=which==='profile', pipeline=which==='pipeline';
+  el('guideView').classList.toggle('hidden',which!=='guide');
+  Guide.view(which);
   el('jobsView').classList.toggle('hidden',!jobs);
   el('profileView').classList.toggle('hidden',!profile);
   el('pipelineView').classList.toggle('hidden',!pipeline);
   el('jobSidebar').classList.toggle('hidden',!jobs);
-  [['jobsNav',jobs],['profileNav',profile],['pipelineNav',pipeline]].forEach(([id,active])=>{
+  [['guideNav',which==='guide'],['jobsNav',jobs],['profileNav',profile],['pipelineNav',pipeline]].forEach(([id,active])=>{
     el(id).classList.toggle('active',active);
     el(id).toggleAttribute('aria-current',active);
     if(active) el(id).setAttribute('aria-current','page');
   });
-  if(profile) loadProfile();
+  if(profile) return loadProfile();
   if(pipeline) loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
 }
+el('guideNav').onclick=()=>showView('guide');
 el('jobsNav').onclick=()=>showView('jobs');
 el('profileNav').onclick=()=>showView('profile');
 el('pipelineNav').onclick=()=>showView('pipeline');
@@ -245,6 +248,7 @@ function reviewDetails(j){
 }
 
 function render(){
+  Guide.jobs(allJobs);
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
   const scopedJobs=allJobs.filter(j=>!src || j.provider_key===src).filter(j=>{
@@ -381,8 +385,8 @@ el('searchBtn').onclick=async()=>{statusEl.textContent=tr('Démarrage du scan…
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
 el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;await requestJson('/api/review/batch?mode=strong',{method:'POST'});statusEl.textContent=tr('Batch review lancé');setTimeout(load,1000);};
 async function refreshAutomationStatus(){
-  try{const h=await requestJson('/api/health');el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'ChatGPT déconnecté : ouvrez start.bat puis connectez-vous dans le navigateur dédié.')].join(' · ');}
-  catch(error){el('automationStatus').textContent=error.message;}
+  try{const h=await requestJson('/api/health');Guide.health(h);el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.')].join(' · ');}
+  catch(error){Guide.health(null);el('automationStatus').textContent=error.message;}
 }
 el('healthBtn').onclick=refreshAutomationStatus;
 el('clearBtn').onclick=async()=>{if(!confirm(tr('Supprimer toutes les offres locales ?')))return;try{await requestJson('/api/jobs',{method:'DELETE'});await load();}catch(error){statusEl.textContent=error.message;}};
@@ -403,13 +407,13 @@ function renderSourceSettings(){
 }
 
 async function loadResumes(){
-  const r=await fetch('/api/resumes'); const xs=await r.json(); resumesCache=xs;
+  const xs=await requestJson('/api/resumes'); resumesCache=xs;
   document.querySelectorAll('.search-profile-row .sp-resume').forEach(sel=>{const cur=sel.value;sel.innerHTML=`<option value="">${esc(tr('CV actif / routage auto'))}</option>`+xs.map(x=>`<option value="${esc(x.id)}">${esc(x.label||x.original_name)}</option>`).join('');sel.value=cur;});
   const box=el('resumeList');
   if(!xs.length){box.innerHTML=`<div class="small">${esc(tr('Aucun CV dans la bibliothèque locale.'))}</div>`;return;}
-  box.innerHTML=xs.map(x=>`<div class="resume-item resume-edit"><div class="resume-fields"><input id="resume-label-${esc(x.id)}" value="${esc(x.label||x.original_name)}" aria-label="Nom du CV"><input id="resume-tags-${esc(x.id)}" value="${esc((x.tags||[]).join(', '))}" placeholder="tags: accueil, logistique…" aria-label="Tags du CV"><div class="resume-meta">${esc(x.original_name)} · ${(x.size/1024).toFixed(0)} KB</div></div><div class="resume-actions">${x.active?'<span class="active-pill">ACTIF</span>':`<button type="button" onclick="activateResume('${esc(x.id)}')">Activer</button>`}<button type="button" onclick="saveResumeMeta('${esc(x.id)}')">Enregistrer</button><button type="button" onclick="deleteResume('${esc(x.id)}')">Supprimer</button></div></div>`).join('');
+  box.innerHTML=xs.map(x=>`<div class="resume-item resume-edit"><div class="resume-fields"><input id="resume-label-${esc(x.id)}" value="${esc(x.label||x.original_name)}" aria-label="Nom du CV"><input id="resume-tags-${esc(x.id)}" value="${esc((x.tags||[]).join(', '))}" placeholder="tags: accueil, logistique…" aria-label="Tags du CV"><div class="resume-meta">${esc(x.original_name)} · ${(x.size/1024).toFixed(0)} KB</div></div><div class="resume-actions">${x.active?'<span class="active-pill">ACTIF</span>':`<button type="button" onclick="activateResume('${esc(x.id)}')">Activer</button>`}<a class="button" href="/api/resumes/${encodeURIComponent(x.id)}/download" download>${esc(Guide.text('download'))}</a><button type="button" onclick="saveResumeMeta('${esc(x.id)}')">Enregistrer</button><button type="button" onclick="deleteResume('${esc(x.id)}')">Supprimer</button></div></div>`).join('');
 }
-async function activateResume(id){try{await requestJson(`/api/resumes/${id}/activate`,{method:'POST'});await loadResumes();profileStatus.textContent=tr('CV actif modifié.');}catch(error){profileStatus.textContent=error.message;}}
+async function activateResume(id){try{await requestJson(`/api/resumes/${id}/activate`,{method:'POST'});await loadResumes();await refreshAutomationStatus();profileStatus.textContent=tr('CV actif modifié.');}catch(error){profileStatus.textContent=error.message;}}
 async function saveResumeMeta(id){
   const label=el(`resume-label-${id}`)?.value?.trim()||'';
   const tags=lines(el(`resume-tags-${id}`)?.value||'');
@@ -419,11 +423,10 @@ async function saveResumeMeta(id){
 async function deleteResume(id){if(!confirm(tr('Supprimer ce CV de la bibliothèque locale ?')))return;try{await requestJson(`/api/resumes/${id}`,{method:'DELETE'});await loadResumes();}catch(error){profileStatus.textContent=error.message;}}
 window.activateResume=activateResume;window.saveResumeMeta=saveResumeMeta;window.deleteResume=deleteResume;
 el('uploadResumeBtn').onclick=async()=>{
-  const file=el('resumeFile').files[0]; if(!file){profileStatus.textContent='Choisis un fichier CV.';return;}
+  const file=el('resumeFile').files[0]; if(!file){profileStatus.textContent=Guide.text('cv');el('resumeFile').focus();return;}
   const fd=new FormData(); fd.append('file',file); fd.append('label',el('resumeLabel').value||'');
-  profileStatus.textContent='Ajout du CV…'; const r=await fetch('/api/resumes/upload',{method:'POST',body:fd});
-  if(!r.ok){profileStatus.textContent=(await r.json()).detail||'Erreur upload';return;}
-  el('resumeFile').value='';el('resumeLabel').value='';await loadResumes();profileStatus.textContent='CV ajouté.';
+  profileStatus.textContent='Ajout du CV…'; await requestJson('/api/resumes/upload',{method:'POST',body:fd});
+  el('resumeFile').value='';el('resumeLabel').value='';await loadResumes();await refreshAutomationStatus();profileStatus.textContent='CV ajouté.';
 };
 
 
@@ -458,7 +461,7 @@ el('addSearchProfileBtn').onclick=()=>searchProfileRow({});
 
 async function loadProfile(){
   try{
-    const r=await fetch('/api/profile'); loadedProfile=await r.json();
+    loadedProfile=await requestJson('/api/profile');
     const i=loadedProfile.identity||{}, b=loadedProfile.background||{}, a=loadedProfile.availability||{}, p=loadedProfile.preferences||{}, au=loadedProfile.automation||{};
     ['first_name','last_name','email','phone','address_line1','city','postal_code','country','linkedin','portfolio'].forEach(k=>setValue(k,i[k]));
     ['current_title','current_company','years_experience','school','degree','field_of_study','graduation_year'].forEach(k=>setValue(k,b[k]));
@@ -670,7 +673,7 @@ for(const button of document.querySelectorAll('button[id]')){
     catch(error){const target=this.closest('#profileView')?profileStatus:this.closest('#pipelineView')?el('pipelineStatus'):statusEl;target.textContent=error.message;}
   };
 }
-document.addEventListener('localechange',()=>{render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+document.addEventListener('localechange',()=>{Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
+async function init(){await Locale.ready;Guide.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
