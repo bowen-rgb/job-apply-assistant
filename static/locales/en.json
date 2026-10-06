@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "Taking over requires the dedicated browser launched by start.bat.",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "Dedicated browser inaccessible. Run start.bat and retry.",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "Prepared tab not found. Find it in the dedicated browser or open the job link; unsent field values cannot be recovered.",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Tab activated. Check documents and answers, submit on the site and confirm here."
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Tab activated. Check documents and answers, submit on the site and confirm here.",
+  "Ouvrir ou reprendre la candidature": "Open or resume application",
+  "Ouvrir le poste dans mon navigateur": "Open job in my browser",
+  "J’ai déjà envoyé cette candidature": "I already submitted this application",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "Already submitted? Confirm here even if preparation failed or the tab is closed. Otherwise, Open resumes the existing tab or reopens the job without restoring old entries.",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "Job page reopened. Old entries are not restored. If already submitted, confirm here without sending again.",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "This application is already submitted or closed. Consult its history instead of preparing it again.",
+  "Lien du poste invalide. Consultez la source du poste.": "Invalid job link. Check its source.",
+  "Historique de la préparation": "Preparation history",
+  "Échec de préparation (historique)": "Past preparation failure"
 }

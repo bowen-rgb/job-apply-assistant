@@ -55,8 +55,10 @@ def _update_status(job_id: int, status: str, **extra) -> None:
         args.append(tracker)
     args.append(job_id)
     with connect() as c:
-        c.execute(f'UPDATE jobs SET {", ".join(sets)} WHERE id=?', tuple(args))
-        if tracker:
+        # Human confirmation is authoritative, even if a cancelled worker
+        # completes or fails late. Preserve the recruiter pipeline as well.
+        changed = c.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id=? AND application_status NOT IN ('submitted','submitted_verified','withdrawn')", tuple(args)).rowcount
+        if tracker and changed:
             c.execute('INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,?,?)', (job_id, tracker, f'Automation status: {status}'))
 
 

@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "La reprise nécessite le navigateur dédié lancé par start.bat.",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici."
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.",
+  "Ouvrir ou reprendre la candidature": "Ouvrir ou reprendre la candidature",
+  "Ouvrir le poste dans mon navigateur": "Ouvrir le poste dans mon navigateur",
+  "J’ai déjà envoyé cette candidature": "J’ai déjà envoyé cette candidature",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.",
+  "Lien du poste invalide. Consultez la source du poste.": "Lien du poste invalide. Consultez la source du poste.",
+  "Historique de la préparation": "Historique de la préparation",
+  "Échec de préparation (historique)": "Échec de préparation (historique)"
 }

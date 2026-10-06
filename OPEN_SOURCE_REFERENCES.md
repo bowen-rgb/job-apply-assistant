@@ -91,6 +91,8 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 
 ## Dashboard state semantics
 
+- [BullMQ job implementation](https://github.com/taskforcesh/bullmq/blob/master/src/classes/job.ts) and [idempotent jobs](https://docs.bullmq.io/patterns/idempotent-jobs): reviewed separation of progress, failure reason and completed outcomes. Local manual submission supersedes preparation failure, repeat confirmations are idempotent and late worker writes cannot revert submission. Implemented independently without BullMQ dependencies or copied source.
+
 - [Prefect flow-run implementation](https://github.com/PrefectHQ/prefect/blob/main/src/prefect/flow_runs.py) and [interactive workflows](https://docs.prefect.io/v3/advanced/interactive): reviewed contextual handoff and explicit user-input patterns. Queue presentation now separates current execution, required human action and failure details; no Prefect source is copied.
 - [Playwright bring-to-front](https://playwright.dev/python/docs/api/class-page#page-bring-to-front) and [CDP sessions](https://playwright.dev/python/docs/api/class-browsercontext#browser-context-new-cdp-session): identify and activate the existing application tab without navigation or final submission.
 

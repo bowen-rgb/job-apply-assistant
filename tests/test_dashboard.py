@@ -11,6 +11,40 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class DashboardMetricTests(unittest.TestCase):
+    def test_manual_submission_from_failed_focus_completes_queue_and_removes_handoff(self):
+        job=dict(id=56,title='VIP reception',url='https://example.test/job',company='Profil',tracker_stage='saved',application_status='error',application_error='Le formulaire de candidature n’est pas encore accessible.')
+        item=dict(job,job_id=56,status='error',note=job['application_error'])
+        posts=[]
+        with sync_playwright() as p,ExitStack() as cleanup:
+            browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
+            page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+            page.on('dialog',lambda d:d.accept())
+            def respond(route):
+                path=urlparse(route.request.url).path
+                if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
+                elif path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')))
+                elif path in {'/api/jobs','/api/pipeline'}:route.fulfill(json=[job])
+                elif path=='/api/queue':route.fulfill(json={'items':[item],'counts':{item['status']:1},'running':False,'paused':True,'last_job_id':56})
+                elif path.endswith('/application-status'):
+                    posts.append(json.loads(route.request.post_data));job.update(application_status='submitted',tracker_stage='submitted');item.update(application_status='submitted',status='done');route.fulfill(json={'ok':True})
+                elif path.endswith('/applications'):route.fulfill(json=[{'status':'apply_error','note':'Previous failure retained'}])
+                elif path.endswith('/stage-events') or path.endswith('/human-review-events'):route.fulfill(json=[])
+                else:route.fulfill(json=[] if path=='/api/sources' else {})
+            page.route('**/*',respond);page.goto('http://dashboard.test/');page.locator('#pipelineNav').click()
+            expect(page.locator('#queueFocus')).to_contain_text('VIP reception')
+            expect(page.locator('#queueFocus')).to_contain_text('我已手动投递完成')
+            expect(page.locator('#queueFocus')).to_contain_text('页面已关闭')
+            expect(page.locator('#queueFocus a')).to_have_attribute('href',job['url'])
+            page.locator('#queueFocus button[onclick="confirmQueueSubmitted(56)"]').click()
+            expect(page.locator('#queueFocus')).not_to_contain_text('VIP reception')
+            expect(page.locator('#queueList .application-error')).to_have_count(0)
+            expect(page.locator('#queueList button[onclick="takeOverApplication(56)"]')).to_have_count(0)
+            expect(page.locator('#queueCounts')).to_contain_text('已完成 1')
+            expect(page.locator('#pipelineBoard .pipeline-card')).to_contain_text('已投递')
+            page.locator('#pipelineBoard details summary').click()
+            expect(page.locator('#pipelineBoard .history-content')).to_contain_text('过去的准备失败记录')
+            self.assertEqual(posts,[{'status':'submitted'}]);self.assertEqual(errors,[])
+
     def test_queue_current_task_failures_filter_and_takeover_are_visible(self):
         jobs=[dict(id=i,title=f'Reception {i}',company='Hotel',url=f'https://example.test/{i}',tracker_stage='queued' if i<3 else 'saved',application_status='preparing_letter' if i==1 else 'error' if i==3 else '',application_error='Le formulaire de candidature n’est pas encore accessible. Aucun document n’a été joint.' if i==3 else '') for i in [1,2,3]]
         items=[dict(j,job_id=j['id'],status='running' if j['id']==1 else 'error' if j['id']==3 else 'queued',application_step='letter' if j['id']==1 else 'finding_form',note=j['application_error']) for j in jobs]
@@ -49,7 +83,7 @@ class DashboardMetricTests(unittest.TestCase):
             jobs[0]['application_status']='needs_human';page.evaluate('loadPipeline()')
             expect(page.locator('#queueFocus')).to_contain_text('下一步需要你处理')
             expect(page.locator('#queueFocus')).to_contain_text('Reception 1')
-            expect(page.locator('#queueFocus')).to_contain_text('不重新加载')
+            expect(page.locator('#queueFocus')).to_contain_text('页面已关闭')
             self.assertEqual(errors,[])
 
     def test_review_export_controls_language_filtered_scope_download_and_cancel(self):

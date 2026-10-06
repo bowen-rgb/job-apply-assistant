@@ -353,6 +353,8 @@ def set_application_status(job_id: int, payload: ApplicationStatus):
         job_repository.set_application_status(job_id, payload.status)
     except KeyError:
         raise HTTPException(404, 'job not found')
+    if payload.status in {'submitted', 'submitted_verified', 'withdrawn'}:
+        cancel_worker('app.apply_worker', job_id)
     return {'ok': True}
 
 
@@ -570,6 +572,8 @@ def track(job_id: int, payload: TrackPatch):
         raise HTTPException(404, 'job not found')
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+    if payload.stage in {'submitted','withdrawn','rejected'}:
+        cancel_worker('app.apply_worker', job_id)
     return {'ok': True}
 
 

@@ -105,7 +105,7 @@ def remove(job_id: int) -> None:
 
 def clear_finished() -> None:
     with connect() as c:
-        c.execute("DELETE FROM application_queue WHERE status IN ('done','error','cancelled')")
+        c.execute("DELETE FROM application_queue WHERE status='done'")
 
 
 def _wait_until_prepared(job_id: int, timeout: int = 240, process=None) -> str:

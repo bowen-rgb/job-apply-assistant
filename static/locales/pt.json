@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "Para assumir é necessário o navegador dedicado iniciado por start.bat.",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "Navegador dedicado inacessível. Execute start.bat e tente novamente.",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "Aba preparada não encontrada. Procure no navegador dedicado ou abra o link; os valores não enviados não podem ser recuperados.",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Aba ativada. Verifique documentos e respostas, envie no site e confirme aqui."
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Aba ativada. Verifique documentos e respostas, envie no site e confirme aqui.",
+  "Ouvrir ou reprendre la candidature": "Abrir ou retomar candidatura",
+  "Ouvrir le poste dans mon navigateur": "Abrir vaga no meu navegador",
+  "J’ai déjà envoyé cette candidature": "Já enviei esta candidatura",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "Já enviada? Confirme aqui mesmo se a preparação falhou ou a aba foi fechada. Caso contrário, Abrir ativa a aba existente ou reabre a vaga sem restaurar os dados antigos.",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "Vaga reaberta. Os dados antigos não foram restaurados. Se já enviou a candidatura, confirme aqui sem enviar novamente.",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Esta candidatura já foi enviada ou encerrada. Consulte o histórico em vez de prepará-la novamente.",
+  "Lien du poste invalide. Consultez la source du poste.": "Link da vaga inválido. Consulte a origem.",
+  "Historique de la préparation": "Histórico de preparação",
+  "Échec de préparation (historique)": "Falha de preparação anterior"
 }

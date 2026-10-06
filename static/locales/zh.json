@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "接管需要使用 start.bat 启动的专用浏览器。",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "无法连接专用浏览器。请运行 start.bat 后重试。",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "未找到之前准备的页面。请在专用浏览器中查找，或通过岗位链接重新打开；未提交的填写内容无法恢复。",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "已切换到申请页面。请检查附件和答案，在网站提交成功后回来确认已发送。"
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "已切换到申请页面。请检查附件和答案，在网站提交成功后回来确认已发送。",
+  "Ouvrir ou reprendre la candidature": "打开或接管申请页面",
+  "Ouvrir le poste dans mon navigateur": "在我的浏览器打开岗位",
+  "J’ai déjà envoyé cette candidature": "我已手动投递完成",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "如果已经投递成功，请直接在这里确认，即使自动准备失败或页面已关闭。尚未投递时，打开会接管已有页面，或重新打开岗位；旧的填写内容不会恢复。",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "已重新打开岗位页面，旧的填写内容未恢复。如果已经投递成功，请回来确认，勿重复提交。",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "此申请已投递或已结束。请查看历史记录，无需重新准备或重复投递。",
+  "Lien du poste invalide. Consultez la source du poste.": "岗位链接无效。请查看岗位来源。",
+  "Historique de la préparation": "自动准备历史",
+  "Échec de préparation (historique)": "过去的准备失败记录"
 }

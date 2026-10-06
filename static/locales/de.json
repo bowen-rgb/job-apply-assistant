@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "Die Übernahme erfordert den mit start.bat gestarteten Browser.",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "Dedizierter Browser nicht erreichbar. Starten Sie start.bat und versuchen Sie es erneut.",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "Vorbereiteter Tab nicht gefunden. Suchen Sie im dedizierten Browser oder öffnen Sie den Stellenlink; nicht gesendete Werte können nicht wiederhergestellt werden.",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Tab aktiviert. Prüfen Sie Dokumente und Antworten, senden Sie auf der Website und bestätigen Sie hier."
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Tab aktiviert. Prüfen Sie Dokumente und Antworten, senden Sie auf der Website und bestätigen Sie hier.",
+  "Ouvrir ou reprendre la candidature": "Bewerbung öffnen oder fortsetzen",
+  "Ouvrir le poste dans mon navigateur": "Stelle in meinem Browser öffnen",
+  "J’ai déjà envoyé cette candidature": "Ich habe diese Bewerbung bereits gesendet",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "Bereits gesendet? Bestätigen Sie hier, auch wenn die Vorbereitung fehlgeschlagen oder der Tab geschlossen ist. Andernfalls wird der vorhandene Tab aktiviert oder die Stelle ohne alte Eingaben neu geöffnet.",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "Stellenseite neu geöffnet. Alte Eingaben wurden nicht wiederhergestellt. Falls bereits gesendet, bestätigen Sie hier ohne erneut zu senden.",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Diese Bewerbung wurde bereits gesendet oder abgeschlossen. Lesen Sie den Verlauf, statt sie erneut vorzubereiten.",
+  "Lien du poste invalide. Consultez la source du poste.": "Ungültiger Stellenlink. Prüfen Sie die Quelle.",
+  "Historique de la préparation": "Vorbereitungsverlauf",
+  "Échec de préparation (historique)": "Früherer Vorbereitungsfehler"
 }

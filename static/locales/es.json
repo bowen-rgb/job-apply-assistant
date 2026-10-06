@@ -537,5 +537,14 @@
   "La reprise nécessite le navigateur dédié lancé par start.bat.": "Para continuar se necesita el navegador dedicado de start.bat.",
   "Navigateur dédié inaccessible. Ouvrez start.bat et réessayez.": "Navegador dedicado inaccesible. Ejecuta start.bat y reintenta.",
   "Onglet préparé introuvable. Retrouvez-le dans le navigateur dédié ou ouvrez le lien du poste ; les champs non envoyés ne sont pas récupérables.": "Pestaña preparada no encontrada. Búscala en el navegador dedicado o abre el enlace; los valores no enviados no se pueden recuperar.",
-  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Pestaña activada. Comprueba documentos y respuestas, envía en el sitio y confirma aquí."
+  "Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.": "Pestaña activada. Comprueba documentos y respuestas, envía en el sitio y confirma aquí.",
+  "Ouvrir ou reprendre la candidature": "Abrir o continuar solicitud",
+  "Ouvrir le poste dans mon navigateur": "Abrir oferta en mi navegador",
+  "J’ai déjà envoyé cette candidature": "Ya envié esta solicitud",
+  "Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.": "¿Ya enviada? Confirma aquí aunque fallara la preparación o cerraras la pestaña. Si no, Abrir activa la pestaña existente o vuelve a abrir la oferta sin restaurar los datos anteriores.",
+  "Page du poste rouverte. Les anciennes saisies ne sont pas restaurées. Si vous avez déjà envoyé la candidature, confirmez-la ici sans renvoyer.": "Oferta reabierta. Los datos anteriores no se restauraron. Si ya enviaste la solicitud, confirma aquí sin volver a enviarla.",
+  "Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.": "Esta solicitud ya fue enviada o cerrada. Consulta el historial en vez de prepararla otra vez.",
+  "Lien du poste invalide. Consultez la source du poste.": "Enlace de oferta no válido. Consulta su fuente.",
+  "Historique de la préparation": "Historial de preparación",
+  "Échec de préparation (historique)": "Fallo de preparación anterior"
 }

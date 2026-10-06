@@ -119,6 +119,7 @@ class JobRepository:
                 raise KeyError(job_id)
             previous = conn.execute('SELECT application_status FROM jobs WHERE id=?', (job_id,)).fetchone()['application_status']
             if status in {'submitted', 'submitted_verified'} and previous in {'submitted', 'submitted_verified'}:
+                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'done'", (previous,job_id))
                 return  # Repeated confirmation must not erase an interview or rejection.
             tracker = 'submitted' if status in {'submitted', 'submitted_verified'} else ('prepared' if status in {'prefilled', 'needs_human'} else '')
             conn.execute(
@@ -129,7 +130,7 @@ class JobRepository:
             )
             conn.execute('INSERT INTO applications(job_id,status,note) VALUES(?,?,?)', (job_id, status or 'status_cleared', 'Manual dashboard status change'))
             if status in {'submitted', 'submitted_verified', 'withdrawn'}:
-                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'running'", (status, job_id))
+                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (status, job_id))
             if tracker:
                 conn.execute('INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,?,?)', (job_id, tracker, 'Application status changed from dashboard'))
 
@@ -179,7 +180,7 @@ class JobRepository:
             if stage == 'withdrawn':
                 conn.execute("UPDATE jobs SET application_status='withdrawn' WHERE id=?", (job_id,))
             if stage in {'submitted', 'withdrawn', 'rejected'}:
-                conn.execute("UPDATE application_queue SET status='done',note=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'running'", (stage, job_id))
+                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (stage, job_id))
             conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,tracker_source=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note.strip()[:4000], source, followup_at[:80], job_id))
             conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at,source) VALUES(?,?,?,?,?)', (job_id, stage, note.strip()[:4000], followup_at[:80], source))
 
