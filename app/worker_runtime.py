@@ -58,3 +58,9 @@ def cancel_all() -> None:
         for process, token in _workers.values():
             if process.poll() is None:
                 token.touch()
+
+
+def is_running(module: str, job_id: int) -> bool:
+    with _lock:
+        entry = _workers.get((module, job_id))
+        return bool(entry and entry[0].poll() is None)

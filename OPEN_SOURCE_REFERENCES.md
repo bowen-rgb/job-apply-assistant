@@ -91,6 +91,9 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 
 ## Dashboard state semantics
 
+- [Prefect flow-run implementation](https://github.com/PrefectHQ/prefect/blob/main/src/prefect/flow_runs.py) and [interactive workflows](https://docs.prefect.io/v3/advanced/interactive): reviewed contextual handoff and explicit user-input patterns. Queue presentation now separates current execution, required human action and failure details; no Prefect source is copied.
+- [Playwright bring-to-front](https://playwright.dev/python/docs/api/class-page#page-bring-to-front) and [CDP sessions](https://playwright.dev/python/docs/api/class-browsercontext#browser-context-new-cdp-session): identify and activate the existing application tab without navigation or final submission.
+
 - [GitHub Projects: filtering views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects): independently filter explicit field values. Implemented locally; no GitHub source code is copied.
 - [Schema.org: validThrough](https://schema.org/validThrough): interpret a job listing's deadline separately from contract end dates and recruiter responses.
 - Recruiter outcomes are confirmed local records with provenance and timestamped history, not inferred from AI recommendations or failed discovery requests.

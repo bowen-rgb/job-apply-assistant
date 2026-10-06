@@ -37,9 +37,12 @@ def _update_status(job_id: int, status: str, **extra) -> None:
     allowed = {
         'apply_adapter', 'fill_audit_path', 'review_verdict', 'review_summary', 'ats',
         'agent_status', 'agent_steps', 'agent_trace_path',
+        'application_step', 'application_tab_id',
     }
     sets = ['application_status=?', 'last_application_at=CURRENT_TIMESTAMP', 'updated_at=CURRENT_TIMESTAMP']
     args: list[object] = [status]
+    if 'application_step' in extra:
+        sets.append('application_step_at=CURRENT_TIMESTAMP')
     for key, value in extra.items():
         if key in allowed:
             sets.append(f'{key}=?')
@@ -97,7 +100,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
 
     resume_path, resume_meta = select_resume_for_job(job, raw_profile)
     profile['resume_path'] = str(resume_path) if resume_path else ''
-    _update_status(job_id, 'opening')
+    _update_status(job_id, 'opening', application_step='connecting', application_tab_id='', fill_audit_path='')
     _record(job_id, 'opening', f"URL: {job.get('url','')}")
 
     with sync_playwright() as p:
@@ -110,22 +113,37 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 raise ValueError('Aucun CV sélectionné. Activez un CV avant le pré-remplissage.')
             browser, context, mode = _open_browser(p, profile)
             if raw_profile.get('application', {}).get('generate_cover_letter', True):
-                _update_status(job_id, 'preparing_letter')
+                _update_status(job_id, 'preparing_letter', application_step='letter')
                 letter = generate_letter(context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
                 profile['cover_letter_text'] = letter['letter']
                 profile['cover_letter_path'] = str(letter_paths(job_id)[1])
             check_cancelled()
             # Resume the same job's open dialog after the user accepts its charter.
             original_url = job['url'].split('?')[0].rstrip('/')
+            _update_status(job_id, 'opening', application_step='opening_form')
             page = next((tab for tab in reversed(context.pages)
                          if not tab.is_closed() and tab.url.split('?')[0].rstrip('/') == original_url), None)
             if page is None:
                 page = context.new_page()
+                try:
+                    session = context.new_cdp_session(page)
+                    target = session.send('Target.getTargetInfo')['targetInfo']['targetId']
+                    session.detach()
+                    _update_status(job_id, 'opening', application_tab_id=target)
+                except Exception:
+                    pass
                 page.goto(job['url'], wait_until='domcontentloaded', timeout=45000)
             elif any('/oneClick/finalize' in frame.url for frame in page.frames):
                 # A prior attempt imported only the CV. Start a fresh import so
                 # the complete packet is uploaded before the final-submit step.
                 page.reload(wait_until='domcontentloaded')
+            try:
+                session = context.new_cdp_session(page)
+                target = session.send('Target.getTargetInfo')['targetInfo']['targetId']
+                session.detach()
+                _update_status(job_id, 'opening', application_tab_id=target)
+            except Exception:
+                pass
             page.wait_for_timeout(1000)
             try:
                 html = page.content()
@@ -133,7 +151,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 html = ''
             ats = detect_ats(page.url, html) or job.get('ats') or 'generic'
             adapter = get_adapter(ats)
-            _update_status(job_id, 'preparing', apply_adapter=adapter.info.key, ats=ats)
+            _update_status(job_id, 'preparing', application_step='finding_form', apply_adapter=adapter.info.key, ats=ats)
 
             adapter.prepare(page)
             form_scope = wait_for_form_scope(page)
@@ -142,7 +160,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 form_scope = wait_for_form_scope(page)
             if form_scope is None:
                 if consent_pending(page):
-                    _update_status(job_id, 'needs_human')
+                    _update_status(job_id, 'needs_human', application_step='privacy')
                     _record(job_id, 'privacy_consent_required', 'Le site demande votre accord à la charte de données personnelles. Acceptez-la dans la fenêtre de candidature, puis relancez le pré-remplissage.')
                     return
                 raise ValueError('Le formulaire de candidature n’est pas encore accessible. Aucun document n’a été joint.')
@@ -154,6 +172,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 packet = build_application_packet(resume_path, Path(profile['cover_letter_path']),
                                                  ROOT / 'data' / 'application_packets' / f'job_{job_id}_cv_et_lettre.pdf')
                 upload_path = Path(packet['path'])
+            _update_status(job_id, 'preparing', application_step='filling')
             report = adapter.fill(form_scope, profile, upload_path, job)
             if packet and 'resume' in report.get('filled', []):
                 report['filled'].append('cover_letter_file')
@@ -173,6 +192,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             if letter_error:
                 report['errors'].append('cover_letter: ' + letter_error)
             report['deterministic_passes'] = 1
+            _update_status(job_id, 'preparing', application_step='checking')
             snapshot = instrument_and_scan(form_scope)
             unanswered, sensitive_unanswered, ordinary_unanswered = _required(snapshot)
 
@@ -202,7 +222,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
 
             if should_agent and not sensitive_unanswered:
                 try:
-                    _update_status(job_id, 'preparing', agent_status='RUNNING')
+                    _update_status(job_id, 'preparing', application_step='assisted', agent_status='RUNNING')
                     _record(job_id, 'agent_running', f'ATS={ats}; required_unanswered={len(unanswered)}')
                     agent_trace = run_agent_loop(
                         page,
@@ -293,6 +313,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             _update_status(
                 job_id,
                 status,
+                application_step='handoff',
                 apply_adapter=adapter.info.key,
                 fill_audit_path=str(audit_path),
 
@@ -312,7 +333,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
 
             # CDP application tab remains open for manual review and submission.
         except Cancelled:
-            if page is not None and not page.is_closed():
+            if mode != 'cdp' and page is not None and not page.is_closed():
                 page.close()
             _update_status(job_id, 'cancelled')
             _record(job_id, 'cancelled', 'Stopped by user')

@@ -52,6 +52,7 @@ from .queue_manager import stop as queue_stop
 from .queue_manager import retry as queue_retry
 from .matching_service import rescore_jobs
 from .review_exports import create_export, read_state as export_state, download as export_download, cancel_export
+from .manual_handoff import take_over
 
 STATIC = ROOT / 'static'
 
@@ -428,6 +429,16 @@ def stop_application(job_id: int):
     cancel_worker('app.cover_letter_worker', job_id)
     queue_remove(job_id)
     return {'ok': True}
+
+
+@app.post('/api/jobs/{job_id}/take-over')
+def take_over_application(job_id: int):
+    try:
+        return take_over(job_id)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
 
 
 @app.get('/api/jobs/{job_id}/audit')

@@ -52,3 +52,10 @@ button:disabled{cursor:not-allowed}
 .export-controls{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
 .export-controls label{display:grid;gap:5px;min-width:160px;font-size:12px}
 .review-export-panel [hidden]{display:none!important}
+.queue-focus{padding:20px;margin:18px 0;background:#eef3e8;border:1px solid #b9cbb7;border-radius:12px}
+.queue-focus h3{font-size:20px;margin:8px 0;overflow-wrap:anywhere}
+.queue-toolbar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.queue-toolbar select{min-width:180px}.queue-item.running{border-left:5px solid #315c46}.queue-item.error{border-left:5px solid #a25436}
+.application-error{background:#fff2e8;border:1px solid #d7b6a3;border-radius:8px;padding:12px;margin:10px 0;color:#753e2b}
+.application-error pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:220px;overflow:auto}
+.tag.appstate.failed{background:#fff2e8;color:#753e2b}

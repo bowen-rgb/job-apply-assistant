@@ -348,7 +348,7 @@ async function openLetter(id){
     catch(error){el(`letter-${id}`).textContent=error.message;}
   }
 }
-async function stopApplication(id){try{await requestJson(`/api/jobs/${id}/stop`,{method:'POST'});await load();await loadLetter(id);}catch(error){statusEl.textContent=error.message;}}
+async function stopApplication(id){try{await requestJson(`/api/jobs/${id}/stop`,{method:'POST'});await load();await loadLetter(id);if(!el('pipelineView').classList.contains('hidden')){await loadPipeline();el('pipelineStatus').textContent=tr('Arrêt demandé. Attendez la fin du traitement avant de reprendre l’onglet.');}}catch(error){statusEl.textContent=error.message;el('pipelineStatus').textContent=error.message;}}
 window.stopApplication=stopApplication;
 window.openLetter=openLetter;
 async function generateLetter(id){
@@ -525,15 +525,46 @@ async function setStage(id,stage){
 async function removeQueue(id){try{await requestJson(`/api/queue/${id}`,{method:'DELETE'});await loadPipeline();await load();}catch(error){el('pipelineStatus').textContent=error.message;}}
 window.setStage=setStage;window.removeQueue=removeQueue;
 let pipelineTimer=null;
+let latestQueueItems=[];
+const stepLabels={connecting:'Connexion au navigateur',letter:'Rédaction de la lettre…',opening_form:'Ouverture du poste',finding_form:'Recherche du formulaire',filling:'Remplissage et pièces jointes',checking:'Vérification des champs',assisted:'Navigation assistée',privacy:'Accord de confidentialité à lire sur le site',handoff:'À reprendre par vous'};
+function applicationFailure(value){
+  const text=value||'';
+  let message='La préparation a échoué. Consultez le détail puis vérifiez le site avant de réessayer.';
+  if(text.includes('formulaire de candidature'))message='Formulaire introuvable : ouvrez le poste dans le navigateur dédié et vérifiez le bouton Postuler, la connexion et les éventuelles étapes du site. Aucun document joint dans cette tentative.';
+  else if(/Target.*closed|Failed to open a new tab|ECONNREFUSED|Browser unavailable/.test(text))message='Le navigateur est fermé ou inaccessible. Relancez start.bat, connectez-vous, puis remettez ce poste en file.';
+  else if(/acceptRgpd|confidential|charte/.test(text))message='Le site attend une action sur la confidentialité. Reprenez son onglet, lisez la charte et décidez vous-même avant de continuer.';
+  else if(/ChatGPT|chatgpt|letter|lettre/.test(text))message='La préparation de la lettre a échoué. Vérifiez la connexion ChatGPT et le CV sélectionné, puis réessayez.';
+  else if(/CV sélectionné|CV avant/.test(text))message='Activez un CV dans le profil avant de réessayer.';
+  else if(/timeout|Timeout/.test(text))message='Le délai de préparation est dépassé. Vérifiez le site et le navigateur avant de réessayer.';
+  else if(/Interrupted/.test(text))message='La préparation a été interrompue. Vérifiez son onglet avant de relancer explicitement.';
+  else if(/(?:gbk|charmap).*codec/.test(text))message='La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.';
+  return tr(message);
+}
+function failureMarkup(job){
+  if(job.application_status!=='error'&&job.status!=='error')return '';
+  const detail=job.application_error||job.failure_reason||job.note||'';
+  return `<div class="application-error"><strong>${esc(tr('Préparation échouée'))}</strong><p>${esc(applicationFailure(detail))}</p><p class="small">${esc(tr('Ce statut ne signifie pas un refus du recruteur.'))}</p>${detail?`<details data-error-job="${job.job_id||job.id}"><summary>${esc(tr('Détail de l’échec'))}</summary><pre>${esc(detail)}</pre></details>`:''}</div>`;
+}
+async function takeOverApplication(id){
+  try{const result=await requestJson(`/api/jobs/${id}/take-over`,{method:'POST'});el('pipelineStatus').textContent=tr(result.message);}
+  catch(error){el('pipelineStatus').textContent=error.message;}
+}
+window.takeOverApplication=takeOverApplication;
+function renderQueueItems(){
+  const value=el('queueFilter').value;
+  const items=latestQueueItems.filter(x=>value==='all'||x.status===value);
+  el('queueList').innerHTML=items.length?items.map(queueItemMarkup).join(''):`<div class="empty">${esc(tr(latestQueueItems.length?'Aucune candidature dans cet état.':'File vide.'))}</div>`;
+}
+el('queueFilter').onchange=renderQueueItems;
 function queueItemMarkup(x){
   const p=x.preparation||{}, d=p.documents||{};
   const waiting=x.status==='waiting_user';
-  const label=waiting?tr(x.application_status==='needs_human'?'À compléter sur le site':'Pré-remplie · envoi manuel requis'):statusLabel(x.status);
+  const label=x.status==='error'?tr('Préparation échouée'):waiting?tr(x.application_status==='needs_human'?'À compléter sur le site':'Pré-remplie · envoi manuel requis'):statusLabel(x.status);
   const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
   const url=safeUrl(p.form_url)||safeUrl(x.url);
   const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
   const guidance=waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('Cette préparation attend votre confirmation du résultat IA.'))} <button class="ghost compact" onclick="openHumanConfirmation()">${esc(tr('Voir les postes à confirmer'))}</button></p>`:'';
-  return `<div class="queue-item" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">${esc(tr('Tentatives'))} ${x.attempts||0}${x.note?` · ${esc(statusLabels[x.note]?statusLabel(x.note):errorMessage(x.note))}`:''}</div>${checks}${guidance}<div class="queue-actions">${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${waiting?`<button class="primary compact" onclick="confirmQueueSubmitted(${x.job_id})">${esc(tr('J’ai envoyé sur le site'))}</button>`:''}${['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr(waiting?'Remettre en file pour préparer':'Réessayer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
+  return `<div class="queue-item ${esc(x.status)}" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">#${x.job_id} · ${esc(tr('Tentatives'))} ${x.attempts||0}${x.status!=='queued'&&x.application_step?` · ${esc(tr(stepLabels[x.application_step]||'Étape inconnue'))}`:''}${(x.application_step_at||x.updated_at)?` · ${esc(tr('Dernière mise à jour'))}: ${esc(x.application_step_at||x.updated_at)} UTC`:''}</div>${failureMarkup(x)}${checks}${guidance}<div class="queue-actions">${['waiting_user','error','cancelled'].includes(x.status)?`<button class="primary compact" onclick="takeOverApplication(${x.job_id})">${esc(tr('Reprendre l’onglet ouvert'))}</button>`:''}${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${waiting?`<button class="primary compact" onclick="confirmQueueSubmitted(${x.job_id})">${esc(tr('J’ai envoyé sur le site'))}</button>`:''}${['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Remettre en file pour préparer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
 }
 async function loadPipeline(){
   clearTimeout(pipelineTimer);
@@ -545,12 +576,20 @@ async function loadPipeline(){
   el('queueRunBtn').textContent=tr(q.running?'Préparation en cours':'Préparer la suivante');
   el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':q.paused?'Préparation en pause. Vérifiez le résultat avant de continuer.':'Les candidatures pré-remplies attendent votre envoi sur le site.');
   if(q.message==='Human confirmation required')el('pipelineStatus').textContent=tr('Cette préparation attend votre confirmation du résultat IA.');
-  if(q.running&&!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(loadPipeline,1500);
+  if(!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(()=>loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message),q.running?1500:4000);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  el('queueList').innerHTML=(q.items||[]).length?(q.items||[]).map(queueItemMarkup).join(''):`<div class="empty">${esc(tr('File vide.'))}</div>`;
+  const openErrors=new Set([...document.querySelectorAll('[data-error-job][open]')].map(x=>x.dataset.errorJob));
+  latestQueueItems=q.items||[];renderQueueItems();
+  el('queueCounts').textContent=[['queued','En file'],['running','En cours'],['waiting_user','À reprendre par vous'],['error','Préparation échouée'],['done','Terminée'],['cancelled','Annulée']].map(([key,label])=>`${tr(label)} ${q.counts?.[key]||0}`).join(' · ');
+  const active=latestQueueItems.find(x=>x.job_id===q.current_job_id&&x.status==='running')||latestQueueItems.find(x=>x.status==='running')||jobs.find(j=>['opening','preparing','preparing_letter'].includes(j.application_status));
+  const focus=active||latestQueueItems.find(x=>q.paused&&x.job_id===q.last_job_id&&['error','waiting_user','cancelled'].includes(x.status))||latestQueueItems.find(x=>x.status==='waiting_user')||latestQueueItems.find(x=>x.status==='error');
+  const focusedId=focus?.job_id||focus?.id;
+  if(active){el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('Préparation en cours')} · #${focusedId}`;el('queueRunBtn').disabled=true;el('queueBatchBtn').disabled=true;}
+  el('queueFocus').innerHTML=focus?`<strong>${esc(tr(active?'En traitement maintenant':'Votre prochaine action'))}</strong>${titleMarkup({id:focusedId,title:focus.title},'h3')}<p>${esc(focus.company||'')} · #${focusedId} · ${esc(tr(focus.status==='error'||focus.application_status==='error'?'Préparation échouée':statusLabels[focus.status||focus.application_status]||focus.status||focus.application_status||'Étape inconnue'))}</p><p>${esc(tr(stepLabels[focus.application_step]||statusLabels[focus.application_status]||'Étape inconnue'))}</p>${focus.application_step_at?`<p class="small">${esc(tr('Depuis'))} ${esc(focus.application_step_at)} UTC</p>`:''}${active?`<p>${esc(tr('L’automatisation travaille dans le navigateur dédié. Pour intervenir, arrêtez-la et attendez sa fin, puis reprenez l’onglet.'))}</p><button class="secondary compact" onclick="stopApplication(${focusedId})">${esc(tr('Arrêter avant de reprendre'))}</button>`:`${failureMarkup(focus)}<button class="primary compact" onclick="takeOverApplication(${focusedId})">${esc(tr('Reprendre l’onglet ouvert'))}</button><p class="small">${esc(tr('Reprendre active l’onglet existant sans recharger. Vérifiez les pièces et réponses, envoyez sur le site, puis confirmez l’envoi ici.'))}</p>`}`:`<p>${esc(tr(q.running?'Démarrage de la préparation…':'Aucune préparation en cours. Choisissez une préparation ou consultez les candidatures à reprendre.'))}</p>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':statusLabels[j.application_status]||j.application_status))}</span>`:''}${failureMarkup(j)}${['error','needs_human','prefilled','cancelled'].includes(j.application_status)?`<button class="ghost compact" onclick="takeOverApplication(${j.id})">${esc(tr('Reprendre l’onglet ouvert'))}</button>`:''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
   observeTitles();
+  for(const detail of document.querySelectorAll('[data-error-job]'))if(openErrors.has(detail.dataset.errorJob))detail.open=true;
 }
 async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
 el('queueRunBtn').onclick=()=>startPreparation('one');

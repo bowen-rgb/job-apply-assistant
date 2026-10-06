@@ -11,6 +11,47 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class DashboardMetricTests(unittest.TestCase):
+    def test_queue_current_task_failures_filter_and_takeover_are_visible(self):
+        jobs=[dict(id=i,title=f'Reception {i}',company='Hotel',url=f'https://example.test/{i}',tracker_stage='queued' if i<3 else 'saved',application_status='preparing_letter' if i==1 else 'error' if i==3 else '',application_error='Le formulaire de candidature n’est pas encore accessible. Aucun document n’a été joint.' if i==3 else '') for i in [1,2,3]]
+        items=[dict(j,job_id=j['id'],status='running' if j['id']==1 else 'error' if j['id']==3 else 'queued',application_step='letter' if j['id']==1 else 'finding_form',note=j['application_error']) for j in jobs]
+        queue=dict(items=items,counts={'running':1,'queued':1,'error':1},current_job_id=1,running=True)
+        requests=[]
+        with sync_playwright() as p,ExitStack() as cleanup:
+            browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
+            page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+            def respond(route):
+                path=urlparse(route.request.url).path
+                if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
+                elif path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')))
+                elif path in {'/api/jobs','/api/pipeline'}:route.fulfill(json=jobs)
+                elif path=='/api/queue':route.fulfill(json=queue)
+                elif path.endswith('/take-over'):
+                    requests.append(path);route.fulfill(json={'message':'Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.'})
+                else:route.fulfill(json=[] if path=='/api/sources' else {})
+            page.route('**/*',respond);page.goto('http://dashboard.test/');page.locator('#pipelineNav').click()
+            expect(page.locator('#queueFocus')).to_contain_text('当前正在处理')
+            expect(page.locator('#queueFocus')).to_contain_text('Reception 1')
+            expect(page.locator('#queueFocus')).to_contain_text('正在撰写求职信')
+            expect(page.locator('#queueFocus button')).to_have_text('先停止，再接管')
+            page.locator('#queueFilter').select_option('error')
+            expect(page.locator('#queueList [data-queue-job]')).to_have_count(1)
+            expect(page.locator('#queueList')).to_contain_text('没有找到可填写的申请表')
+            expect(page.locator('#queueList')).to_contain_text('不代表招聘方拒绝')
+            page.locator('#queueList details summary').click()
+            page.evaluate('loadPipeline()')
+            expect(page.locator('#queueList details')).to_have_attribute('open','')
+            page.locator('#queueList button[onclick="takeOverApplication(3)"]').click()
+            expect(page.locator('#pipelineStatus')).to_contain_text('已切换到申请页面')
+            self.assertEqual(requests,['/api/jobs/3/take-over'])
+            expect(page.locator('#pipelineBoard .pipeline-card').filter(has_text='Reception 3')).to_contain_text('自动准备失败')
+            queue.update(running=False,paused=True,last_job_id=1,current_job_id=None,counts={'waiting_user':1,'queued':1,'error':1})
+            items[0].update(status='waiting_user',application_status='needs_human',application_step='handoff')
+            jobs[0]['application_status']='needs_human';page.evaluate('loadPipeline()')
+            expect(page.locator('#queueFocus')).to_contain_text('下一步需要你处理')
+            expect(page.locator('#queueFocus')).to_contain_text('Reception 1')
+            expect(page.locator('#queueFocus')).to_contain_text('不重新加载')
+            self.assertEqual(errors,[])
+
     def test_review_export_controls_language_filtered_scope_download_and_cancel(self):
         jobs=[dict(id=1,title='One',url='https://example.test/1',decision='keep',review_verdict='APPLY',human_review_status='pending',provider_key='one',score=90),
               dict(id=2,title='Two',url='https://example.test/2',decision='review',review_verdict='HUMAN_REVIEW',human_review_status='pending',provider_key='two',score=50),

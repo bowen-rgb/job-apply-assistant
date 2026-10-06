@@ -15,7 +15,7 @@ from .human_review import annotate, can_prepare
 
 _lock = threading.Lock()
 _stop = threading.Event()
-_state: dict[str, Any] = {'paused': False, 'running': False, 'current_job_id': None, 'started_at': '', 'message': ''}
+_state: dict[str, Any] = {'paused': False, 'running': False, 'current_job_id': None, 'last_job_id': None, 'pause_reason': '', 'started_at': '', 'message': ''}
 _terminal = {'prefilled', 'needs_human', 'submitted', 'submitted_verified', 'error', 'withdrawn'}
 
 
@@ -29,7 +29,7 @@ def status() -> dict[str, Any]:
         counts = {r['status']: r['n'] for r in c.execute('SELECT status,COUNT(*) n FROM application_queue GROUP BY status').fetchall()}
         rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
                             j.review_revision,j.reviewed_at,j.review_summary,j.review_json,j.body,j.employment_type,j.start_date,j.end_date,j.valid_through,
-                            j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,
+                            j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,j.application_step,j.application_step_at,
                             COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
@@ -150,7 +150,7 @@ def _worker(mode: str = 'one'):
                     _set(paused=True, message='Human confirmation required')
                     break
                 c.execute("UPDATE application_queue SET status='running',attempts=attempts+1,started_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
-            _set(current_job_id=jid, message=f'Preparing job {jid}')
+            _set(current_job_id=jid, last_job_id=jid, pause_reason='', message=f'Preparing job {jid}')
             if _stop.is_set():
                 remove(jid)
                 break
@@ -201,7 +201,7 @@ def _worker(mode: str = 'one'):
             # Missing input/errors pause the batch, as in Prefect's HITL pattern:
             # https://docs.prefect.io/v3/advanced/interactive
             if mode == 'one' or result == 'needs_human' or qstatus in {'error', 'cancelled'}:
-                _set(paused=True)
+                _set(paused=True, pause_reason='input' if result == 'needs_human' else qstatus)
                 break
     finally:
         _set(running=False, current_job_id=None)
@@ -214,7 +214,7 @@ def start(mode: str = 'one') -> dict[str, Any]:
     with _lock:
         already = bool(_state['running'])
         if not already:
-            _state.update(running=True, paused=False, message='', mode=mode)
+            _state.update(running=True, paused=False, message='', pause_reason='', mode=mode)
             _stop.clear()
     if not already:
         with connect() as c:
