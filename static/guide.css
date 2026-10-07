@@ -7,6 +7,14 @@
 .guide-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-left:28px}
 .guide-page-help summary,.guide-trouble summary{cursor:pointer;font-weight:600}
 .guide-readiness p{margin:6px 0}
+.worked-example,#exampleCompanion{border:2px solid #305f47;background:#fff;border-radius:12px;padding:24px;margin:16px 0 24px;line-height:1.6}
+.worked-example h2{margin-top:0}.example-note{color:#586858;border-left:4px solid #305f47;padding-left:12px}
+.example-preview{background:#eef3e9;border:1px solid #d4dccf;padding:16px;border-radius:8px}
+.example-preview dl{display:grid;grid-template-columns:auto 1fr;gap:8px;margin:0}.example-preview dd{margin:0;overflow-wrap:anywhere}
+.example-check{display:flex;align-items:center;gap:12px;margin:20px 0}.example-check input{width:auto}
+.example-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.worked-example progress{width:100%;accent-color:#305f47}
+#guideView .example-actions .primary{background:#305f47;color:white}
+.example-success{background:#eef3e9;padding:16px;font-weight:600}
 #guideView button,.guide-welcome button,.guide-page-help button{border:1px solid #92a58b;background:#fff;width:auto;text-align:left}
 #guideView button:hover,.guide-welcome button:hover,.guide-page-help button:hover{background:#e3ecdd}
 .guide-paths button,.guide-welcome [data-guide-target="guide"]{background:#305f47!important;color:#fff}

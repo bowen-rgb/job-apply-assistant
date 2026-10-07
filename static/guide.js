@@ -32,13 +32,16 @@ window.Guide=(()=>{
       ${pending.length?`<p>${button('pending','jobs','cards','human')} <strong>${pending.length}</strong></p>`:''}
       <details class="guide-trouble"><summary>${t('help')}</summary><p>${t('offline')}</p><p>${t('privacy')}</p></details>
       <button type="button" id="guidePrint">${t('print')}</button>`;
+    const practice=document.createElement('section');practice.id='workedExample';practice.className='worked-example';
+    $('guideView').querySelector('header').after(practice);Example.mount();
     if(troubleOpen)$('guideView').querySelector('details').open=true;
     if(focused&&$(focused))$(focused).focus({preventScroll:true});
     bind($('guideView'));$('guideRetry').onclick=refreshAutomationStatus;
     $('guidePrint').onclick=()=>{
       const details=$('guideView').querySelector('details'),wasOpen=details.open;
       details.open=true;
-      try{window.print();}finally{details.open=wasOpen;}
+      Example.print(true);
+      try{window.print();}finally{Example.print(false);details.open=wasOpen;}
     };
     $('welcomeGuide').hidden=view!=='jobs'||stored('jaa-guide-dismissed')==='1';
     $('welcomeGuide').innerHTML=`<p>${t('welcome')}</p>${button('nav','guide')}<button type="button" id="guideDismiss">${t('dismiss')}</button>`;

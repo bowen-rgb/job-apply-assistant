@@ -15,6 +15,63 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class GuideTests(unittest.TestCase):
+    def test_worked_example_check_confirmation_recording_and_resume_are_isolated(self):
+        mutations=[]
+        with sync_playwright() as p:
+            browser=p.chromium.launch(headless=True)
+            try:
+                page=browser.new_page(locale='fr-FR')
+                errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
+                def respond(route):
+                    path=urlparse(route.request.url).path
+                    if route.request.method!='GET':mutations.append(path)
+                    if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
+                    elif path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')))
+                    elif path=='/api/profile':route.fulfill(json=default_profile())
+                    elif path in {'/api/jobs','/api/sources','/api/resumes','/api/pipeline'}:route.fulfill(json=[])
+                    else:route.fulfill(json={})
+                page.route('**/*',respond);page.goto('http://example.test/')
+                page.locator('#guideNav').click()
+                expect(page.locator('#workedExample')).to_contain_text('Exercice fictif')
+                page.locator('#exampleReal').click()
+                expect(page.locator('#resumeFile')).to_be_focused()
+                expect(page.locator('#exampleCompanion')).to_be_visible()
+                page.locator('#exampleCompanion button').click()
+                page.locator('#exampleAdvance').click()
+                expect(page.locator('#workedExample')).to_contain_text('Hôtel Exemple')
+                page.locator('#exampleAdvance').click()
+                expect(page.locator('#exampleAdvance')).to_be_disabled()
+                page.locator('#exampleChecked').check()
+                page.evaluate('refreshAutomationStatus()')
+                expect(page.locator('#exampleChecked')).to_be_checked()
+                page.locator('#languageSelect').select_option('en')
+                expect(page.locator('#workedExample')).to_contain_text('Check the recruiter’s form')
+                page.locator('#exampleAdvance').click()
+                page.reload();page.locator('#guideNav').click()
+                expect(page.locator('#workedExample')).to_contain_text('Send on the site and wait for confirmation')
+                page.locator('#exampleAdvance').click()
+                expect(page.locator('#workedExample')).to_contain_text('Return and record the application')
+                page.locator('#exampleAdvance').click()
+                expect(page.locator('#workedExample')).to_contain_text('Example complete')
+                expect(page.locator('#workedExample progress')).to_have_attribute('value','5')
+                page.evaluate('window.print=()=>{window.printedGuide=document.querySelector("#workedExample").textContent;}')
+                page.locator('#guidePrint').click()
+                printed=page.evaluate('window.printedGuide')
+                self.assertIn('1. Add and activate the CV',printed)
+                self.assertIn('5. Return and record the application',printed)
+                expect(page.locator('#workedExample')).to_contain_text('Example complete')
+                page.locator('#exampleReset').click()
+                expect(page.locator('#workedExample progress')).to_have_attribute('value','0')
+                self.assertEqual(mutations,[]);self.assertEqual(errors,[])
+            finally:browser.close()
+
+    def test_example_translations_are_complete_in_all_six_languages(self):
+        data=json.loads((STATIC/'example-text.js').read_text(encoding='utf-8').removeprefix('window.ExampleTexts=').rstrip(';\n'))
+        self.assertEqual(set(data),{'fr','zh','en','de','es','pt'})
+        for language,strings in data.items():
+            self.assertEqual(set(strings),set(data['fr']),language)
+            self.assertTrue(all(value.strip() for value in strings.values()))
+
     def test_guide_locales_have_complete_text(self):
         data = json.loads((STATIC / 'guide-text.js').read_text(encoding='utf-8').removeprefix('window.GuideTexts=').rstrip(';\n'))
         self.assertEqual(set(data), {'fr', 'zh', 'en', 'de', 'es', 'pt'})

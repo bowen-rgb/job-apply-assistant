@@ -2,6 +2,8 @@
 
 ## Beginner guidance
 
+- Worked example: adapted the explicit task completion and review-before-confirmation principles of [check answers](https://design-system.service.gov.uk/patterns/check-answers/) and [confirmation pages](https://design-system.service.gov.uk/patterns/confirmation-pages/). The independently implemented five-step practice uses fictional data, preserves its own progress, and never writes candidate or job state. Printing includes the whole example.
+
 - [GOV.UK task list](https://design-system.service.gov.uk/components/task-list/) and [complete multiple tasks](https://design-system.service.gov.uk/patterns/complete-multiple-tasks/): actionable task names and contextual explanations for a workflow completed over time.
 - Inspected the [govuk-frontend task-list template](https://github.com/alphagov/govuk-frontend/blob/main/packages/govuk-frontend/src/govuk/components/task-list/template.njk). Implemented independent native HTML guidance without copying source or adding dependencies.
 - Manual, assisted and already-sent routes remain independent. Browser detection does not establish ChatGPT authentication. Guide navigation never starts automation or sends applications.
