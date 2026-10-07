@@ -2,6 +2,8 @@
 
 ## Beginner guidance
 
+- Default simple mode follows [GOV.UK question pages](https://design-system.service.gov.uk/patterns/question-pages/) (one task per screen, clear heading, continue/back) and [W3C Make Each Step Clear](https://www.w3.org/WAI/WCAG2/supplemental/patterns/o1p04-clear-steps/) (short instructions and persistent context). The real manual journey reuses an active CV, shows one actual job at a time, separates external submission from local confirmation, and preserves inputs through polling and errors. Advanced controls can be restored without changing saved configuration. These are independently implemented patterns, not copied code or a claim of tested usability with this user.
+
 - Worked example: adapted the explicit task completion and review-before-confirmation principles of [check answers](https://design-system.service.gov.uk/patterns/check-answers/) and [confirmation pages](https://design-system.service.gov.uk/patterns/confirmation-pages/). The independently implemented five-step practice uses fictional data, preserves its own progress, and never writes candidate or job state. Printing includes the whole example.
 
 - [GOV.UK task list](https://design-system.service.gov.uk/components/task-list/) and [complete multiple tasks](https://design-system.service.gov.uk/patterns/complete-multiple-tasks/): actionable task names and contextual explanations for a workflow completed over time.

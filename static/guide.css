@@ -15,6 +15,25 @@
 .example-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.worked-example progress{width:100%;accent-color:#305f47}
 #guideView .example-actions .primary{background:#305f47;color:white}
 .example-success{background:#eef3e9;padding:16px;font-weight:600}
+.beginner-guide{max-width:760px;background:white;border:2px solid #305f47;border-radius:12px;padding:28px;margin:24px 0;font-size:18px;line-height:1.6}
+.beginner-guide h2{font-size:28px}.beginner-guide button,.beginner-guide input,.coach-link{min-height:48px;font-size:18px}
+.beginner-guide label{display:block;margin:12px 0}.beginner-guide input{margin:8px 0 16px;max-width:100%}
+#guideView .beginner-guide .primary{display:block;background:#305f47;color:white;margin:16px 0;text-decoration:none;padding:12px 18px;border-radius:8px}
+.coach-check{display:flex!important;align-items:flex-start;gap:12px}.coach-check input{width:24px;min-height:24px;flex-shrink:0}
+.coach-site-steps{padding-left:28px}.coach-site-steps li{margin:12px 0}.coach-job{border:1px solid #d4dccf;border-radius:8px;padding:18px}
+.coach-job details p{white-space:pre-wrap;max-height:300px;overflow:auto}.coach-job p{overflow-wrap:anywhere}
+.coach-file-box{position:relative;border:1px solid #92a58b;border-radius:8px;padding:16px;margin:12px 0;overflow-wrap:anywhere}
+.coach-file-box:focus-within{outline:3px solid #305f47;outline-offset:3px}
+.coach-file-box #coachFile{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+#coachPractice,#guideMore{margin:20px 0;max-width:100%}#coachPractice>summary,#guideMore>summary{cursor:pointer;padding:12px;font-size:16px}
+body:not(.simple-mode) #beginnerGuide{display:none}
+.simple-mode #automationStatus,.simple-mode aside>.hint,.simple-mode #welcomeGuide,.simple-mode #exampleCompanion{display:none}
+.simple-mode .primary-nav #jobsNav,.simple-mode .primary-nav #profileNav,.simple-mode .primary-nav #pipelineNav{display:none}
+.simple-mode #jobSidebar .filter:not([data-filter="all"]):not([data-filter="keep"]):not([data-filter="human"]):not([data-filter="submitted"]),.simple-mode #batchBtn,.simple-mode #healthBtn,.simple-mode #startQueueBtn,.simple-mode #jobSidebar .queue-help,.simple-mode #clearBtn,.simple-mode .reviewer-box,.simple-mode #rescoreBtn{display:none}
+.simple-mode #profileForm .settings-card:has(#chrome_cdp_endpoint),.simple-mode #profileForm .settings-card:has(#current_title),.simple-mode #profileForm .settings-card:has(#answersList){display:none}
+.simple-mode #queueBatchBtn,.simple-mode #queueAddMatchesBtn,.simple-mode #analyticsCards{display:none}
+#simpleModeToggle{margin:12px 0;border:1px solid #92a58b;font-size:14px;min-height:44px}
+@media(max-width:600px){.beginner-guide{padding:18px;font-size:17px}.beginner-guide h2{font-size:24px}.beginner-guide button,.coach-link{width:100%!important}}
 #guideView button,.guide-welcome button,.guide-page-help button{border:1px solid #92a58b;background:#fff;width:auto;text-align:left}
 #guideView button:hover,.guide-welcome button:hover,.guide-page-help button:hover{background:#e3ecdd}
 .guide-paths button,.guide-welcome [data-guide-target="guide"]{background:#305f47!important;color:#fff}

@@ -18,6 +18,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             page.on('dialog',lambda d:d.accept())
             def respond(route):
                 path=urlparse(route.request.url).path
@@ -53,6 +54,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             def respond(route):
                 path=urlparse(route.request.url).path
                 if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
@@ -95,6 +97,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
             def respond(route):
                 path=urlparse(route.request.url).path
@@ -143,6 +146,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser=playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror',lambda e:errors.append(str(e)))
             def respond(route):
@@ -217,6 +221,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror', lambda error: errors.append(str(error)))
             def respond(route):
@@ -258,6 +263,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser=playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror',lambda error:errors.append(str(error)))
             page.on('dialog',lambda dialog:dialog.accept())
@@ -295,6 +301,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='fr-FR')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -362,6 +369,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -414,6 +422,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
+            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
             def respond(route):
                 path = urlparse(route.request.url).path
                 if path == '/':

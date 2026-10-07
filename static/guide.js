@@ -19,7 +19,10 @@ window.Guide=(()=>{
     root.querySelectorAll('[data-guide-target]').forEach(b=>b.onclick=()=>go(b.dataset.guideTarget,b.dataset.guideId,b.dataset.guideFilter));
   }
   function render(){
-    const troubleOpen=$('guideView').querySelector('details')?.open;
+    const troubleOpen=$('guideView').querySelector('.guide-trouble')?.open;
+    const existingCoach=$('beginnerGuide');
+    const practiceOpen=$('coachPractice')?.open;
+    const moreOpen=$('guideMore')?.open;
     const focused=document.activeElement?.id;
     $('guideNav').textContent=text('nav');
     const pending=jobs.filter(j=>['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)&&j.human_review_status!=='approved'&&j.human_review_status!=='declined'&&!['submitted','submitted_verified','withdrawn'].includes(j.application_status));
@@ -34,14 +37,19 @@ window.Guide=(()=>{
       <button type="button" id="guidePrint">${t('print')}</button>`;
     const practice=document.createElement('section');practice.id='workedExample';practice.className='worked-example';
     $('guideView').querySelector('header').after(practice);Example.mount();
-    if(troubleOpen)$('guideView').querySelector('details').open=true;
+    if(troubleOpen)$('guideView').querySelector('.guide-trouble').open=true;
+    const header=$('guideView').querySelector('header');
+    const more=document.createElement('details');more.id='guideMore';more.innerHTML=`<summary>${escape(Coach.text('guideMore'))}</summary>`;more.open=!Coach.isSimple()||moreOpen===true;
+    const practiceDetails=document.createElement('details');practiceDetails.id='coachPractice';practiceDetails.innerHTML=`<summary>${escape(Coach.text('practice'))}</summary>`;practiceDetails.open=!Coach.isSimple()||practiceOpen===true;practiceDetails.append(practice);
+    while(header.nextElementSibling)more.append(header.nextElementSibling);
+    const coach=existingCoach||document.createElement('section');coach.id='beginnerGuide';coach.className='beginner-guide';header.after(coach,practiceDetails,more);Coach.mount(coach,health,jobs);
     if(focused&&$(focused))$(focused).focus({preventScroll:true});
     bind($('guideView'));$('guideRetry').onclick=refreshAutomationStatus;
     $('guidePrint').onclick=()=>{
-      const details=$('guideView').querySelector('details'),wasOpen=details.open;
-      details.open=true;
+      const details=[...$('guideView').querySelectorAll('details')],open=details.map(d=>d.open);
+      details.forEach(d=>d.open=true);
       Example.print(true);
-      try{window.print();}finally{Example.print(false);details.open=wasOpen;}
+      try{window.print();}finally{Example.print(false);details.forEach((d,i)=>d.open=open[i]);}
     };
     $('welcomeGuide').hidden=view!=='jobs'||stored('jaa-guide-dismissed')==='1';
     $('welcomeGuide').innerHTML=`<p>${t('welcome')}</p>${button('nav','guide')}<button type="button" id="guideDismiss">${t('dismiss')}</button>`;
@@ -55,5 +63,5 @@ window.Guide=(()=>{
     document.querySelectorAll('#resumeList a[download]').forEach(a=>a.textContent=text('download'));
     Locale.apply();
   }
-  return {text,go,init:render,render,view:which=>{view=which;render();},health:value=>{health=value;render();},jobs:value=>{jobs=value;render();}};
+  return {text,go,init:render,render,view:which=>{view=which;render();},health:value=>{health=value;render();},jobs:value=>{jobs=value;Coach.jobsLoaded();render();}};
 })();

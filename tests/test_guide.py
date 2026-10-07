@@ -21,6 +21,7 @@ class GuideTests(unittest.TestCase):
             browser=p.chromium.launch(headless=True)
             try:
                 page=browser.new_page(locale='fr-FR')
+                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
                 errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
                 def respond(route):
                     path=urlparse(route.request.url).path
@@ -86,6 +87,7 @@ class GuideTests(unittest.TestCase):
             browser = p.chromium.launch(headless=True)
             try:
                 page = browser.new_page(locale='fr-FR')
+                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
                 errors = []
                 page.on('pageerror', lambda e: errors.append(str(e)))
                 def respond(route):
@@ -146,6 +148,7 @@ class GuideTests(unittest.TestCase):
             browser = p.chromium.launch(headless=True)
             try:
                 page = browser.new_page(locale='fr-FR')
+                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
                 def respond(route):
                     path = urlparse(route.request.url).path
                     if path == '/':

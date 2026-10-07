@@ -1,5 +1,27 @@
 # Première utilisation / 新手使用说明
 
+## Le chemin le plus simple / 最简单的用法
+
+L’application démarre maintenant en **mode simple** sur **Me guider**. Suivez le bouton vert. Vous n’avez pas besoin de choisir un outil ou de connecter ChatGPT.
+
+1. **CV** : choisir votre fichier, puis **Enregistrer mon CV et continuer**. Si un CV est déjà actif, cette étape est passée automatiquement.
+2. **Offre** : une offre apparaît. Si elle vous convient, **Je choisis cette offre**. Sinon, **Voir une autre offre**. Si aucune offre n’est disponible, indiquez seulement le poste et la ville puis **Chercher des offres**.
+3. **Site du recruteur** : le bouton vert ouvre un autre onglet. Cliquez Postuler sur ce site, joignez votre CV, remplissez le formulaire et envoyez. Attendez sa confirmation, puis revenez dans l’onglet de l’assistant.
+4. **Confirmation** : cochez la case uniquement si le site ou un courriel confirme l’envoi pour cette offre. Cliquez sur le bouton vert pour enregistrer ce fait ici. En cas d’erreur, la page ne dit pas que c’est terminé.
+5. **Terminé** : vous pouvez choisir une autre offre. Vous pouvez fermer et revenir plus tard ; votre étape est conservée. La confirmation d’envoi devra être cochée à nouveau après un rechargement.
+
+**Afficher tous les outils** remet les filtres, la préparation assistée et les paramètres avancés. **Mode simple** permet de revenir. Les paramètres masqués restent enregistrés. Le parcours simple est une candidature manuelle ; le site du recruteur peut demander une connexion ou des réponses supplémentaires.
+
+现在默认打开 **简洁模式 → 一步步带我投递**。只需跟着绿色按钮：
+
+1. 选择本机简历文件，点保存。已经启用简历时自动跳过。
+2. 一次看一个岗位。合适就选，不合适看下一个。没有岗位时只填想找的岗位和城市，再点寻找。
+3. 绿色按钮打开招聘网站。在新标签页申请、上传简历、填表、提交。看到成功提示后回到助手标签页。
+4. 只有看到了网站成功提示或确认邮件，才能勾选确认并保存投递记录。保存失败不会显示完成。
+5. 显示完成后，可以再选一个岗位。刷新或以后回来都能继续；发送成功的确认框不会自动替你勾上。
+
+不需要连接 ChatGPT，也不需要理解队列或 AI 规则。网站本身可能要求登录或补充回答。需要高级功能时点 **显示完整工具**，随时可以切回 **简洁模式**；收起配置不会删除原有资料。
+
 Ouvrez **Premiers pas** dans la barre latérale. Choisissez Français si nécessaire. Le guide existe dans les six langues de l’interface ; vous pouvez l’imprimer ou le sauvegarder en PDF. Chaque page contient une aide dépliable.
 
 在应用左侧打开 **从这里开始**。可选法语等六种语言，也可打印或保存指引为 PDF。每页顶部都有可展开的操作说明。

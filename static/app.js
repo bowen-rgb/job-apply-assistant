@@ -365,7 +365,7 @@ window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; wind
 
 async function pollScan(){
   try{
-    const r=await fetch('/api/search/status'); const s=await r.json();
+    const s=await requestJson('/api/search/status');Coach.scan(s);
     if(s.running || s.scan_id){
       scanPanel.classList.remove('hidden'); scanText.textContent=tr(s.running?'Scan en cours':'Dernier scan terminé');
       scanCounts.textContent=`${s.found} ${tr('vus')} · ${s.fetched} ${tr('lus')} · ${s.inserted} ${tr('nouveaux')} · ${s.updated} ${tr('mis à jour')} · ${s.errors} ${tr('erreurs')}`;
@@ -376,7 +376,7 @@ async function pollScan(){
     }
     if(s.running){if(!scanTimer) scanTimer=setInterval(pollScan,1500); await load();}
     else if(scanTimer){clearInterval(scanTimer);scanTimer=null;await load();}
-  }catch(e){}
+  }catch(e){Coach.scan(null);}
 }
 
 for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');current=b.dataset.filter;render();};
@@ -674,6 +674,6 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;Guide.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;Guide.init();Coach.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
