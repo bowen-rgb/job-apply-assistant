@@ -530,7 +530,7 @@ async function removeQueue(id){try{await requestJson(`/api/queue/${id}`,{method:
 window.setStage=setStage;window.removeQueue=removeQueue;
 let pipelineTimer=null;
 let latestQueueItems=[];
-const stepLabels={connecting:'Connexion au navigateur',letter:'Rédaction de la lettre…',opening_form:'Ouverture du poste',finding_form:'Recherche du formulaire',filling:'Remplissage et pièces jointes',checking:'Vérification des champs',assisted:'Navigation assistée',privacy:'Accord de confidentialité à lire sur le site',handoff:'À reprendre par vous'};
+const stepLabels={login:'Connexion au compte recruteur',submitting:'Envoi de la candidature',submission_check:'Résultat à vérifier sur le site',completed:'Candidature envoyée',connecting:'Connexion au navigateur',letter:'Rédaction de la lettre…',opening_form:'Ouverture du poste',finding_form:'Recherche du formulaire',filling:'Remplissage et pièces jointes',checking:'Vérification des champs',assisted:'Navigation assistée',privacy:'Accord de confidentialité à lire sur le site',handoff:'À reprendre par vous'};
 function applicationFailure(value){
   const text=value||'';
   let message='La préparation a échoué. Consultez le détail puis vérifiez le site avant de réessayer.';
@@ -545,6 +545,7 @@ function applicationFailure(value){
   return tr(message);
 }
 function failureMarkup(job){
+  if(!hasSubmitted(job)&&job.application_status==='needs_human'&&(job.failure_reason||job.application_error))return `<div class="application-error"><p>${esc(tr(job.failure_reason||job.application_error))}</p></div>`;
   if(hasSubmitted(job)||job.application_status==='withdrawn'||(job.application_status!=='error'&&job.status!=='error'))return '';
   const detail=job.application_error||job.failure_reason||job.note||'';
   return `<div class="application-error"><strong>${esc(tr('Préparation échouée'))}</strong><p>${esc(applicationFailure(detail))}</p><p class="small">${esc(tr('Ce statut ne signifie pas un refus du recruteur.'))}</p>${detail?`<details data-error-job="${job.job_id||job.id}"><summary>${esc(tr('Détail de l’échec'))}</summary><pre>${esc(detail)}</pre></details>`:''}</div>`;
@@ -646,7 +647,7 @@ el('reviewExportBtn').onclick=async()=>{
   try{
     await load();
     const state=await requestJson('/api/review-exports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({format:el('reviewExportFormat').value,language:el('reviewExportLanguage').value,scope:el('reviewExportScope').value,job_ids:el('reviewExportScope').value==='visible'?visibleJobIds:[],translate_text:el('reviewExportTranslate').checked})});
-    reviewExportId=state.id;localStorage.setItem('jaa-review-export',reviewExportId);await pollReviewExport();
+    reviewExportId=state.id;localStorage.setItem(Accounts.key('jaa-review-export'),reviewExportId);await pollReviewExport();
   }catch(error){reviewExportBusy=false;el('reviewExportStatus').textContent=error.message;updateExportCount();}
 };
 el('reviewExportCancelBtn').onclick=async()=>{
@@ -674,6 +675,6 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;Guide.init();Coach.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem('jaa-review-export');if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;await Accounts.init();Guide.init();Coach.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);

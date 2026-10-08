@@ -18,7 +18,9 @@ CACHE=ROOT/'data'/'review_translation_cache'
 
 
 def cache_path(text,language):
-    return CACHE/(hashlib.sha256(f'v1:{language}:{text}'.encode('utf-8')).hexdigest()+'.json')
+    from .workspaces import data_dir
+    folder = CACHE if CACHE != ROOT/'data'/'review_translation_cache' else data_dir()/'review_translation_cache'
+    return folder/(hashlib.sha256(f'v1:{language}:{text}'.encode('utf-8')).hexdigest()+'.json')
 
 
 def translation_prompt(texts,language):
@@ -86,7 +88,7 @@ def translate_rows(rows,language,cfg,progress=lambda count:None):
                     check_cancelled()
                     answer=ask_chatgpt_json(context,translation_prompt(strings,language),{**cfg,'timeout_seconds':180},purpose='review-export-translation')
                     result=validate_translations(answer,strings)
-                    CACHE.mkdir(parents=True,exist_ok=True)
+                    cache_path("",language).parent.mkdir(parents=True,exist_ok=True)
                     for key,value in result.items():
                         text=strings[key];translations[text]=value
                         path=cache_path(text,language);temporary=path.with_suffix(f'.{uuid4().hex}.tmp')

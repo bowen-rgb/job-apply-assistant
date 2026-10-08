@@ -1,5 +1,6 @@
 """Managed UTF-8 workers with cooperative cancellation across processes."""
 from __future__ import annotations
+from .workspaces import data_dir
 import os
 import subprocess
 import sys
@@ -22,7 +23,7 @@ def check_cancelled() -> None:
         raise Cancelled('Task cancelled by user')
 
 
-def launch(module: str, job_id: int, *args: str):
+def _launch(module: str, job_id: int, *args: str):
     key = (module, job_id)
     with _lock:
         if module == 'app.apply_worker':
@@ -34,10 +35,11 @@ def launch(module: str, job_id: int, *args: str):
             if previous[1].exists():
                 raise ValueError('La tâche précédente s’arrête. Réessayez dans quelques secondes.')
             return previous[0]
-        directory = ROOT / 'data' / 'workers'
+        directory = data_dir() / 'workers'
         directory.mkdir(parents=True, exist_ok=True)
         token = directory / f'{module.rsplit(".", 1)[-1]}_{job_id}_{uuid.uuid4().hex}.cancel'
-        env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8:backslashreplace', 'JOB_WORKER_TOKEN': str(token)}
+        from .workspaces import candidate_id
+        env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8:backslashreplace', 'JOB_WORKER_TOKEN': str(token), 'JAA_CANDIDATE_ID': candidate_id()}
         with (directory / f'{module.rsplit(".", 1)[-1]}_{job_id}.log').open('a', encoding='utf-8') as log:
             process = subprocess.Popen([sys.executable, '-m', module, str(job_id), *args], cwd=str(ROOT), env=env,
                                        stdout=log, stderr=subprocess.STDOUT,
@@ -64,3 +66,16 @@ def is_running(module: str, job_id: int) -> bool:
     with _lock:
         entry = _workers.get((module, job_id))
         return bool(entry and entry[0].poll() is None)
+
+
+def any_running() -> bool:
+    with _lock:
+        return any(process.poll() is None for process, _ in _workers.values())
+
+
+def launch(*args, **kwargs):
+    from .workspaces import LOCK, candidate_id, active_id
+    with LOCK:
+        if candidate_id() != active_id():
+            raise ValueError("Candidate changed. Reload before continuing.")
+        return _launch(*args, **kwargs)

@@ -57,9 +57,15 @@ def take_over(job_id):
     try:
         with sync_playwright() as p:
             browser = p.chromium.connect_over_cdp(cfg.get('chrome_cdp_endpoint') or 'http://127.0.0.1:9222', timeout=8000)
-            context = browser.contexts[0] if browser.contexts else browser.new_context()
             try:
-                focus_existing(context, dict(row))
+                matched = False
+                for context in browser.contexts:
+                    try:
+                        focus_existing(context, dict(row))
+                        matched = True
+                        break
+                    except MissingTab: pass
+                if not matched: raise MissingTab(MISSING_TAB)
                 action = 'focused'
             except MissingTab:
                 # A closed tab is a normal handoff branch, not a retry of
@@ -69,6 +75,9 @@ def take_over(job_id):
                 parsed = urlparse(url)
                 if parsed.scheme not in {'http','https'} or not parsed.hostname or parsed.username:
                     raise ValueError('Lien du poste invalide. Consultez la source du poste.')
+                from .secret_store import read
+                state = read().get('browser_state')
+                context = browser.new_context(storage_state=state) if state else browser.new_context()
                 page = context.new_page()
                 session = context.new_cdp_session(page)
                 try:

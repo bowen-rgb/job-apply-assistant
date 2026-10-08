@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "Enlace de oferta no válido. Consulta su fuente.",
   "Historique de la préparation": "Historial de preparación",
   "Échec de préparation (historique)": "Fallo de preparación anterior",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navegador dedicado no detectado. Abra start.bat para la asistencia; aún puede postular manualmente."
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navegador dedicado no detectado. Abra start.bat para la asistencia; aún puede postular manualmente.",
+  "Connexion au compte recruteur": "Accediendo al sitio de empleo",
+  "Envoi de la candidature": "Enviando solicitud",
+  "Résultat à vérifier sur le site": "Comprueba el resultado en el sitio",
+  "Candidature envoyée": "Solicitud enviada",
+  "Verification code or MFA required. Complete it on the open page.": "Se requiere código o MFA. Complétalo en la página abierta.",
+  "Login required: configure this site account or sign in on the open page.": "Guarda esta cuenta en Perfiles y cuentas o accede en la página abierta.",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "Acceso incompleto. Comprueba contraseña, código o MFA. No se restablecen contraseñas automáticamente.",
+  "Missing answers, documents or form errors.": "Faltan respuestas, documentos o hay errores. Comprueba la página.",
+  "A unique final application button was not identified.": "Botón final no identificado. Revisa y envía en el sitio.",
+  "Send result uncertain. Check the recruiter site before retrying.": "Envío incierto. Comprueba el sitio o el email antes de reintentar.",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "No hay confirmación. Comprueba el sitio antes de reenviar.",
+  "Candidate changed. Reload before continuing.": "El perfil cambió. Recarga la página.",
+  "Stop running tasks before switching candidate": "Detén las tareas y espera antes de cambiar el perfil."
 }

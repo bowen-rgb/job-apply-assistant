@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 import threading
+from contextvars import copy_context
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -292,7 +293,7 @@ def _worker(base_profile: dict, scan_id: int):
         _finish_scan(scan_id, status())
 
 
-def start(profile: dict) -> dict[str, Any]:
+def _start(profile: dict) -> dict[str, Any]:
     with _lock:
         if _state.get('running'):
             return dict(_state)
@@ -303,5 +304,13 @@ def start(profile: dict) -> dict[str, Any]:
         started_at=datetime.now(timezone.utc).isoformat(), finished_at='', message='Starting scan…',
         source_diagnostics=[],
     )
-    threading.Thread(target=_worker, args=(profile, scan_id), daemon=True, name=f'job-scan-{scan_id}').start()
+    threading.Thread(target=copy_context().run, args=(_worker, profile, scan_id), daemon=True, name=f'job-scan-{scan_id}').start()
     return status()
+
+
+def start(*args, **kwargs):
+    from .workspaces import LOCK, candidate_id, active_id
+    with LOCK:
+        if candidate_id() != active_id():
+            raise ValueError("Candidate changed. Reload before continuing.")
+        return _start(*args, **kwargs)

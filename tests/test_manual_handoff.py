@@ -65,18 +65,26 @@ class HandoffTests(unittest.TestCase):
                 old=context.new_page();old.goto('https://example.test/job');old.locator('input').fill('Old unsent data')
                 session=context.new_cdp_session(old);target=session.send('Target.getTargetInfo')['targetInfo']['targetId'];session.detach();old.close()
                 with db.connect() as c:c.execute('UPDATE jobs SET application_tab_id=? WHERE id=1',(target,))
-                with patch('app.manual_handoff.sync_playwright') as fake,patch('app.manual_handoff.runtime_profile',return_value={'browser_mode':'cdp'}):
+                created=[]
+                create_context=browser.new_context
+                def isolated_context(**kwargs):
+                    owned=create_context(**kwargs)
+                    owned.route('https://example.test/**',lambda route:route.fulfill(content_type='text/html',body='<form onsubmit="event.preventDefault();window.submitted=true"><input name="answer"><button>Send</button></form>'))
+                    created.append(owned)
+                    return owned
+                with patch.object(browser,'new_context',side_effect=isolated_context),patch('app.secret_store.read',return_value={}),patch('app.manual_handoff.sync_playwright') as fake,patch('app.manual_handoff.runtime_profile',return_value={'browser_mode':'cdp'}):
                     fake.return_value.__enter__.return_value.chromium.connect_over_cdp.return_value=browser
                     result=take_over(1)
                     self.assertEqual(result['action'],'opened')
-                    self.assertEqual(len(context.pages),1)
-                    new=context.pages[0]
+                    self.assertEqual(len(context.pages),0)
+                    owned=created[0]
+                    new=owned.pages[0]
                     self.assertEqual(new.url,'https://example.test/job')
                     self.assertEqual(new.locator('input').input_value(),'')
                     self.assertFalse(new.evaluate('Boolean(window.submitted)'))
                     self.assertIn('ne sont pas restaurées',result['message'])
                     self.assertEqual(take_over(1)['action'],'focused')
-                    self.assertEqual(len(context.pages),1)
+                    self.assertEqual(len(owned.pages),1)
                 self.assertEqual(JobRepository().list()[0]['application_status'],'needs_human')
             finally:browser.close()
 

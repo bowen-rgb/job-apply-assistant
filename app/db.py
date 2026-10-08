@@ -134,8 +134,10 @@ CREATE TABLE IF NOT EXISTS scans (
 
 @contextmanager
 def connect():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    from .workspaces import data_dir
+    path = DB_PATH if DB_PATH != Path(__file__).resolve().parent.parent / 'data' / 'jobs.db' else data_dir() / 'jobs.db'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
     try:
         yield conn

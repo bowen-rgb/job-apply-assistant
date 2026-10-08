@@ -22,7 +22,12 @@ def _loop():
     last_run = 0.0
     while True:
         try:
-            raw = load_profile_raw()
+            from .workspaces import CURRENT, LOCK, active_id
+            with LOCK:
+                owner = active_id()
+                token = CURRENT.set(owner)
+                try: raw = load_profile_raw()
+                finally: CURRENT.reset(token)
             interval = int(raw.get('automation', {}).get('auto_scan_interval_minutes') or 0)
         except Exception:
             interval = 0
@@ -37,7 +42,11 @@ def _loop():
                 _state['next_due_at'] = ''
         if due and not scan_status().get('running'):
             try:
-                start_scan(runtime_profile(raw))
+                with LOCK:
+                    if owner != active_id(): continue
+                    token = CURRENT.set(owner)
+                    try: start_scan(runtime_profile(raw))
+                    finally: CURRENT.reset(token)
                 last_run = now
                 with _lock:
                     _state['last_auto_scan_at'] = datetime.now(timezone.utc).isoformat()

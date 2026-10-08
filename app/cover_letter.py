@@ -19,6 +19,11 @@ import uuid
 LETTER_DIR = ROOT / 'data' / 'cover_letters'
 
 
+from .workspaces import data_dir
+
+def owned_directory():
+    return LETTER_DIR if LETTER_DIR != ROOT / 'data' / 'cover_letters' else data_dir() / 'cover_letters'
+
 def generation_error(exc: Exception) -> str:
     message = str(exc)
     if 'connect_over_cdp' in message or 'ECONNREFUSED' in message:
@@ -50,7 +55,7 @@ def resume_text(path: Path | None) -> str:
 
 
 def letter_paths(job_id: int) -> tuple[Path, Path]:
-    return LETTER_DIR / f'job_{job_id}.json', LETTER_DIR / f'job_{job_id}.pdf'
+    return owned_directory() / f'job_{job_id}.json', owned_directory() / f'job_{job_id}.pdf'
 
 
 def save_letter_state(job_id: int, state: dict) -> None:
@@ -63,8 +68,8 @@ def save_letter_state(job_id: int, state: dict) -> None:
 
 
 def generate_letter(context, job: dict, raw: dict, resume_path: Path | None, cfg: dict) -> dict:
-    LETTER_DIR.mkdir(parents=True, exist_ok=True)
-    lock = FileLock(str(LETTER_DIR / f'job_{job["id"]}.lock'))
+    owned_directory().mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(owned_directory() / f'job_{job["id"]}.lock'))
     deadline = time.monotonic() + 600
     while True:
         check_cancelled()

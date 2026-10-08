@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "Lien du poste invalide. Consultez la source du poste.",
   "Historique de la préparation": "Historique de la préparation",
   "Échec de préparation (historique)": "Échec de préparation (historique)",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible."
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.",
+  "Connexion au compte recruteur": "Connexion au compte recruteur",
+  "Envoi de la candidature": "Envoi de la candidature",
+  "Résultat à vérifier sur le site": "Résultat à vérifier sur le site",
+  "Candidature envoyée": "Candidature envoyée",
+  "Verification code or MFA required. Complete it on the open page.": "Code ou MFA requis. Terminez la vérification sur la page ouverte.",
+  "Login required: configure this site account or sign in on the open page.": "Enregistrez le compte du site dans Profils & comptes, ou connectez-vous sur la page ouverte.",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "Connexion incomplète. Vérifiez le mot de passe, le code ou MFA. Aucun mot de passe réinitialisé automatiquement.",
+  "Missing answers, documents or form errors.": "Réponses ou documents manquants, ou erreurs du formulaire. Vérifiez la page.",
+  "A unique final application button was not identified.": "Bouton final non identifié avec certitude. Vérifiez et envoyez sur le site.",
+  "Send result uncertain. Check the recruiter site before retrying.": "Envoi incertain. Vérifiez le site ou l’email de confirmation avant de réessayer.",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "Aucune confirmation observée. Vérifiez le site ; ne renvoyez pas sans vérifier.",
+  "Candidate changed. Reload before continuing.": "Le profil a changé. Rechargez la page.",
+  "Stop running tasks before switching candidate": "Arrêtez les tâches et attendez leur fin avant de changer de profil."
 }

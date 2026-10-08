@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "Link da vaga inválido. Consulte a origem.",
   "Historique de la préparation": "Histórico de preparação",
   "Échec de préparation (historique)": "Falha de preparação anterior",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navegador dedicado não detetado. Abra start.bat para assistência; pode candidatar-se manualmente."
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Navegador dedicado não detetado. Abra start.bat para assistência; pode candidatar-se manualmente.",
+  "Connexion au compte recruteur": "Entrando no site de recrutamento",
+  "Envoi de la candidature": "Enviando candidatura",
+  "Résultat à vérifier sur le site": "Confira o resultado no site",
+  "Candidature envoyée": "Candidatura enviada",
+  "Verification code or MFA required. Complete it on the open page.": "Código ou MFA necessário. Conclua na página aberta.",
+  "Login required: configure this site account or sign in on the open page.": "Salve a conta em Perfis e contas ou entre na página aberta.",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "Acesso incompleto. Confira senha, código ou MFA. Senhas não são redefinidas automaticamente.",
+  "Missing answers, documents or form errors.": "Faltam respostas, documentos ou há erros. Confira a página.",
+  "A unique final application button was not identified.": "Botão final não identificado. Revise e envie no site.",
+  "Send result uncertain. Check the recruiter site before retrying.": "Envio incerto. Confira o site ou email antes de tentar novamente.",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "Sem confirmação. Confira o site antes de reenviar.",
+  "Candidate changed. Reload before continuing.": "O perfil mudou. Recarregue a página.",
+  "Stop running tasks before switching candidate": "Pare as tarefas e espere antes de trocar o perfil."
 }

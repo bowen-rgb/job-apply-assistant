@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .workspaces import data_dir
 
 import json
 import sys
@@ -62,14 +63,28 @@ def _update_status(job_id: int, status: str, **extra) -> None:
             c.execute('INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,?,?)', (job_id, tracker, f'Automation status: {status}'))
 
 
-def _open_browser(p, profile: dict):
+def _open_browser(p, profile: dict, job=None):
     mode = profile.get('browser_mode', 'cdp')
     if mode == 'cdp':
         browser = p.chromium.connect_over_cdp(profile.get('chrome_cdp_endpoint', 'http://127.0.0.1:9222'))
-        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        if job and job.get('application_tab_id'):
+            for existing in browser.contexts:
+                for tab in existing.pages:
+                    if tab.is_closed(): continue
+                    session=existing.new_cdp_session(tab)
+                    try:
+                        if session.send('Target.getTargetInfo')['targetInfo']['targetId']==job['application_tab_id']:
+                            return browser,existing,mode
+                    finally: session.detach()
+        from . import secret_store
+        from .workspaces import candidate_id
+        saved=secret_store.read().get('browser_state')
+        if saved is None and candidate_id()=='default' and browser.contexts:
+            saved=browser.contexts[0].storage_state()
+        context = browser.new_context(storage_state=saved) if saved else browser.new_context()
         return browser, context, mode
     context = p.chromium.launch_persistent_context(
-        str(ROOT / 'data' / 'browser-profile'),
+        str(data_dir() / 'browser-profile'),
         headless=False,
         viewport=None,
         args=['--start-maximized'],
@@ -92,6 +107,8 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
         if not row:
             raise ValueError('job not found')
         job = dict(row)
+    if job.get('application_status') in {'submitted','submitted_verified','withdrawn'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn'}:
+        return
 
     # Recheck in the worker as well: a new AI review may have started after
     # the HTTP handler/queue accepted the launch.
@@ -99,6 +116,16 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
         _record(job_id, 'apply_error', 'Human confirmation required')
         _update_status(job_id, 'error')
         raise ValueError('Human confirmation required')
+
+    if job.get('application_step') == 'submission_check':
+        try:
+            previous=json.loads(Path(job.get('fill_audit_path') or '').read_text(encoding='utf-8'))
+            uncertain=previous.get('submission',{}).get('status') in {'uncertain','dispatching'}
+        except (OSError,ValueError): uncertain=True
+        if uncertain:
+            _update_status(job_id,'needs_human',application_step='submission_check')
+            _record(job_id,'submission_check','Send result uncertain. Check the recruiter site before retrying.')
+            return
 
     resume_path, resume_meta = select_resume_for_job(job, raw_profile)
     profile['resume_path'] = str(resume_path) if resume_path else ''
@@ -113,10 +140,11 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             check_cancelled()
             if not resume_path or not resume_path.is_file():
                 raise ValueError('Aucun CV sélectionné. Activez un CV avant le pré-remplissage.')
-            browser, context, mode = _open_browser(p, profile)
+            browser, context, mode = _open_browser(p, profile, job)
             if raw_profile.get('application', {}).get('generate_cover_letter', True):
                 _update_status(job_id, 'preparing_letter', application_step='letter')
-                letter = generate_letter(context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
+                letter_context=browser.contexts[0] if mode=='cdp' and browser and browser.contexts else context
+                letter = generate_letter(letter_context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))
                 profile['cover_letter_text'] = letter['letter']
                 profile['cover_letter_path'] = str(letter_paths(job_id)[1])
             check_cancelled()
@@ -147,6 +175,14 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             except Exception:
                 pass
             page.wait_for_timeout(1000)
+            from .login_flow import dismiss_optional_popups,login_if_needed
+            page.on('dialog',lambda dialog:dialog.dismiss())
+            dismiss_optional_popups(page)
+            login=login_if_needed(page)
+            if login['status']=='handoff':
+                _update_status(job_id,'needs_human',application_step='login')
+                _record(job_id,'login_required',login['reason'])
+                return
             try:
                 html = page.content()
             except Exception:
@@ -156,6 +192,12 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             _update_status(job_id, 'preparing', application_step='finding_form', apply_adapter=adapter.info.key, ats=ats)
 
             adapter.prepare(page)
+            login=login_if_needed(page)
+            if login['status']=='handoff':
+                _update_status(job_id,'needs_human',application_step='login')
+                _record(job_id,'login_required',login['reason'])
+                return
+            if login['status']=='logged_in':adapter.prepare(page)
             form_scope = wait_for_form_scope(page)
             if form_scope is None and consent_pending(page) and privacy_confirmed:
                 accept_confirmed_privacy(page)
@@ -172,7 +214,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             upload_path = resume_path
             if profile.get('cover_letter_path') and requires_combined_packet(form_scope):
                 packet = build_application_packet(resume_path, Path(profile['cover_letter_path']),
-                                                 ROOT / 'data' / 'application_packets' / f'job_{job_id}_cv_et_lettre.pdf')
+                                                 data_dir() / 'application_packets' / f'job_{job_id}_cv_et_lettre.pdf')
                 upload_path = Path(packet['path'])
             _update_status(job_id, 'preparing', application_step='filling')
             report = adapter.fill(form_scope, profile, upload_path, job)
@@ -291,8 +333,8 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 'captured_at': now,
                 'final_submit_performed_by_script': False,
             }
-            audit_dir = ROOT / 'data' / 'application_audits'
-            snap_dir = ROOT / 'data' / 'form_snapshots'
+            audit_dir = data_dir() / 'application_audits'
+            snap_dir = data_dir() / 'form_snapshots'
             audit_path = audit_dir / f'job_{job_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
             snap_path = snap_dir / f'job_{job_id}.json'
             _write_json(audit_path, audit)
@@ -302,6 +344,25 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 except Exception:
                     pass
             _write_json(snap_path, snapshot)
+
+            if raw_profile.get('automation',{}).get('auto_submit') is True:
+                from .auto_submission import submit_complete_form
+                _update_status(job_id,'preparing',application_step='submitting')
+                def mark_dispatch():
+                    audit['submission']={'status':'dispatching','reason':'Send initiated; verify outcome before any retry.'}
+                    _write_json(audit_path,audit)
+                    _update_status(job_id,'preparing',application_step='submission_check',fill_audit_path=str(audit_path))
+                result=submit_complete_form(page,form_scope,audit,before_click=mark_dispatch)
+                audit['submission']=result
+                audit['final_submit_performed_by_script']=result['status'] in {'verified','uncertain'}
+                _write_json(audit_path,audit)
+                if result['status']=='verified':
+                    _update_status(job_id,'submitted_verified',application_step='completed',fill_audit_path=str(audit_path))
+                    _record(job_id,'submitted_verified',result['reason'])
+                    return
+                _update_status(job_id,'needs_human',application_step='submission_check',fill_audit_path=str(audit_path))
+                _record(job_id,'submission_check',result['reason'])
+                return
 
             letter_missing = bool(profile.get('cover_letter_path') and not {'cover_letter_file', 'cover_letter_text'}.intersection(report.get('filled', [])))
             needs_human = bool(unanswered or letter_error or letter_missing or not resume_path or 'resume' not in report.get('filled', []) or (agent_trace and agent_trace.get('result') in {'HANDOFF', 'ERROR'}))
@@ -344,6 +405,13 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             _record(job_id, 'apply_error', generation_error(exc))
             raise
         finally:
+            if context is not None and mode=='cdp':
+                try:
+                    from . import secret_store
+                    state=context.storage_state()
+                    secret_store.update(lambda data:data.update(browser_state=state))
+                except Exception:
+                    _record(job_id,'session_not_saved','Browser session could not be encrypted; sign in again next time.')
             if context is not None and mode != 'cdp':
                 try:
                     context.close()

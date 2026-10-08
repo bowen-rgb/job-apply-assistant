@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "岗位链接无效。请查看岗位来源。",
   "Historique de la préparation": "自动准备历史",
   "Échec de préparation (historique)": "过去的准备失败记录",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "未检测到专用浏览器。辅助功能需运行 start.bat；仍可手动投递。"
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "未检测到专用浏览器。辅助功能需运行 start.bat；仍可手动投递。",
+  "Connexion au compte recruteur": "招聘网站登录",
+  "Envoi de la candidature": "正在发送申请",
+  "Résultat à vérifier sur le site": "请在招聘网站核实发送结果",
+  "Candidature envoyée": "申请已发送",
+  "Verification code or MFA required. Complete it on the open page.": "网站要求验证码或多重验证。请接管页面完成验证。",
+  "Login required: configure this site account or sign in on the open page.": "请在“个人档案与账号”保存这个网站的账号，或接管页面手动登录。",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "未能登录。请检查密码，或接管页面完成验证。系统不会自动重置密码。",
+  "Missing answers, documents or form errors.": "缺少必填答案、附件，或表单出现错误。请接管页面检查。",
+  "A unique final application button was not identified.": "无法确定最终发送按钮。请接管页面手动检查并提交。",
+  "Send result uncertain. Check the recruiter site before retrying.": "发送结果不确定。请先在招聘网站或确认邮件中核实，别直接重发。",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "没有看到投递成功提示。请接管页面核实，不要直接重发。",
+  "Candidate changed. Reload before continuing.": "当前个人档案已切换。请刷新页面再操作。",
+  "Stop running tasks before switching candidate": "请先停止正在运行的任务，等结束后再切换个人档案。"
 }

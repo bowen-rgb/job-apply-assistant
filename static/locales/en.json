@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "Invalid job link. Check its source.",
   "Historique de la préparation": "Preparation history",
   "Échec de préparation (historique)": "Past preparation failure",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Dedicated browser not detected. Run start.bat for assistance; manual applications remain available."
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Dedicated browser not detected. Run start.bat for assistance; manual applications remain available.",
+  "Connexion au compte recruteur": "Signing in to recruiter account",
+  "Envoi de la candidature": "Sending application",
+  "Résultat à vérifier sur le site": "Check the outcome on the recruiter site",
+  "Candidature envoyée": "Application sent",
+  "Verification code or MFA required. Complete it on the open page.": "Verification code or MFA required. Complete it on the open page.",
+  "Login required: configure this site account or sign in on the open page.": "Save this site account in Profiles & accounts, or sign in on the open page.",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "Login incomplete. Check your password, code or MFA. Passwords are not reset automatically.",
+  "Missing answers, documents or form errors.": "Missing answers, documents or form errors. Check the page.",
+  "A unique final application button was not identified.": "Final send button unclear. Review and submit on the site.",
+  "Send result uncertain. Check the recruiter site before retrying.": "Send result uncertain. Check the recruiter site or confirmation email before retrying.",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "No submission confirmation observed. Check the site before resending.",
+  "Candidate changed. Reload before continuing.": "Profile changed. Reload before continuing.",
+  "Stop running tasks before switching candidate": "Stop tasks and wait for completion before switching profiles."
 }

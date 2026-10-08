@@ -547,5 +547,18 @@
   "Lien du poste invalide. Consultez la source du poste.": "Ungültiger Stellenlink. Prüfen Sie die Quelle.",
   "Historique de la préparation": "Vorbereitungsverlauf",
   "Échec de préparation (historique)": "Früherer Vorbereitungsfehler",
-  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Eigener Browser nicht erkannt. Für die Assistenz start.bat starten; manuelle Bewerbungen bleiben möglich."
+  "Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.": "Eigener Browser nicht erkannt. Für die Assistenz start.bat starten; manuelle Bewerbungen bleiben möglich.",
+  "Connexion au compte recruteur": "Anmeldung beim Arbeitgeber",
+  "Envoi de la candidature": "Bewerbung wird gesendet",
+  "Résultat à vérifier sur le site": "Ergebnis auf der Website prüfen",
+  "Candidature envoyée": "Bewerbung gesendet",
+  "Verification code or MFA required. Complete it on the open page.": "Code oder MFA erforderlich. Auf der geöffneten Seite abschließen.",
+  "Login required: configure this site account or sign in on the open page.": "Konto unter Profile & Konten speichern oder auf der offenen Seite anmelden.",
+  "Login was not completed. Check password, verification code or MFA; password reset is not automatic.": "Anmeldung unvollständig. Passwort, Code oder MFA prüfen. Keine automatische Passwortzurücksetzung.",
+  "Missing answers, documents or form errors.": "Fehlende Antworten, Dokumente oder Formularfehler. Seite prüfen.",
+  "A unique final application button was not identified.": "Endgültiger Sendeknopf unklar. Auf der Website prüfen und senden.",
+  "Send result uncertain. Check the recruiter site before retrying.": "Versand unklar. Website oder Bestätigungs-E-Mail vor einem erneuten Versuch prüfen.",
+  "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "Keine Sendebestätigung. Website vor erneutem Versand prüfen.",
+  "Candidate changed. Reload before continuing.": "Profil geändert. Seite neu laden.",
+  "Stop running tasks before switching candidate": "Aufgaben stoppen und vor dem Profilwechsel auf ihr Ende warten."
 }

@@ -1,3 +1,7 @@
+## Profiles, saved accounts and optional automatic submission
+
+Open **Profiles & accounts** to create/switch candidate workspaces, save existing recruiter logins, configure Gmail OAuth and choose queue automation. Automatic start and sending are separately opt-in. Completed AI reviews still require your confirmation. Supported complete forms may be sent automatically; missing input, CAPTCHA, MFA, consent and uncertain send outcomes pause for intervention. Gmail connection UI is ready; verification-code retrieval and password recovery are not implemented yet. See [setup and worked example](ACCOUNT_SETUP.md).
+
 
 ## First-time users / Première utilisation / 第一次使用
 
@@ -127,7 +131,7 @@ The dedupe scope is configurable:
 
 Jobs can be added to a local queue and prepared sequentially. The worker launches the existing ATS/agent pre-fill pipeline, waits until a job becomes `prefilled`, `needs_human`, submitted or errors, then advances to the next queued job.
 
-**Final submission remains manual.** Queue automation does not bypass CAPTCHA/MFA, create accounts, make legal declarations or click final Submit.
+**Final submission is manual by default.** Opt-in automatic sending uses a separate bounded handler for recognized complete forms. Queue automation does not bypass CAPTCHA/MFA, create accounts or make legal declarations.
 
 ### Pipeline tracker
 
@@ -284,8 +288,7 @@ and ignored jobs do not inflate the pending-confirmation counter.
 orange recommendations you have checked. Individual preparation, enqueue,
 retry, the batch worker and the application worker all enforce confirmation
 for completed green/orange AI reviews. A legacy queue pauses when it reaches an
-unconfirmed job. Final submission remains manual on the recruiter's website;
-confirmation permits preparation only.
+unconfirmed job. Human confirmation permits preparation. Sending stays manual unless the active candidate separately enables automatic submission in Profiles & accounts.
 
 Confirmation is bound to the reviewed recommendation and listing content.
 Rerunning AI review or changing job details invalidates an older approval, while

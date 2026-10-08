@@ -1,3 +1,7 @@
+个人档案、账号登录和可选自动投递：见 [配置与完整例子](ACCOUNT_SETUP.md)。
+
+Profils, comptes et envoi automatique facultatif : voir [la configuration et un exemple complet](ACCOUNT_SETUP.md).
+
 # Première utilisation / 新手使用说明
 
 ## Le chemin le plus simple / 最简单的用法

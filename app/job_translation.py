@@ -47,6 +47,11 @@ QUALIFIERS = (
 )
 
 
+from .workspaces import data_dir
+
+def owned_directory():
+    return CACHE_DIR if CACHE_DIR != ROOT / 'data' / 'title_translations' else data_dir() / 'title_translations'
+
 def local_title(title: str, language: str) -> str | None:
     if language not in LANGUAGES:
         return title if language == 'fr' else None
@@ -72,7 +77,7 @@ def translate_title(title: str, language: str) -> dict:
     if not title or len(title.encode('utf-8')) > 450:
         return {'title': title, 'status': 'unavailable'}
     key = hashlib.sha256(f'v1:{language}:{title}'.encode()).hexdigest()
-    path = CACHE_DIR / f'{key}.json'
+    path = owned_directory() / f'{key}.json'
     if path.is_file():
         return json.loads(path.read_text(encoding='utf-8'))
     try:
@@ -84,7 +89,7 @@ def translate_title(title: str, language: str) -> dict:
         if int(result.get('responseStatus', 0)) != 200 or result.get('quotaFinished') or not text or len(text) > 1500:
             raise ValueError('Translation unavailable')
         output = {'title': text, 'status': 'ready', 'method': 'machine'}
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        owned_directory().mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(f'.{uuid4().hex}.tmp')
         temporary.write_text(json.dumps(output, ensure_ascii=False), encoding='utf-8')
         temporary.replace(path)

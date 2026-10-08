@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .workspaces import data_dir
 
 import json
 import tempfile
@@ -64,7 +65,15 @@ async def local_security(request: Request, call_next):
     client = request.client.host if request.client else ''
     if client not in {'127.0.0.1', '::1', 'localhost', 'testclient'}:
         return JSONResponse({'detail': 'Local access only'}, status_code=403)
-    response = await call_next(request)
+    from .workspaces import CURRENT, active_id
+    identifier=active_id()
+    if request.url.path.startswith('/api/') and request.headers.get('x-candidate-id') not in {None,identifier}:
+        return JSONResponse({'detail':'Candidate changed. Reload before continuing.'},status_code=409)
+    token=CURRENT.set(identifier)
+    try:
+        response = await call_next(request)
+    finally:
+        CURRENT.reset(token)
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'no-referrer'
@@ -181,7 +190,8 @@ def resumes():
 
 @app.get('/api/resumes/{resume_id}/download')
 def download_resume(resume_id: str):
-    from .profile_store import RESUME_DIR
+    from .profile_store import resume_directory
+    RESUME_DIR=resume_directory()
     row = next((row for row in list_resumes() if row['id'] == resume_id), None)
     if row is None:
         raise HTTPException(404, 'CV not found')
@@ -461,7 +471,7 @@ def application_audit(job_id: int):
     if not raw_path:
         raise HTTPException(404, 'No fill audit for this job')
     path = Path(raw_path).resolve()
-    audit_root = (ROOT / 'data' / 'application_audits').resolve()
+    audit_root = (data_dir() / 'application_audits').resolve()
     if audit_root not in path.parents or not path.exists():
         raise HTTPException(404, 'Audit file unavailable')
     try:
@@ -476,7 +486,7 @@ def agent_trace(job_id: int):
     if not raw_path:
         raise HTTPException(404, 'No agent trace for this job')
     path = Path(raw_path).resolve()
-    trace_root = (ROOT / 'data' / 'agent_traces').resolve()
+    trace_root = (data_dir() / 'agent_traces').resolve()
     if trace_root not in path.parents or not path.exists():
         raise HTTPException(404, 'Agent trace unavailable')
     try:
@@ -534,9 +544,33 @@ def get_queue():
     return queue_status()
 
 
+@app.get('/api/candidates')
+def list_candidates():
+    from .workspaces import candidates,active_id
+    return {'active_id':active_id(),'items':candidates()}
+
+
+@app.post('/api/candidates')
+def create_candidate(payload: dict):
+    from .workspaces import create
+    try:return {'id':create(payload.get('name',''))}
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+
+@app.post('/api/candidates/{identifier}/activate')
+def activate_candidate(identifier: str):
+    from .workspaces import activate
+    try:activate(identifier);return {'ok':True}
+    except KeyError:raise HTTPException(404,'Candidate not found')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+
 @app.post('/api/queue')
 def add_queue(payload: QueueRequest):
-    return queue_enqueue(payload.job_ids, payload.priority)
+    result = queue_enqueue(payload.job_ids, payload.priority)
+    if load_profile_raw().get('automation', {}).get('auto_start_queue') is True and not result.get('paused'):
+        queue_start('batch')
+    return result
 
 
 @app.post('/api/queue/start')
@@ -604,3 +638,83 @@ def analytics():
 def clear_jobs():
     job_repository.clear()
     return {'ok': True}
+
+
+@app.get('/api/accounts')
+def get_accounts():
+    from .site_accounts import list_accounts
+    return list_accounts()
+
+
+@app.put('/api/accounts')
+def put_account(payload: dict):
+    from .site_accounts import save_account
+    try: save_account(payload)
+    except ValueError as exc: raise HTTPException(400,str(exc))
+    return {'ok':True}
+
+
+@app.delete('/api/accounts')
+def remove_account(login_url: str):
+    from .site_accounts import delete_account
+    try: delete_account(login_url)
+    except ValueError as exc: raise HTTPException(400,str(exc))
+    return {'ok':True}
+
+
+@app.get('/api/gmail')
+def gmail_status():
+    from .gmail_connection import status
+    return status()
+
+
+@app.put('/api/gmail/config')
+def gmail_config(payload: dict):
+    from .gmail_connection import configure
+    try: configure(payload)
+    except ValueError as exc: raise HTTPException(400,str(exc))
+    return {'ok':True}
+
+
+@app.post('/api/gmail/connect')
+def gmail_connect():
+    from .gmail_connection import begin
+    try: return begin()
+    except ValueError as exc: raise HTTPException(400,str(exc))
+
+
+@app.get('/api/gmail/callback')
+def gmail_callback(state: str='',code: str='',error: str=''):
+    from .gmail_connection import finish
+    from fastapi.responses import HTMLResponse
+    import html
+    try:
+        email = finish(state,code,error)
+        message = 'Gmail connected: '+email+'. Close this tab and return to Profiles & accounts.'
+    except ValueError as exc: message = str(exc)
+    except Exception: message = 'Connection failed. Check OAuth configuration and Gmail API access, then connect again.'
+    return HTMLResponse('<!doctype html><html lang="en"><meta charset="utf-8"><title>Gmail connection</title><main><h1>Gmail</h1><p>'+html.escape(message)+'</p><a href="/">Return to Job Apply Assistant</a></main></html>')
+
+
+@app.delete('/api/gmail')
+def gmail_disconnect():
+    from .gmail_connection import disconnect
+    disconnect()
+    return {'ok':True}
+
+
+@app.put('/api/automation/options')
+def automation_options(payload: dict):
+    if set(payload) != {'auto_submit','auto_start_queue'} or any(type(value) is not bool for value in payload.values()):
+        raise HTTPException(400,'Choose both automation options.')
+    profile=load_profile_raw()
+    profile.setdefault('automation',{}).update(payload)
+    save_profile_raw(profile)
+    return {'ok':True}
+
+
+@app.get('/api/gmail/guide')
+def gmail_guide(language: str='en'):
+    from .account_guide import render
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(render(language))

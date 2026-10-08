@@ -18,6 +18,20 @@ RESUME_DIR = DATA_DIR / 'resumes'
 RESUME_INDEX = RESUME_DIR / 'index.json'
 
 
+from . import workspaces
+
+def profile_file():
+    return PROFILE_PATH if PROFILE_PATH != ROOT / 'profile.json' else workspaces.profile_path()
+
+def data_directory():
+    return DATA_DIR if DATA_DIR != ROOT / 'data' else workspaces.data_dir()
+
+def resume_directory():
+    return RESUME_DIR if RESUME_DIR != ROOT / 'data' / 'resumes' else workspaces.data_dir() / 'resumes'
+
+def resume_index_file():
+    return RESUME_INDEX if RESUME_INDEX != ROOT / 'data' / 'resumes' / 'index.json' else resume_directory() / 'index.json'
+
 def _deep_merge(base: dict, incoming: dict) -> dict:
     out = deepcopy(base)
     for key, value in (incoming or {}).items():
@@ -92,6 +106,7 @@ def default_profile() -> dict[str, Any]:
             ]
         },
         'automation': {
+            'auto_start_queue': False,
             'enabled_sources': [
                 'france_travail', 'hellowork', 'indeed', 'wttj', 'cityone', 'plany',
                 'staffme', 'adecco', 'manpower', 'randstad', 'synergie', 'meteojob',
@@ -204,17 +219,17 @@ def _legacy_to_v5(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def ensure_profile() -> dict[str, Any]:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    RESUME_DIR.mkdir(parents=True, exist_ok=True)
-    if PROFILE_PATH.exists():
-        raw = json.loads(PROFILE_PATH.read_text(encoding='utf-8'))
-    elif PROFILE_EXAMPLE.exists():
+    data_directory().mkdir(parents=True, exist_ok=True)
+    resume_directory().mkdir(parents=True, exist_ok=True)
+    if profile_file().exists():
+        raw = json.loads(profile_file().read_text(encoding='utf-8'))
+    elif workspaces.candidate_id() == 'default' and PROFILE_EXAMPLE.exists():
         raw = json.loads(PROFILE_EXAMPLE.read_text(encoding='utf-8'))
     else:
         raw = default_profile()
     p = _legacy_to_v5(raw)
     if p != raw:
-        PROFILE_PATH.write_text(json.dumps(p, ensure_ascii=False, indent=2), encoding='utf-8')
+        profile_file().write_text(json.dumps(p, ensure_ascii=False, indent=2), encoding='utf-8')
     return p
 
 
@@ -226,24 +241,24 @@ def save_profile_raw(data: dict[str, Any]) -> dict[str, Any]:
     current = ensure_profile()
     merged = _deep_merge(current, data or {})
     merged['schema_version'] = 8
-    PROFILE_PATH.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding='utf-8')
+    profile_file().write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding='utf-8')
     return merged
 
 
 def _resume_index() -> list[dict[str, Any]]:
-    RESUME_DIR.mkdir(parents=True, exist_ok=True)
-    if not RESUME_INDEX.exists():
+    resume_directory().mkdir(parents=True, exist_ok=True)
+    if not resume_index_file().exists():
         return []
     try:
-        rows = json.loads(RESUME_INDEX.read_text(encoding='utf-8'))
+        rows = json.loads(resume_index_file().read_text(encoding='utf-8'))
         return rows if isinstance(rows, list) else []
     except Exception:
         return []
 
 
 def _write_resume_index(rows: list[dict[str, Any]]) -> None:
-    RESUME_DIR.mkdir(parents=True, exist_ok=True)
-    RESUME_INDEX.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
+    resume_directory().mkdir(parents=True, exist_ok=True)
+    resume_index_file().write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
 def list_resumes() -> list[dict[str, Any]]:
@@ -251,7 +266,7 @@ def list_resumes() -> list[dict[str, Any]]:
     active = p.get('application', {}).get('active_resume_id', '')
     rows = []
     for row in _resume_index():
-        path = RESUME_DIR / row.get('filename', '')
+        path = resume_directory() / row.get('filename', '')
         if not path.exists():
             continue
         x = dict(row)
@@ -273,8 +288,8 @@ def add_resume(src_path: Path, original_name: str, label: str = '') -> dict[str,
     resume_id = uuid.uuid4().hex[:12]
     safe = _safe_name(original_name)
     filename = f'{resume_id}_{safe}'
-    dst = RESUME_DIR / filename
-    RESUME_DIR.mkdir(parents=True, exist_ok=True)
+    dst = resume_directory() / filename
+    resume_directory().mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src_path, dst)
     row = {
         'id': resume_id,
@@ -308,7 +323,7 @@ def delete_resume(resume_id: str) -> None:
     target = next((x for x in rows if x.get('id') == resume_id), None)
     if not target:
         raise KeyError(resume_id)
-    path = RESUME_DIR / target.get('filename', '')
+    path = resume_directory() / target.get('filename', '')
     if path.exists():
         path.unlink()
     rows = [x for x in rows if x.get('id') != resume_id]
@@ -324,7 +339,7 @@ def active_resume_path(raw: dict[str, Any] | None = None) -> Path | None:
     rid = p.get('application', {}).get('active_resume_id', '')
     for row in _resume_index():
         if row.get('id') == rid:
-            path = RESUME_DIR / row.get('filename', '')
+            path = resume_directory() / row.get('filename', '')
             return path if path.exists() else None
     legacy = p.get('application', {}).get('legacy_resume_path', '')
     if legacy:
@@ -335,11 +350,11 @@ def active_resume_path(raw: dict[str, Any] | None = None) -> Path | None:
             return path
     # Backward-friendly fallback for users dropping cv.pdf into root.
     fallback = ROOT / 'cv.pdf'
-    if fallback.exists():
+    if workspaces.candidate_id() == 'default' and fallback.exists():
         return fallback
     # A single library CV is unambiguous even when an imported profile has
     # lost its active selection. Never guess between multiple documents.
-    available = [RESUME_DIR / row.get('filename', '') for row in _resume_index()]
+    available = [resume_directory() / row.get('filename', '') for row in _resume_index()]
     available = [path for path in available if path.is_file()]
     return available[0] if len(available) == 1 else None
 
@@ -351,7 +366,7 @@ def replace_profile_raw(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError('Profile must be a JSON object')
     normalized = _legacy_to_v5(data)
     normalized['schema_version'] = 8
-    PROFILE_PATH.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding='utf-8')
+    profile_file().write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding='utf-8')
     return normalized
 
 
@@ -395,7 +410,7 @@ def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None
                 rid = str(campaign.get('resume_id') or '').strip()
                 chosen = next((x for x in rows if x.get('id') == rid), None)
                 if chosen:
-                    path = RESUME_DIR / chosen.get('filename', '')
+                    path = resume_directory() / chosen.get('filename', '')
                     return (path if path.exists() else None), chosen
                 break
 
@@ -421,7 +436,7 @@ def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None
             best = row
     chosen = best if best_score > 0 else active
     if chosen:
-        path = RESUME_DIR / chosen.get('filename', '')
+        path = resume_directory() / chosen.get('filename', '')
         return (path if path.exists() else None), chosen
     return active_resume_path(p), None
 

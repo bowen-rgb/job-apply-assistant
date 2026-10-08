@@ -14,9 +14,14 @@ from .worker_runtime import launch, cancel
 EXPORT_ROOT=ROOT/'data'/'review_exports'
 
 
+from .workspaces import data_dir
+
+def owned_directory():
+    return EXPORT_ROOT if EXPORT_ROOT != ROOT / 'data' / 'review_exports' else data_dir() / 'review_exports'
+
 def directory(export_id):
     if not re.fullmatch(r'[0-9a-f]{32}',export_id):raise KeyError(export_id)
-    return EXPORT_ROOT/export_id
+    return owned_directory()/export_id
 
 
 def read_state(export_id):

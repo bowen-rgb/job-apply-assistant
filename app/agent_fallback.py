@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .workspaces import data_dir
 
 import json
 from datetime import datetime, timezone
@@ -94,7 +95,7 @@ def _job_packet(job: dict[str, Any], profile: dict[str, Any], snapshot: dict[str
 
 
 def _write_trace(job_id: int, trace: dict[str, Any]) -> Path:
-    d = ROOT / 'data' / 'agent_traces'
+    d = data_dir() / 'agent_traces'
     d.mkdir(parents=True, exist_ok=True)
     p = d / f'job_{job_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     p.write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -270,7 +271,7 @@ def run_agent_loop(page, *, context, job_id: int, job: dict[str, Any], profile: 
         'result': 'HANDOFF',
     }
 
-    shot_dir = ROOT / 'data' / 'agent_screens' / f'job_{job_id}'
+    shot_dir = data_dir() / 'agent_screens' / f'job_{job_id}'
     if agent_cfg.get('screenshot_each_step', False):
         shot_dir.mkdir(parents=True, exist_ok=True)
 

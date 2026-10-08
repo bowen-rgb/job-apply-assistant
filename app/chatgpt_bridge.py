@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .workspaces import data_dir
 
 import json
 import re
@@ -16,7 +17,7 @@ CHATGPT_LOCK = FileLock(str(ROOT / 'data' / 'chatgpt-web.lock'))
 
 def _diagnostic(page, purpose: str) -> None:
     """Keep local evidence when the website changes its response layout."""
-    folder = ROOT / 'data' / 'chatgpt_diagnostics'
+    folder = data_dir() / 'chatgpt_diagnostics'
     folder.mkdir(parents=True, exist_ok=True)
     try:
         payload = {'url': page.url, 'purpose': purpose,

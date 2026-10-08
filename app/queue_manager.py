@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from contextvars import copy_context
 import time
 import json
 from pathlib import Path
@@ -30,7 +31,7 @@ def status() -> dict[str, Any]:
         rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
                             j.review_revision,j.reviewed_at,j.review_summary,j.review_json,j.body,j.employment_type,j.start_date,j.end_date,j.valid_through,
                             j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,j.application_step,j.application_step_at,
-                            COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status='apply_error' ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
+                            COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status IN ('apply_error','login_required','submission_check','privacy_consent_required') ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
                                      q.priority ASC,q.id ASC LIMIT 200''').fetchall()
@@ -207,7 +208,7 @@ def _worker(mode: str = 'one'):
         _set(running=False, current_job_id=None)
 
 
-def start(mode: str = 'one') -> dict[str, Any]:
+def _start(mode: str = 'one') -> dict[str, Any]:
     if mode not in {'one', 'batch'}:
         raise ValueError('Invalid queue mode')
     already = False
@@ -219,7 +220,7 @@ def start(mode: str = 'one') -> dict[str, Any]:
     if not already:
         with connect() as c:
             c.execute("UPDATE application_queue SET status='error',note='Interrupted: retry explicitly',updated_at=CURRENT_TIMESTAMP WHERE status='running'")
-        threading.Thread(target=_worker, args=(mode,), daemon=True, name='application-queue').start()
+        threading.Thread(target=copy_context().run, args=(_worker, mode), daemon=True, name='application-queue').start()
     return status()
 
 
@@ -232,3 +233,11 @@ def stop() -> dict[str, Any]:
     if current:
         remove(current)
     return status()
+
+
+def start(*args, **kwargs):
+    from .workspaces import LOCK, candidate_id, active_id
+    with LOCK:
+        if candidate_id() != active_id():
+            raise ValueError("Candidate changed. Reload before continuing.")
+        return _start(*args, **kwargs)

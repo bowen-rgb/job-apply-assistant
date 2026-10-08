@@ -1,9 +1,11 @@
 """Small, read-only handoff summary from a locally stored preparation audit."""
+from .workspaces import data_dir
 import json
 from pathlib import Path
 from urllib.parse import urlparse
 
 from .profile_store import ROOT
+_ORIGINAL_ROOT = ROOT
 
 
 def preparation_summary(job: dict) -> dict:
@@ -11,7 +13,7 @@ def preparation_summary(job: dict) -> dict:
                'documents': {}, 'required_unanswered': None, 'missing_fields': []}
     try:
         path = Path(job.get('fill_audit_path') or '').resolve()
-        if (ROOT / 'data' / 'application_audits').resolve() not in path.parents:
+        if ((ROOT / 'data' if ROOT != _ORIGINAL_ROOT else data_dir()) / 'application_audits').resolve() not in path.parents:
             return summary
         audit = json.loads(path.read_text(encoding='utf-8'))
         documents = audit.get('documents', {})
