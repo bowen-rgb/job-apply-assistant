@@ -560,5 +560,14 @@
   "Send result uncertain. Check the recruiter site before retrying.": "Envoi incertain. Vérifiez le site ou l’email de confirmation avant de réessayer.",
   "No submission confirmation observed. Check the recruiter site; do not resend blindly.": "Aucune confirmation observée. Vérifiez le site ; ne renvoyez pas sans vérifier.",
   "Candidate changed. Reload before continuing.": "Le profil a changé. Rechargez la page.",
-  "Stop running tasks before switching candidate": "Arrêtez les tâches et attendez leur fin avant de changer de profil."
+  "Stop running tasks before switching candidate": "Arrêtez les tâches et attendez leur fin avant de changer de profil.",
+  "tags: accueil, logistique…": "Tags : accueil, logistique…",
+  "Utiliser ce CV": "Utiliser ce CV",
+  "CV utilisé": "CV utilisé",
+  "Enregistrer le nom et les tags": "Enregistrer le nom et les tags",
+  "Website name must be at most 80 characters": "Le nom du site ne doit pas dépasser 80 caractères.",
+  "Enter the password for the new username": "Identifiant modifié : renseignez le mot de passe du nouveau compte.",
+  "Enter the password": "Renseignez le mot de passe de ce compte.",
+  "Enter the account email or username": "Renseignez l’email ou l’identifiant du compte.",
+  "Use an HTTPS login URL without credentials": "Copiez l’adresse de connexion commençant par https://, sans identifiants dans l’adresse."
 }

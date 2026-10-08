@@ -15,6 +15,25 @@ from app.auto_submission import submit_complete_form
 
 
 class CandidateTests(unittest.TestCase):
+    def test_websites_keep_separate_accounts_and_edit_preserves_only_same_users_password(self):
+        vault={}
+        with patch.object(secret_store,'read',side_effect=lambda:vault),patch.object(secret_store,'update',side_effect=lambda fn:fn(vault)):
+            site_accounts.save_account({'login_url':'https://indeed.test/login','site_name':'Indeed','username':'alice@example.test','password':'indeed-secret','enabled':True})
+            site_accounts.save_account({'login_url':'https://hellowork.test/login','site_name':'HelloWork','username':'alice@example.test','password':'hellowork-secret','enabled':True})
+            site_accounts.save_account({'login_url':'https://indeed.test/login','site_name':'Indeed','username':'alice@example.test','password':'','enabled':False})
+            self.assertIsNone(site_accounts.account_for('https://indeed.test/job'))
+            self.assertEqual(site_accounts.account_for('https://hellowork.test/job')['password'],'hellowork-secret')
+            self.assertEqual(vault['accounts']['https://indeed.test']['password'],'indeed-secret')
+            public=site_accounts.list_accounts()
+            self.assertEqual({row['site_name'] for row in public},{'Indeed','HelloWork'})
+            self.assertTrue(all('password' not in row for row in public))
+            with self.assertRaises(ValueError):
+                site_accounts.save_account({'login_url':'https://indeed.test/login','username':'bob@example.test','password':''})
+            self.assertEqual(vault['accounts']['https://indeed.test']['username'],'alice@example.test')
+            site_accounts.delete_account('https://indeed.test/login')
+            self.assertEqual(len(site_accounts.list_accounts()),1)
+            self.assertEqual(site_accounts.account_for('https://hellowork.test/job')['password'],'hellowork-secret')
+
     def test_auto_enqueue_does_not_restart_a_paused_queue(self):
         client=TestClient(app)
         with patch('app.main.load_profile_raw',return_value={'automation':{'auto_start_queue':True}}),patch('app.main.queue_enqueue',return_value={'paused':True}),patch('app.main.queue_start') as start:

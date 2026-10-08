@@ -10,18 +10,28 @@ def origin(url):
 
 
 def list_accounts():
-    return [{k:v for k,v in account.items() if k!='password'}|{'has_password':bool(account.get('password'))} for account in secret_store.read().get('accounts',{}).values()]
+    rows = []
+    for account in secret_store.read().get('accounts', {}).values():
+        public = {k:v for k,v in account.items() if k!='password'}
+        public['site_name'] = account.get('site_name') or urlparse(account['origin']).hostname
+        public['has_password'] = bool(account.get('password'))
+        rows.append(public)
+    return sorted(rows, key=lambda row: row['site_name'].casefold())
 
 
 def save_account(payload):
     target=origin(payload.get('login_url',''))
     username=str(payload.get('username','')).strip()
     if not username or len(username)>320:raise ValueError('Enter the account email or username')
+    site_name = str(payload.get('site_name', '')).strip()
+    if len(site_name)>80:raise ValueError('Website name must be at most 80 characters')
     def change(data):
         accounts=data.setdefault('accounts',{});previous=accounts.get(target,{})
+        if previous and previous['username'] != username and not payload.get('password'):
+            raise ValueError('Enter the password for the new username')
         password=payload.get('password') or previous.get('password','')
         if not isinstance(password,str) or not password or len(password)>1024:raise ValueError('Enter the password')
-        accounts[target]={'origin':target,'login_url':payload['login_url'],'username':username,'password':password,'enabled':payload.get('enabled') is True}
+        accounts[target]={'origin':target,'login_url':payload['login_url'],'site_name':site_name or previous.get('site_name') or urlparse(target).hostname,'username':username,'password':password,'enabled':payload.get('enabled') is True}
     secret_store.update(change)
 
 

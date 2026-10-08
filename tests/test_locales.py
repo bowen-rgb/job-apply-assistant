@@ -26,6 +26,12 @@ class LocaleCatalogTests(unittest.TestCase):
         self.assertEqual(catalogs['zh']['Lettre de motivation'], '求职信')
         self.assertEqual(catalogs['zh']['En cours'], '处理中')
         self.assertEqual(catalogs['zh']['File:'], '队列：')
+        self.assertEqual(catalogs['zh']['Utiliser ce CV'], '使用这份简历')
+        self.assertEqual(catalogs['zh']['CV utilisé'], '当前使用')
+        self.assertEqual(catalogs['zh']['Enregistrer le nom et les tags'], '保存名称和标签')
+        self.assertEqual(catalogs['zh']['auto'], '自动')
+        for mistranslation in ('使能够', '积极的', '节省', '工作间谍', '确实国家', '本地图书馆', '工人开始了', '主动 CV', '自动布线'):
+            self.assertFalse(any(mistranslation in value for value in catalogs['zh'].values()),mistranslation)
 
 
 if __name__ == '__main__':

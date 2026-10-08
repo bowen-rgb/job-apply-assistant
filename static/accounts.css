@@ -1,1 +1,14 @@
 #accountsDialog{width:min(880px,92vw);max-height:90vh;border:1px solid #bacaba;border-radius:18px;padding:24px;color:#263c32;background:#f6f5f0}#accountsDialog::backdrop{background:#10251c99}#accountsDialog header{display:flex;align-items:center;justify-content:space-between;gap:16px}#accountsDialog form{display:grid;gap:12px;margin:20px 0;padding:18px;background:white;border-radius:12px}#accountsDialog label{display:block}#accountsDialog input:not([type=checkbox]){width:100%;margin-top:6px}#accountsDialog h3{margin-top:30px}#accountsDialog article{padding:12px;margin:8px 0}#accountsDialog input[type=checkbox]{width:auto;margin-right:10px}.candidate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.candidate-card{border:1px solid #cad4c7;border-radius:12px;overflow-wrap:anywhere}.candidate-card.selected{background:#e0ecdc;border:2px solid #315c46}.candidate-avatar{display:block;font-size:24px;font-weight:bold}#accountsNotice:empty{display:none}#accountsNotice{border-left:4px solid #315c46;padding:12px}body.simple-mode #accountsNav{display:block}
+#savedAccounts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+#accountsDialog .website-account{margin:0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+#accountsDialog .website-account h4{margin:0 0 8px;font-size:18px}
+#accountsDialog .website-origin{font-size:12px;color:var(--muted)}
+#accountsDialog .account-check{display:flex;flex-direction:row;align-items:center;gap:8px;line-height:1.5}
+#accountsDialog .account-check input{flex:none;margin:0}
+#accountsDialog .website-account-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#accountsDialog .website-account-actions button,#accountsDialog .website-account-actions a,#accountsDialog header button{width:auto}
+#accountsDialog .website-account-actions a{color:var(--accent);text-decoration:none}
+#accountsDialog details{margin:16px 0}#accountsDialog summary{cursor:pointer;font-weight:650}
+#accountsDialog input[readonly]{background:var(--panel2);color:var(--muted)}
+#accountsDialog>header{position:sticky;top:0;z-index:1;padding:12px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+@media(max-width:480px){#accountsDialog{padding:16px}#accountsDialog form{padding:12px}#accountsDialog .website-account-actions>*{flex:1 1 auto}}
