@@ -36,3 +36,22 @@ The live [rahoo.online](https://rahoo.online/) **素材生成** panel was inspec
 This revision uses the reusable-vector approach with an **original local SVG**, `static/artwork/application-orbit.svg`, built from circles, ticks, curves, dot/stripe patterns and an application-document motif. No external generator code, video frame, game character, font file or remote runtime was copied into the application. The generator was inspected as a tool reference; the project does not depend on it or require an account.
 
 Composition changes: cobalt/neutral palette with lime reserved for prominent actions, layered display typography, asymmetric header illustration, a dominant first metric, angular cuts, local dot texture, controlled fine lines and quiet data regions. Decoration is hidden from assistive technology, does not intercept input and cannot be mistaken for a real progress gauge. Real chart values, profile ownership and submission semantics remain unchanged. Reduced-motion handling and mobile layouts remain in place.
+
+
+## Whole-site surface coverage — 2026-10-15
+
+`static/surfaces.css` is loaded after the dashboard, guide, account and personal-task styles, so dynamically opened panels share one palette and control language. `static/surfaces.js` stamps each main view and application dialog, maintains profile-section jump buttons and groups the five account-dialog sections. It moves existing DOM nodes rather than recreating form controls, preserving input values and action handlers. Keyboard jumps focus the destination heading; motion respects the reduced-motion preference. Locale changes update section names.
+
+| Surface | Coverage |
+| --- | --- |
+| Job discovery | Heading, metric filters, search/source toolbar, cards, matching evidence, AI/human review panels, letters, scan/source diagnostics, empty and failed states |
+| Personal profile | Heading, section navigation, identity/contact/education/availability/preferences forms, search campaigns, sources, browser/agent settings, resume library, reusable answers and save/import/export controls |
+| Pipeline and queue | Heading, analytics, queue controls, current/next task, takeover and manual-submission controls, queue filters, failed preparation details, per-item actions, tracking board and event history |
+| Beginner flow | Heading, readiness, manual/assisted/sent paths, one-action coach, worked example, file upload, practice/more/help disclosures and guide print styles |
+| Profiles and accounts dialog | Sticky heading, five section jumps, profile cards/create form, per-site saved accounts, expandable account editor, password states, automation options, Gmail configuration/connection controls |
+| Personal tasks dialog | Sticky heading, owner title, pending/completed filters, bulk queue action, task cards, links and queue/status controls |
+| Separate pages | Gmail setup guide and callback use `connection.css`; portable HTML review report has embedded matching colours and retains its self-contained print layout |
+
+Native browser confirmation prompts retain browser-managed appearance and their existing confirmation semantics. No sign-in, submission, deletion or background task is triggered by the new visual or section-navigation code.
+
+Browser checks open every main view, both dialogs, an expanded account editor and preparation-error detail, and the separate Gmail guide. Screenshots use labelled example data and are saved under ignored `data/surface-previews/`. Checks cover 320/768/1440px overflow, profile inputs surviving section jumps, keyboard destination focus, dialog labelling, six-language headings and no state-changing API requests from navigation. Queue's untranslated `Tout` option now has a translation in all six catalogs.

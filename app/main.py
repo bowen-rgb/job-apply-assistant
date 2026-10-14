@@ -698,7 +698,7 @@ def gmail_callback(state: str='',code: str='',error: str=''):
         message = 'Gmail connected: '+email+'. Close this tab and return to Profiles & accounts.'
     except ValueError as exc: message = str(exc)
     except Exception: message = 'Connection failed. Check OAuth configuration and Gmail API access, then connect again.'
-    return HTMLResponse('<!doctype html><html lang="en"><meta charset="utf-8"><title>Gmail connection</title><main><h1>Gmail</h1><p>'+html.escape(message)+'</p><a href="/">Return to Job Apply Assistant</a></main></html>')
+    return HTMLResponse('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gmail connection</title><link rel="stylesheet" href="/static/connection.css"><main><h1>Gmail</h1><p>'+html.escape(message)+'</p><a href="/">Return to Job Apply Assistant</a></main></html>')
 
 
 @app.delete('/api/gmail')

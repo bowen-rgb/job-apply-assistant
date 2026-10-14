@@ -2,7 +2,7 @@
 
 Open **Dashboard / 工作台** in the sidebar. The overview refreshes the current profile’s real records every 6 seconds while visible. Click a metric or source bar to open its jobs; open the queue to see preparation and takeover details. Use the 7/30-day selector for job discovery and expand chart data tables when useful. A disconnected notice keeps the last snapshot identifiable. Discovery counts are not submission counts.
 
-The **To do / 待处理** menu now includes **Add to queue** for pending vacancies and a bulk option. Laboratory contacts and document checks remain tasks. Enqueueing does not start preparation or send an application. The graphic composition uses layered typography, an asymmetric document illustration, fine radial and contour lines, local dot texture, cobalt contrast and lime action highlights. See [design and data definitions](DASHBOARD_DESIGN.md).
+The **To do / 待处理** menu now includes **Add to queue** for pending vacancies and a bulk option. Laboratory contacts and document checks remain tasks. Enqueueing does not start preparation or send an application. The graphic composition uses layered typography, an asymmetric document illustration, fine radial and contour lines, local dot texture, cobalt contrast and lime action highlights. The same visual system covers job cards, profile forms, queues, beginner guidance, account/to-do dialogs and separate Gmail help pages. Profile and account sections provide jump controls for long forms. See [design and data definitions](DASHBOARD_DESIGN.md).
 
 ## Profiles, saved accounts and optional automatic submission
 
