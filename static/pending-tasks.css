@@ -1,0 +1,5 @@
+#pendingTasksDialog{width:min(900px,92vw);max-height:90vh;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--bg);color:var(--text)}
+#pendingTasksDialog::backdrop{background:#10251c99}#pendingTasksDialog header{display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;background:var(--bg);z-index:1}#pendingTasksDialog header button{width:auto}
+.pending-filters,.pending-actions{display:flex;gap:12px;flex-wrap:wrap}.pending-filters button,.pending-actions button{width:auto}.pending-filters button[aria-pressed=true]{background:var(--panel2);outline:1px solid var(--accent)}
+.pending-task{margin:16px 0;padding:20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}.pending-task h3{margin:12px 0}.pending-note{white-space:pre-wrap}.pending-actions a{color:var(--accent);text-decoration:none}
+body.simple-mode #pendingTasksNav{display:block}@media(max-width:480px){#pendingTasksDialog{padding:16px}.pending-task{padding:12px}}

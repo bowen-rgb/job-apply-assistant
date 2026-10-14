@@ -1,5 +1,7 @@
 ## Profiles, saved accounts and optional automatic submission
 
+The sidebar's **Active profile** dropdown switches directly between candidate workspaces. Running tasks must finish or stop before switching. Each workspace also has a separate **To do** list for application links, laboratory contacts and document checks. Marking a to-do as done never sends an application or changes submission history. Personal profiles and to-dos live in local ignored data, rather than Git.
+
 Open **Profiles & accounts** to create/switch candidate workspaces, save existing recruiter logins, configure Gmail OAuth and choose queue automation. Automatic start and sending are separately opt-in. Completed AI reviews still require your confirmation. Supported complete forms may be sent automatically; missing input, CAPTCHA, MFA, consent and uncertain send outcomes pause for intervention. Gmail connection UI is ready; verification-code retrieval and password recovery are not implemented yet. See [setup and worked example](ACCOUNT_SETUP.md).
 
 

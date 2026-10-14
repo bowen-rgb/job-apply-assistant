@@ -723,3 +723,18 @@ def gmail_guide(language: str='en'):
     from .account_guide import render
     from fastapi.responses import HTMLResponse
     return HTMLResponse(render(language))
+
+
+@app.get('/api/pending-tasks')
+def list_pending_tasks():
+    from .pending_tasks import read
+    return {'items':read()}
+
+
+@app.patch('/api/pending-tasks/{identifier}')
+def update_pending_task(identifier: str,payload: dict):
+    from .pending_tasks import set_status
+    try: set_status(identifier,payload.get('status'))
+    except ValueError as exc: raise HTTPException(400,str(exc))
+    except KeyError: raise HTTPException(404,'Task not found in this profile')
+    return {'ok':True}

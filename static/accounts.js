@@ -1,6 +1,6 @@
 /* Configure once, then use the existing confirmed-job queue. */
 window.Accounts=(()=>{
-  let owner='default';
+  let owner='default',registry={items:[]};
   const originalFetch=window.fetch.bind(window);
   let resolveReady;
   const ready=new Promise(resolve=>resolveReady=resolve);
@@ -72,8 +72,23 @@ window.Accounts=(()=>{
     document.getElementById('gmailDisconnect').onclick=run(async()=>{await api('/api/gmail','DELETE');await render();});
   }
   async function init(){
-    try{const response=await originalFetch('/api/candidates');const data=await response.json();owner=data.active_id||'default';}
+    try{const response=await originalFetch('/api/candidates');const data=await response.json();owner=data.active_id||'default';registry=data;}
     finally{resolveReady();}
+    const switchLabels={zh:'当前档案',fr:'Profil actif',en:'Active profile',de:'Aktuelles Profil',es:'Perfil activo',pt:'Perfil ativo'};
+    const switcher=document.createElement('div');switcher.className='profile-switcher';
+    const caption=document.createElement('label');caption.htmlFor='candidateSelect';caption.textContent=switchLabels[Locale.language]||switchLabels.en;
+    const select=document.createElement('select');select.id='candidateSelect';
+    const rows=registry.items?.length?registry.items:[{id:owner,name:'Current profile'}];
+    rows.forEach(row=>{const option=document.createElement('option');option.value=row.id;option.textContent=row.name;select.append(option);});select.value=owner;
+    const status=document.createElement('p');status.id='candidateSwitchStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    switcher.append(caption,select,status);document.querySelector('.language-control').after(switcher);
+    select.onchange=async()=>{
+      if(select.value===owner)return;
+      select.disabled=true;status.textContent='';
+      try{await api(`/api/candidates/${select.value}/activate`,'POST');location.reload();}
+      catch(error){select.value=owner;select.disabled=false;status.textContent=Locale.t(error.message);}
+    };
+    document.addEventListener('localechange',()=>{caption.textContent=switchLabels[Locale.language]||switchLabels.en;});
     nav=document.createElement('button');nav.type='button';nav.id='accountsNav';nav.className='navmain';nav.textContent=t(0);
     document.querySelector('.primary-nav').append(nav);
     dialog=document.createElement('dialog');dialog.id='accountsDialog';dialog.setAttribute('aria-label',t(0));document.body.append(dialog);
