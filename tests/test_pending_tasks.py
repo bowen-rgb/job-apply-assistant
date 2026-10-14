@@ -13,6 +13,31 @@ STATIC=Path(__file__).resolve().parents[1]/'static'
 
 
 class PendingTaskTests(unittest.TestCase):
+    def test_queue_import_is_idempotent_and_contact_material_and_sent_jobs_are_blocked(self):
+        from app import db
+        with tempfile.TemporaryDirectory() as folder,patch.object(workspaces,'ROOT',Path(folder)):
+            token=workspaces.CURRENT.set('default')
+            try:
+                db.init_db()
+                pending_tasks.add([{'title':'Research vacancy','url':'https://lab.test/job','kind':'vacancy'},
+                                   {'title':'Contact a professor','url':'https://lab.test/team','kind':'contact'},
+                                   {'title':'Find CV','kind':'material'}])
+                rows=pending_tasks.read()
+                first=pending_tasks.queue_task(rows[0]['id'])
+                self.assertEqual(first['queue_status'],'queued')
+                self.assertTrue(pending_tasks.queue_task(rows[0]['id'])['already_queued'])
+                for row in rows[1:]:
+                    with self.assertRaises(ValueError):pending_tasks.queue_task(row['id'])
+                with db.connect() as c:
+                    self.assertEqual(c.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],1)
+                    self.assertEqual(c.execute('SELECT COUNT(*) FROM application_queue').fetchone()[0],1)
+                    self.assertEqual(c.execute('SELECT COUNT(*) FROM applications').fetchone()[0],0)
+                    c.execute("UPDATE jobs SET application_status='submitted' WHERE id=?",(first['job_id'],))
+                with self.assertRaises(ValueError):pending_tasks.queue_task(rows[0]['id'])
+                other=workspaces.create('Candidate C');workspaces.CURRENT.set(other)
+                with self.assertRaises(KeyError):pending_tasks.queue_task(rows[0]['id'])
+            finally:workspaces.CURRENT.reset(token)
+
     def test_tasks_are_isolated_idempotent_and_completion_is_not_submission(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(workspaces,'ROOT',Path(folder)):
             token=workspaces.CURRENT.set('default')

@@ -53,3 +53,59 @@ def set_status(identifier,status):
         if item is None:raise KeyError(identifier)
         item.update(status=status,updated_at=datetime.now(timezone.utc).isoformat())
     _change(change)
+
+
+def with_queue():
+    from .db import connect
+    items=read()
+    if not (data_dir()/'jobs.db').exists():return items
+    with connect() as connection:
+        if not connection.execute("SELECT name FROM sqlite_master WHERE name='jobs'").fetchone():return items
+        for item in items:
+            if item['kind']!='vacancy' or not item['url']:continue
+            row=connection.execute('''SELECT j.id,j.application_status,q.status AS queue_status
+                FROM jobs j LEFT JOIN application_queue q ON q.job_id=j.id WHERE j.url=?''',(item['url'],)).fetchone()
+            if row:item.update(job_id=row['id'],queue_status=row['queue_status'] or '',application_status=row['application_status'])
+    return items
+
+
+def queue_task(identifier):
+    """Import one vacancy and enqueue it; never launch a worker or claim sent."""
+    from .db import connect,init_db
+    from .queue_manager import enqueue
+    from .repositories import JobRepository
+    def change(items):
+        item=next((item for item in items if item['id']==identifier),None)
+        if item is None:raise KeyError(identifier)
+        if item['kind']!='vacancy' or item['status']!='pending':
+            raise ValueError('Only pending job applications can enter the application queue')
+        parsed=urlparse(item['url'])
+        if parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError('This task needs a valid HTTPS job link')
+        init_db()
+        with connect() as connection:
+            row=connection.execute('SELECT * FROM jobs WHERE url=?',(item['url'],)).fetchone()
+            if row is None:
+                company='CEA' if parsed.hostname.endswith('.cea.fr') else parsed.hostname
+                connection.execute('''INSERT INTO jobs(url,canonical_url,title,company,source,provider_key,
+                     body,snippet,decision,tracker_note,source_variants_json)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
+                     (item['url'],item['url'],item['title'],company,'Personal to-do','pending_tasks',
+                      item['note'],item['note'][:500],'review',item['note'],
+                      json.dumps([{'source':item['source'],'url':item['url'],'provider_key':'pending_tasks'}])))
+                row=connection.execute('SELECT * FROM jobs WHERE url=?',(item['url'],)).fetchone()
+            job_id=row['id']
+            if row['application_status'] in {'submitted','submitted_verified','withdrawn'} or row['tracker_stage'] in {'submitted','screening','interview','offer','rejected','withdrawn'}:
+                raise ValueError('This application is already sent or closed. Check its history instead of sending again.')
+            previous=connection.execute('SELECT status FROM application_queue WHERE job_id=?',(job_id,)).fetchone()
+        if previous:
+            item['job_id']=job_id
+            return {'job_id':job_id,'queue_status':previous['status'],'already_queued':True}
+        JobRepository().assert_preparable(job_id)
+        enqueue([job_id])
+        with connect() as connection:
+            queued=connection.execute('SELECT status FROM application_queue WHERE job_id=?',(job_id,)).fetchone()
+        if not queued:raise ValueError('This job could not enter the queue. Confirm its review and eligibility first.')
+        item['job_id']=job_id
+        return {'job_id':job_id,'queue_status':queued['status'],'already_queued':False}
+    return _change(change)

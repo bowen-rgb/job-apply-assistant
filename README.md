@@ -1,3 +1,9 @@
+## Live dashboard / 实时工作台
+
+Open **Dashboard / 工作台** in the sidebar. The overview refreshes the current profile’s real records every 6 seconds while visible. Click a metric or source bar to open its jobs; open the queue to see preparation and takeover details. Use the 7/30-day selector for job discovery and expand chart data tables when useful. A disconnected notice keeps the last snapshot identifiable. Discovery counts are not submission counts.
+
+The **To do / 待处理** menu now includes **Add to queue** for pending vacancies and a bulk option. Laboratory contacts and document checks remain tasks. Enqueueing does not start preparation or send an application. The industrial layout uses dark navigation, square panels, a pale grid and lime highlights. See [design and data definitions](DASHBOARD_DESIGN.md).
+
 ## Profiles, saved accounts and optional automatic submission
 
 The sidebar's **Active profile** dropdown switches directly between candidate workspaces. Running tasks must finish or stop before switching. Each workspace also has a separate **To do** list for application links, laboratory contacts and document checks. Marking a to-do as done never sends an application or changes submission history. Personal profiles and to-dos live in local ignored data, rather than Git.
@@ -31,7 +37,7 @@ Expand **Source diagnostics** under the scan progress to see attempted searches,
 
 Switching the interface language also displays translated job titles in offer cards and the application pipeline. The original title stays underneath for verification. Common recruitment titles and contract terms use a local glossary; other visible titles are translated on demand through MyMemory and cached locally. Only the public job title is sent to that service. Provider failures keep the original title visible. The source title, candidate profile, matching and application documents are unchanged. Search supports translated titles already available locally.
 
-The French interface now translates review controls and application states. The dashboard uses a restrained warm light palette, compact controls and collapsible matching details.
+The French interface now translates review controls and application states. The interface uses an industrial workspace palette, compact controls and collapsible matching details.
 
 ### Share human-review results
 

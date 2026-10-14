@@ -727,8 +727,8 @@ def gmail_guide(language: str='en'):
 
 @app.get('/api/pending-tasks')
 def list_pending_tasks():
-    from .pending_tasks import read
-    return {'items':read()}
+    from .pending_tasks import with_queue
+    return {'items':with_queue()}
 
 
 @app.patch('/api/pending-tasks/{identifier}')
@@ -738,3 +738,11 @@ def update_pending_task(identifier: str,payload: dict):
     except ValueError as exc: raise HTTPException(400,str(exc))
     except KeyError: raise HTTPException(404,'Task not found in this profile')
     return {'ok':True}
+
+
+@app.post('/api/pending-tasks/{identifier}/queue')
+def queue_pending_task(identifier: str):
+    from .pending_tasks import queue_task
+    try:return queue_task(identifier)
+    except ValueError as exc:raise HTTPException(409,str(exc))
+    except KeyError:raise HTTPException(404,'Task not found in this profile')

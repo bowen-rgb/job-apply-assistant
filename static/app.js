@@ -88,6 +88,9 @@ async function translateVisibleTitles(){
 }
 
 function showView(which){
+  el('overviewView').classList.toggle('hidden',which!=='overview');
+  el('overviewNav').classList.toggle('active',which==='overview');
+  if(which==='overview'){el('overviewNav').setAttribute('aria-current','page');Workbench.refresh();}else el('overviewNav').removeAttribute('aria-current');
   const jobs=which==='jobs', profile=which==='profile', pipeline=which==='pipeline';
   el('guideView').classList.toggle('hidden',which!=='guide');
   Guide.view(which);
@@ -104,6 +107,7 @@ function showView(which){
   if(pipeline) loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
 }
 el('guideNav').onclick=()=>showView('guide');
+el('overviewNav').onclick=()=>showView('overview');
 el('jobsNav').onclick=()=>showView('jobs');
 el('profileNav').onclick=()=>showView('profile');
 el('pipelineNav').onclick=()=>showView('pipeline');
@@ -251,7 +255,7 @@ function render(){
   Guide.jobs(allJobs);
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
-  const scopedJobs=allJobs.filter(j=>!src || j.provider_key===src).filter(j=>{
+  const scopedJobs=allJobs.filter(j=>!src || (src==='__unassigned__'?!j.provider_key:j.provider_key===src)).filter(j=>{
     if(!q) return true;
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
@@ -675,6 +679,6 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
