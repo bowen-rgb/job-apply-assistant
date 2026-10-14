@@ -569,5 +569,15 @@
   "Enter the password for the new username": "换了邮箱或用户名，请填写新账号的密码。",
   "Enter the password": "请填写这个网站账号的密码。",
   "Enter the account email or username": "请填写账号邮箱或用户名。",
-  "Use an HTTPS login URL without credentials": "请复制网站登录页地址，应以 https:// 开头，不要把账号密码写进地址。"
+  "Use an HTTPS login URL without credentials": "请复制网站登录页地址，应以 https:// 开头，不要把账号密码写进地址。",
+  "Diplôme obtenu": "已取得的学位",
+  "Niveau d’études actuel": "当前学历层级",
+  "Diplôme préparé — niveau": "正在准备的学位层级",
+  "Intitulé du diplôme préparé": "正在准备的学位名称",
+  "Copiez les libellés exacts du site. Ne confondez pas le diplôme obtenu et le diplôme en cours ; les formations multiples restent à vérifier.": "请按网站选项的原文填写。已取得的学位和正在读的学位要分开；多段教育经历仍需人工核对。",
+  "Offres sans envoi enregistré": "系统未记录投递成功的岗位",
+  "État de préparation": "申请准备状态",
+  "Étape du suivi": "求职跟进阶段",
+  "Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.": "这份清单仅表示系统未记录投递成功。再次投递前，请先查招聘网站或确认邮件，避免重复发送。",
+  "Formation (optionnel)": "教育背景（选填）"
 }

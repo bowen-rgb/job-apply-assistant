@@ -34,10 +34,13 @@ FIELD_RULES: tuple[tuple[str, str], ...] = (
     (r'\b(poste actuel|current title|job title|titre du poste)\b', 'current_title'),
     (r'\b(entreprise actuelle|current company|employer|company)\b', 'current_company'),
     (r'\b(annees? d.experience|years? of experience|experience years)\b', 'years_experience'),
-    (r'\b(ecole|school|universite|university|college)\b', 'school'),
+    (r'\b(annee de diplome|graduation year|year of graduation)\b', 'graduation_year'),
+    (r'\b(intitule du diplome prepare|degree being prepared title|degree being pursued title)\b', 'prepared_degree'),
+    (r'\b(diplome prepare|degree being prepared|degree being pursued)\b', 'prepared_degree_level'),
+    (r'\b(niveau d.etudes|education level|current study level)\b', 'education_level'),
+    (r'\b(etablissement formation|ecole|school|universite|university|college)\b', 'school'),
     (r'\b(diplome|degree|qualification)\b', 'degree'),
     (r'\b(domaine d.etudes|field of study|major)\b', 'field_of_study'),
-    (r'\b(annee de diplome|graduation year|year of graduation)\b', 'graduation_year'),
     (r'\b(disponibilite|disponible|availability)\b', 'availability_text'),
     (r'\b(date de debut|start date|available from|disponible a partir)\b', 'availability_start_date'),
 )
@@ -252,6 +255,7 @@ def generic_fill(page, profile: dict, resume_path: Path | None = None) -> dict[s
     full_name = ' '.join(x for x in [profile.get('first_name', ''), profile.get('last_name', '')] if x).strip()
     locs = page.locator('input, textarea, select')
     count = min(locs.count(), 260)
+    education_counts = None
     for i in range(count):
         loc = locs.nth(i)
         try:
@@ -281,6 +285,34 @@ def generic_fill(page, profile: dict, resume_path: Path | None = None) -> dict[s
                     continue
 
             if tag == 'select':
+                education_key = next((key for rx,key in FIELD_RULES if re.search(rx,desc,re.I)), '')
+                if education_key in {'education_level','prepared_degree_level','degree'}:
+                    value = str(profile.get(education_key) or '').strip()
+                    if not value:
+                        report['skipped_ambiguous'].append(label[:220])
+                        continue
+                    # Explicit profile values only, unique exact option labels.
+                    # Repeated education blocks need separate history records.
+                    if education_counts is None:
+                        education_counts = {}
+                        for j in range(count):
+                            other = locs.nth(j)
+                            if not other.is_visible():continue
+                            peer_key = next((key for rx,key in FIELD_RULES if re.search(rx,safe_descriptor(page,other,j)[1],re.I)), '')
+                            education_counts[peer_key] = education_counts.get(peer_key,0)+1
+                    options = loc.locator('option').all()
+                    matches = [option for option in options if value and norm(option.inner_text().strip()) == norm(value)
+                               and option.get_attribute('value') and not option.is_disabled()]
+                    current = str(loc.input_value()).strip()
+                    selected = loc.locator('option:checked')
+                    placeholder = not current or (selected.count() == 1 and re.search(r'select|selection|choisir|choose',norm(selected.inner_text())))
+                    if education_counts.get(education_key) == 1 and len(matches) == 1 and placeholder:
+                        loc.select_option(value=matches[0].get_attribute('value'))
+                        report['filled'].append(education_key)
+                        report['actions'].append({'field':education_key,'strategy':'explicit_education_option','selector':label[:180],'confidence':100})
+                        continue
+                    report['skipped_ambiguous'].append(label[:220])
+                    continue
                 if re.search(r'\b(pays|country)\b', desc):
                     country = profile.get('country', '')
                     if country:

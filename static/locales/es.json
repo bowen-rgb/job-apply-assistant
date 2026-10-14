@@ -569,5 +569,15 @@
   "Enter the password for the new username": "Usuario cambiado: introduce la contraseña de la nueva cuenta.",
   "Enter the password": "Introduce la contraseña de esta cuenta.",
   "Enter the account email or username": "Introduce el email o usuario de la cuenta.",
-  "Use an HTTPS login URL without credentials": "Copia la dirección https:// de acceso sin credenciales en ella."
+  "Use an HTTPS login URL without credentials": "Copia la dirección https:// de acceso sin credenciales en ella.",
+  "Diplôme obtenu": "Título obtenido",
+  "Niveau d’études actuel": "Nivel de estudios actual",
+  "Diplôme préparé — niveau": "Título en curso — nivel",
+  "Intitulé du diplôme préparé": "Nombre del título en curso",
+  "Copiez les libellés exacts du site. Ne confondez pas le diplôme obtenu et le diplôme en cours ; les formations multiples restent à vérifier.": "Copia las opciones exactas del sitio. Separa títulos obtenidos y en curso; verifica manualmente varias formaciones.",
+  "Offres sans envoi enregistré": "Ofertas sin envío registrado",
+  "État de préparation": "Estado de preparación",
+  "Étape du suivi": "Etapa de seguimiento",
+  "Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.": "La lista solo indica que no hay envío registrado. Revisa el portal o los emails antes de enviar de nuevo.",
+  "Formation (optionnel)": "Formación (opcional)"
 }

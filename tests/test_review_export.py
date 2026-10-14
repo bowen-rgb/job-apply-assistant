@@ -158,6 +158,20 @@ class ExportApiTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/review-exports',json={'scope':'visible'}).status_code,400)
         self.assertEqual(self.client.get('/api/review-exports/not-an-id').status_code,404)
 
+    def test_unsubmitted_export_excludes_sent_closed_and_declined_and_keeps_uncertainty(self):
+        with db.connect() as c:
+            c.execute("UPDATE jobs SET application_status='needs_human',application_step='submission_check' WHERE id=1")
+            c.execute("UPDATE jobs SET tracker_stage='interview' WHERE id=2")
+        result=self.client.post('/api/review-exports',json={'scope':'unsubmitted','language':'zh','translate_text':False}).json()
+        snapshot=json.loads((exports.directory(result['id'])/'snapshot.json').read_text(encoding='utf-8'))
+        self.assertEqual([row['id'] for row in snapshot['rows']],[1])
+        self.assertEqual(snapshot['metadata']['scope'],'unsubmitted')
+        self.assertEqual(snapshot['rows'][0]['application_status'],'needs_human')
+        worker.main(result['id'])
+        html=self.client.get(f'/api/review-exports/{result["id"]}/download').text
+        self.assertIn('系统未记录投递成功',html)
+        self.assertIn('避免重复发送',html)
+
     def test_cancelled_export_cannot_be_marked_ready_later(self):
         result=self.client.post('/api/review-exports',json={}).json()
         with patch.object(exports,'cancel'):

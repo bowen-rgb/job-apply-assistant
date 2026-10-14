@@ -13,11 +13,12 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTE = 'Ce fichier est un instantané pour lecture et commentaires. Aucun avis ne soumet une candidature ni ne modifie le suivi local.'
+UNSUBMITTED_NOTE = 'Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.'
 TRANSLATION_NOTE = 'Les traductions automatiques sont des aides à la lecture. Les originaux sont conservés pour vérification.'
 FIELDS = ('id', 'title', 'company', 'location', 'url', 'source', 'employment_type',
           'start_date', 'end_date', 'valid_through', 'salary', 'review_verdict',
           'review_confidence', 'review_summary', 'review_json', 'reviewed_at',
-          'human_review_status', 'human_reviewed_at')
+          'human_review_status', 'human_reviewed_at', 'application_status', 'tracker_stage')
 
 
 def labels(language):
@@ -34,6 +35,16 @@ def safe_url(value):
 
 def strings(value):
     return [str(x) for x in value if isinstance(x, (str, int, float))] if isinstance(value, list) else []
+
+
+def flow_label(value, translate):
+    names={'prefilled':'Pré-remplie','needs_human':'À compléter','error':'Préparation échouée',
+           'opening':'Ouverture…','preparing':'Préparation…','preparing_letter':'Rédaction de la lettre…',
+           'submitted':'Envoyée','cancelled':'Annulée','withdrawn':'Retirée','saved':'Sauvegardée',
+           'queued':'En file','prepared':'Préparée','screening':'Screening','interview':'Entretien',
+           'offer':'Offre','rejected':'Refus du recruteur'}
+    if value=='submitted_verified':return translate('Envoyée')+' · '+translate('vérifiée')
+    return translate(names.get(value,value or 'Non renseigné'))
 
 
 def report_row(job):
@@ -64,6 +75,8 @@ def render_html(rows, metadata):
         d, original = row['display'], row['original']
         facts = {t('Contrat'): row.get('employment_type'), t('Début'): row.get('start_date'), t('Fin'): row.get('end_date'),
                  t('Date limite'): row.get('valid_through'), t('Salaire'): row.get('salary'), t('Revue IA du'): row.get('reviewed_at')}
+        facts.update({t('État de préparation'):flow_label(row.get('application_status'),t),
+                      t('Étape du suivi'):flow_label(row.get('tracker_stage'),t)})
         facts.update({t({'contract':'Contrat', 'start_date':'Début', 'end_date':'Fin', 'location':'Lieu', 'schedule':'Horaires', 'salary':'Salaire'}[k]): v for k,v in d['facts'].items()})
         sections = ''.join(f'<section><h3>{e(t(key))}</h3>{listing(d[field])}</section>' for key,field in [('Raisons','reasons'),('Risques','risks'),('Questions à vérifier','questions')])
         originals = f'<details><summary>{e(t("Textes originaux"))}</summary><h3>{e(original["title"])}</h3><p>{e(original["summary"])}</p>' + ''.join(f'<h4>{e(t(key))}</h4>{listing(original[field])}' for key,field in [('Raisons','reasons'),('Risques','risks'),('Questions à vérifier','questions')]) + listing([f'{k}: {v}' for k,v in original['facts'].items()]) + '</details>'
@@ -77,6 +90,7 @@ def render_html(rows, metadata):
         {f'<p><a href="{e(row["url"])}" target="_blank" rel="noopener noreferrer">{e(t("Ouvrir l’offre ↗"))}</a></p>' if row['url'] else ''}
         {originals}<section class="notes"><h3>{e(t('Avis du vérificateur'))}</h3><p>☐ {e(t('À préparer'))}　☐ {e(t('Ne pas préparer ce poste'))}　☐ {e(t('Informations à compléter'))}</p><p>{e(t('Commentaire du vérificateur'))}: ____________________________</p></section></article>''')
     warnings = f'<p class="warning">{e(t("Certaines traductions sont indisponibles ; les textes originaux sont affichés."))}</p>' if any(r['translation']=='unavailable' for r in rows) else ''
+    if metadata.get('scope')=='unsubmitted': warnings += f'<p class="warning">{e(t(UNSUBMITTED_NOTE))}</p>'
     title=e(t('Revue des postes'))
     return f'''<!doctype html><html lang="{e(metadata['language'])}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>{title}</title>
     <style>body{{font:16px/1.65 system-ui,sans-serif;background:#f6f5f0;color:#26342e;margin:0}}main{{max-width:1100px;margin:auto;padding:28px}}h1,h2,h3,p{{overflow-wrap:anywhere}}h2{{line-height:1.35;font-size:24px}}h3{{font-size:17px}}article{{background:white;padding:26px;margin:22px 0;border:1px solid #dce3d8;border-radius:12px;break-inside:avoid}}.badge{{display:inline-block;padding:4px 9px;border-radius:6px;background:#e7ecdf;font-size:14px}}.good{{background:#dfeddf}}.warn,.warning{{background:#f5ebd7;padding:10px}}.small,details{{font-size:14px;color:#576760}}dl{{display:grid;grid-template-columns:130px 1fr;gap:6px}}dd{{margin:0}}dt{{font-weight:600}}.notes{{border-top:1px solid #dce3d8;margin-top:20px}}a{{color:#245f41}}@media print{{body{{background:white}}main{{padding:0}}article{{border:0;border-bottom:1px solid #aaa;border-radius:0;break-inside:auto}}details{{display:none}}a{{color:black}}}}</style></head>
@@ -94,7 +108,7 @@ def render_xlsx(rows, metadata):
     sheet=book.add_worksheet(t('Revue des postes')[:31])
     wrap=book.add_format({'text_wrap':True,'valign':'top'})
     header=book.add_format({'bold':True,'bg_color':'#315c46','font_color':'white','text_wrap':True})
-    names=['ID','Poste','Titre original :','Entreprise','Lieu','Lien du poste','Verdict IA','Confiance IA','Confirmation humaine','Résumé IA','Raisons','Risques','Questions à vérifier','Contrat','Début','Fin','Date limite','Revue IA du','Textes originaux','Traduction','Avis du vérificateur','Commentaire du vérificateur','Informations du reviewer','Salaire']
+    names=['ID','Poste','Titre original :','Entreprise','Lieu','Lien du poste','Verdict IA','Confiance IA','Confirmation humaine','Résumé IA','Raisons','Risques','Questions à vérifier','Contrat','Début','Fin','Date limite','Revue IA du','Textes originaux','Traduction','Avis du vérificateur','Commentaire du vérificateur','Informations du reviewer','Salaire','État de préparation','Étape du suivi']
     data=[]
     verdict={'APPLY':'Candidature conseillée','HUMAN_REVIEW':'À vérifier','SKIP':'À écarter'}
     states={'pending':'À confirmer par vous','approved':'Confirmée par vous','declined':'Écartée par vous'}
@@ -103,7 +117,7 @@ def render_xlsx(rows, metadata):
         original=row['original']
         text='\n\n'.join([original['summary'],*original['reasons'],*original['risks'],*original['questions'],*[f'{k}: {v}' for k,v in original['facts'].items()]])
         data.append([row['id'],d['title'],original['title'],row.get('company') or '',row.get('location') or '',row['url'],t(verdict.get(row.get('review_verdict'),row.get('review_verdict') or 'Non renseigné')),row.get('review_confidence') or 0,t(states.get(row.get('human_review_status'),'Non renseigné')),d['summary'],'\n'.join(d['reasons']),'\n'.join(d['risks']),'\n'.join(d['questions']),row.get('employment_type') or '',row.get('start_date') or '',row.get('end_date') or '',row.get('valid_through') or '',row.get('reviewed_at') or '',text,t({'translated':'Traduction automatique','unavailable':'Traduction indisponible','original':'Texte original'}[row['translation']]),'',''])
-        data[-1].extend(['\n'.join(f'{t({"contract":"Contrat","start_date":"Début","end_date":"Fin","location":"Lieu","schedule":"Horaires","salary":"Salaire"}[k])}: {v}' for k,v in d['facts'].items()),row.get('salary') or ''])
+        data[-1].extend(['\n'.join(f'{t({"contract":"Contrat","start_date":"Début","end_date":"Fin","location":"Lieu","schedule":"Horaires","salary":"Salaire"}[k])}: {v}' for k,v in d['facts'].items()),row.get('salary') or '',flow_label(row.get('application_status'),t),flow_label(row.get('tracker_stage'),t)])
     too_long=any(isinstance(value,str) and len(value)>32767 for line in data for value in line)
     marker='\n… '+t('Texte trop long : utilisez HTML pour le lire intégralement.')
     data=[[value if not isinstance(value,str) or len(value)<=32767 else value[:32767-len(marker)]+marker for value in line] for line in data]
@@ -125,6 +139,7 @@ def render_xlsx(rows, metadata):
     for index,line in enumerate([(t('Revue des postes'),metadata['created_at']),(t('Instantané'),str(len(rows))),(t('Avis du vérificateur'),t(NOTE)),(t('Traduction'),t(TRANSLATION_NOTE)),(t('Traduction indisponible'),t('Certaines traductions sont indisponibles ; les textes originaux sont affichés.') if any(r['translation']=='unavailable' for r in rows) else '')]):
         guide.write_row(index,0,line,wrap)
         guide.set_row(index,60)
+    if metadata.get('scope')=='unsubmitted':guide.write(6,1,t(UNSUBMITTED_NOTE),wrap)
     if too_long:guide.write(5,1,t('Texte trop long : utilisez HTML pour le lire intégralement.'),wrap)
     book.close()
     return output.getvalue()

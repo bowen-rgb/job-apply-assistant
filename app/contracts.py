@@ -50,7 +50,7 @@ class HumanReview(BaseModel):
 class ReviewExport(BaseModel):
     format: Literal['html', 'xlsx'] = 'html'
     language: Literal['zh', 'fr', 'en', 'de', 'es', 'pt'] = 'zh'
-    scope: Literal['pending', 'visible'] = 'pending'
+    scope: Literal['pending', 'visible', 'unsubmitted'] = 'pending'
     job_ids: list[int] = Field(default_factory=list, max_length=1000)
     translate_text: bool = True
 

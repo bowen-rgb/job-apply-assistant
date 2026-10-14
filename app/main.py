@@ -120,12 +120,17 @@ def start_review_export(payload: ReviewExport):
               and j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
               and j['tracker_stage'] not in {'rejected','withdrawn'}
               and j['decision']!='expired' and j['availability_status']!='expired']
+    elif payload.scope=='unsubmitted':
+        rows=[j for j in rows if j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
+              and j['tracker_stage'] not in {'submitted','screening','interview','offer','rejected','withdrawn'}
+              and j['user_action']!='skipped' and j['human_review_status']!='declined'
+              and j['review_verdict']!='SKIP' and j['decision'] not in {'reject','expired'} and j['availability_status']!='expired']
     else:
         if not payload.job_ids:raise HTTPException(400,'Aucun poste à exporter dans cette sélection.')
         by_id={j['id']:j for j in rows}
         if any(id not in by_id for id in payload.job_ids):raise HTTPException(409,'La sélection a changé. Rechargez la liste avant d’exporter.')
         rows=[by_id[id] for id in dict.fromkeys(payload.job_ids)]
-    try:return create_export(rows,payload.language,payload.format,payload.translate_text)
+    try:return create_export(rows,payload.language,payload.format,payload.translate_text,scope=payload.scope)
     except ValueError as exc:raise HTTPException(400,str(exc))
 
 

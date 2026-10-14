@@ -76,7 +76,7 @@
       <details class="review-export-panel"><summary>Exporter pour vérification</summary>
         <p class="small">HTML pour lire et imprimer ; Excel pour filtrer les postes et noter les avis. Le destinataire n’a pas besoin du serveur local.</p>
         <div class="export-controls">
-          <label>Contenu<select id="reviewExportScope"><option value="pending">Tous les postes à confirmer</option><option value="visible">Vue affichée avec ses filtres</option></select></label>
+          <label>Contenu<select id="reviewExportScope"><option value="pending">Tous les postes à confirmer</option><option value="visible">Vue affichée avec ses filtres</option><option value="unsubmitted">Offres sans envoi enregistré</option></select></label>
           <label>Format<select id="reviewExportFormat"><option value="html">HTML</option><option value="xlsx">Excel (.xlsx)</option></select></label>
           <label>Langue du fichier<select id="reviewExportLanguage"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></label>
         </div>
@@ -142,8 +142,18 @@
             <label>Poste actuel / dernier poste<input id="current_title"></label>
             <label>Entreprise actuelle / dernière<input id="current_company"></label>
             <label>Années d'expérience<input id="years_experience" type="number" min="0" step="0.5"></label>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-head"><div><h2>Formation (optionnel)</h2></div></div>
+          <div class="form-grid cols2">
             <label>École / université<input id="school"></label>
-            <label>Diplôme<input id="degree"></label>
+            <label>Diplôme obtenu<input id="degree"></label>
+            <label>Niveau d’études actuel<input id="education_level"></label>
+            <label>Diplôme préparé — niveau<input id="prepared_degree_level"></label>
+            <label>Intitulé du diplôme préparé<input id="prepared_degree"></label>
+            <p class="small">Copiez les libellés exacts du site. Ne confondez pas le diplôme obtenu et le diplôme en cours ; les formations multiples restent à vérifier.</p>
             <label>Domaine d'études<input id="field_of_study"></label>
             <label>Année de diplôme<input id="graduation_year" inputmode="numeric"></label>
           </div>

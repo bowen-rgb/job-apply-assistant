@@ -569,5 +569,15 @@
   "Enter the password for the new username": "Identifiant modifié : renseignez le mot de passe du nouveau compte.",
   "Enter the password": "Renseignez le mot de passe de ce compte.",
   "Enter the account email or username": "Renseignez l’email ou l’identifiant du compte.",
-  "Use an HTTPS login URL without credentials": "Copiez l’adresse de connexion commençant par https://, sans identifiants dans l’adresse."
+  "Use an HTTPS login URL without credentials": "Copiez l’adresse de connexion commençant par https://, sans identifiants dans l’adresse.",
+  "Diplôme obtenu": "Diplôme obtenu",
+  "Niveau d’études actuel": "Niveau d’études actuel",
+  "Diplôme préparé — niveau": "Diplôme préparé — niveau",
+  "Intitulé du diplôme préparé": "Intitulé du diplôme préparé",
+  "Copiez les libellés exacts du site. Ne confondez pas le diplôme obtenu et le diplôme en cours ; les formations multiples restent à vérifier.": "Copiez les libellés exacts du site. Distinguez diplôme obtenu et en cours ; vérifiez les formations multiples.",
+  "Offres sans envoi enregistré": "Offres sans envoi enregistré",
+  "État de préparation": "État de préparation",
+  "Étape du suivi": "Étape du suivi",
+  "Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.": "Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.",
+  "Formation (optionnel)": "Formation (optionnel)"
 }

@@ -569,5 +569,15 @@
   "Enter the password for the new username": "Username changed: enter the new account’s password.",
   "Enter the password": "Enter this website account’s password.",
   "Enter the account email or username": "Enter the account email or username.",
-  "Use an HTTPS login URL without credentials": "Copy an https:// login URL without embedded credentials."
+  "Use an HTTPS login URL without credentials": "Copy an https:// login URL without embedded credentials.",
+  "Diplôme obtenu": "Completed degree",
+  "Niveau d’études actuel": "Current education level",
+  "Diplôme préparé — niveau": "Degree being pursued — level",
+  "Intitulé du diplôme préparé": "Degree being pursued — name",
+  "Copiez les libellés exacts du site. Ne confondez pas le diplôme obtenu et le diplôme en cours ; les formations multiples restent à vérifier.": "Copy the website’s exact labels. Keep completed and ongoing degrees separate; verify multiple education records manually.",
+  "Offres sans envoi enregistré": "Jobs without a recorded submission",
+  "État de préparation": "Preparation status",
+  "Étape du suivi": "Tracking stage",
+  "Cette liste indique uniquement l’absence d’envoi enregistré. Vérifiez le portail ou les e-mails avant de renvoyer une candidature.": "This list only means no submission is recorded here. Check the recruiter portal or confirmation emails before sending again.",
+  "Formation (optionnel)": "Education (optional)"
 }

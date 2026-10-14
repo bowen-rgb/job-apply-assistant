@@ -49,14 +49,14 @@ def update_state(export_id,**values):
     return True
 
 
-def create_export(jobs,language,format,translate_text=True):
+def create_export(jobs,language,format,translate_text=True,scope="visible"):
     if not jobs:raise ValueError('Aucun poste à exporter dans cette sélection.')
     if len(jobs)>1000:raise ValueError('Limitez la sélection à 1000 postes.')
     export_id=uuid4().hex
     folder=directory(export_id)
     folder.mkdir(parents=True)
     metadata={'id':export_id,'language':language,'format':format,'translate_text':translate_text,
-              'created_at':datetime.now(timezone.utc).isoformat()}
+              'created_at':datetime.now(timezone.utc).isoformat(),'scope':scope}
     (folder/'snapshot.json').write_text(json.dumps({'metadata':metadata,'rows':[report_row(j) for j in jobs]},ensure_ascii=False),encoding='utf-8')
     update_state(export_id,**metadata,status='queued',completed=0,total=len(jobs),message='Préparation de l’export…')
     try:launch('app.review_export_worker',export_id)
