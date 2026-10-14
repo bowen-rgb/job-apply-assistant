@@ -19,3 +19,20 @@ Design references consulted 2026-10-15:
 - Official Arknights: Endfield visual reference: https://endfield.gryphline.com/en-us
 
 Validation: browser coverage for snapshot changes, disconnected-state retention, chart periods, source navigation, all six languages, responsive overflow and no JavaScript errors; backend coverage for task ownership, queue idempotency, sent-job protection and contact/material exclusion.
+## Video study and graphic composition pass — 2026-10-15
+
+The following user-provided Bilibili videos were opened in Edge. Playback frames were sampled, including process and finished-composition frames. This is a visual reference study, **not a claim of complete viewing or a full transcript**. The local Bilibili RAG service was unavailable; Agent Reach was not installed and OpenCLI's browser bridge was disconnected. The browser could nevertheless play the videos after loading.
+
+| Reference | Observations from sampled frames / visible description | Applied to the product |
+| --- | --- | --- |
+| [机械生命·安卓心](https://www.bilibili.com/video/BV1vkLu68EQe/) — 圆形的石墩 | Monochrome subject, cobalt diagonal shapes, orbital curves, dense texture. Description names ibis Paint X. | An original application-document illustration, with a diagonal colour strip and fine radial structure. |
+| [如何学习优秀的视觉设计？](https://www.bilibili.com/video/BV1wiL36GEb8/) — LensTM | Sampled intro, character-design, hazard-stripe and assets/resources segments. Large type overlaps quieter secondary type; strong differences in scale; distinct focal regions. | Layered heading typography and a clear dominant metric rather than four identical visual weights. No claim of extracting all spoken recommendations. |
+| [0基础尝试平面构成的一点过程分享](https://www.bilibili.com/video/BV1Gtao6AE45/) — 耶咦是月亮呐- | Sampled construction and finished frames: offset circular frame, thin diagonal guides, monochrome landscape/figure collage and a restrained blue accent. Description names Photoshop. | Asymmetric illustration placement, overlapping line work and a deliberate quiet area reserved for functional text. |
+| [一些预制图形的快速生成演示](https://www.bilibili.com/video/BV1Wmp96JEdJ/) — 拉乎 | Sampled grid and radial-shape generation. Description provides rahoo.online and a second part for dot/square-grid updates. | Reusable vector geometry and local, resolution-independent assets. |
+| [字体设计/logo设计辅助工具+等高线生成器](https://www.bilibili.com/video/BV1csH96GErh/) — 拉乎 | Sampled click-to-add/remove polygon marks, dot-matrix and contour-generation frames. | Simple geometric brand cuts and a fine contour-like line layer, rather than another full-page grid. |
+
+The live [rahoo.online](https://rahoo.online/) **素材生成** panel was inspected directly. It exposes concentric circles, halftone dots, HUD lines, tick circles, barcodes, waves, repeated lines, dot matrices, polygon grids, contours, common shapes, nested polygons, globe grids, square grids and rays. Circle controls include count/radii/stroke widths/angles/line style/colour, with SVG export and image-save controls.
+
+This revision uses the reusable-vector approach with an **original local SVG**, `static/artwork/application-orbit.svg`, built from circles, ticks, curves, dot/stripe patterns and an application-document motif. No external generator code, video frame, game character, font file or remote runtime was copied into the application. The generator was inspected as a tool reference; the project does not depend on it or require an account.
+
+Composition changes: cobalt/neutral palette with lime reserved for prominent actions, layered display typography, asymmetric header illustration, a dominant first metric, angular cuts, local dot texture, controlled fine lines and quiet data regions. Decoration is hidden from assistive technology, does not intercept input and cannot be mistaken for a real progress gauge. Real chart values, profile ownership and submission semantics remain unchanged. Reduced-motion handling and mobile layouts remain in place.

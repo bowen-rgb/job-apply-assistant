@@ -82,5 +82,7 @@ class WorkbenchTests(unittest.TestCase):
                 self.assertEqual(errors,[])
                 Path('data').mkdir(exist_ok=True)
                 page.set_viewport_size({'width':1440,'height':1100})
-                page.screenshot(path='data/workbench-preview.png',full_page=True)
+                expect(page.locator('#wbRefresh')).to_be_enabled()
+                page.locator('#overviewView details').evaluate_all('(nodes)=>nodes.forEach(node=>node.open=false)')
+                page.screenshot(path='data/workbench-preview.png',full_page=False)
             finally:browser.close()
