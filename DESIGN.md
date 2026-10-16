@@ -17,7 +17,7 @@ This is an **operate** dashboard: a calm local control room for finding, reviewi
 - Every request has a visible loading, success, error or empty state.
 - Keyboard focus uses a high-contrast outline; controls must remain usable without a pointer.
 - The language selector changes interface copy only. Job descriptions, search terms, saved answers and profile data are user data and stay untouched.
-- Reviewer and browser actions surface their current state in the page status area. Final Submit is always a manual action.
+- Reviewer and browser actions surface their current state in the page status area. Sending is manual by default; opt-in automatic sending requires approval of the actual document versions. Approval alone never sends an application.
 - Mobile layouts stack controls and keep the pipeline horizontally scrollable rather than shrinking text below a comfortable size.
 
 ## Reference implementation

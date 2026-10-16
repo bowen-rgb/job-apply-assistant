@@ -27,6 +27,12 @@ class JobRepository:
     def _row_dict(row: Any) -> dict[str, Any] | None:
         return dict(row) if row else None
 
+    @staticmethod
+    def _verification(job):
+        from ..application_safety import verification_state
+        job['verification_state'] = verification_state(job['id'], job['application_status'])
+        return job
+
     def exists(self, job_id: int) -> bool:
         with connect() as conn:
             return conn.execute('SELECT 1 FROM jobs WHERE id=?', (job_id,)).fetchone() is not None
@@ -57,7 +63,7 @@ class JobRepository:
             + where + self._ORDER
         )
         with connect() as conn:
-            return [annotate(dict(row)) for row in conn.execute(query, tuple(args)).fetchall()]
+            return [self._verification(annotate(dict(row))) for row in conn.execute(query, tuple(args)).fetchall()]
 
     def stats(self) -> dict[str, Any]:
         query = """SELECT
@@ -114,10 +120,16 @@ class JobRepository:
                 conn.execute('UPDATE jobs SET decision=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (decision, job_id))
 
     def set_application_status(self, job_id: int, status: str) -> None:
+        if status == 'submitted_verified':
+            raise ValueError('Verified submission requires a saved browser confirmation receipt')
         with connect() as conn:
             if not self._exists_in(conn, job_id):
                 raise KeyError(job_id)
             previous = conn.execute('SELECT application_status FROM jobs WHERE id=?', (job_id,)).fetchone()['application_status']
+            if previous == 'withdrawn' and status != 'withdrawn':
+                raise ValueError('A withdrawn application cannot be reopened')
+            if previous in {'submitted', 'submitted_verified', 'withdrawn'} and status not in {'submitted', 'withdrawn'}:
+                raise ValueError('A closed application cannot be reopened for preparation')
             if status in {'submitted', 'submitted_verified'} and previous in {'submitted', 'submitted_verified'}:
                 conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status<>'done'", (previous,job_id))
                 return  # Repeated confirmation must not erase an interview or rejection.
@@ -151,7 +163,7 @@ class JobRepository:
                      WHERE (user_action<>'skipped' OR application_status IN ('submitted','submitted_verified','withdrawn') OR tracker_stage IN ('rejected','screening','interview','offer')) AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
                    ORDER BY COALESCE(last_application_at,updated_at) DESC"""
         with connect() as conn:
-            return [dict(row) for row in conn.execute(query).fetchall()]
+            return [self._verification(dict(row)) for row in conn.execute(query).fetchall()]
 
     def track(self, job_id: int, stage: str, note: str = '', followup_at: str = '', source: str = '') -> None:
         if stage not in TRACK_STAGES:
@@ -160,6 +172,13 @@ class JobRepository:
             if not self._exists_in(conn, job_id):
                 raise KeyError(job_id)
             job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+            if job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'}:
+                if stage in {'saved', 'queued', 'prepared'}:
+                    raise ValueError('A closed application cannot be reopened for preparation')
+                if stage == 'submitted':
+                    if job['application_status'] == 'withdrawn':
+                        raise ValueError('A withdrawn application cannot be reopened')
+                    return
             external = stage in {'screening', 'interview', 'offer', 'rejected'}
             if external:
                 if job['application_status'] not in {'submitted', 'submitted_verified'}:

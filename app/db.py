@@ -217,6 +217,13 @@ def init_db():
     with connect() as c:
         c.executescript(SCHEMA)
         _ensure_columns(c)
+        c.execute('''CREATE TABLE IF NOT EXISTS material_approvals (
+                     job_id INTEGER NOT NULL,token TEXT NOT NULL,
+                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(job_id,token))''')
+        c.execute('''CREATE TABLE IF NOT EXISTS submission_attempts (
+                     id TEXT PRIMARY KEY,job_id INTEGER NOT NULL UNIQUE,material_token TEXT NOT NULL,
+                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,receipt_json TEXT DEFAULT '',
+                     receipt_path TEXT DEFAULT '',receipt_hash TEXT DEFAULT '')''')
         event_cols = {r['name'] for r in c.execute('PRAGMA table_info(application_stage_events)').fetchall()}
         if 'source' not in event_cols:
             c.execute("ALTER TABLE application_stage_events ADD COLUMN source TEXT DEFAULT ''")

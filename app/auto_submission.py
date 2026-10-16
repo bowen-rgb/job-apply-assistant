@@ -23,8 +23,10 @@ def submit_complete_form(page,scope,audit,before_click=lambda:None):
     for _ in range(20):
         check_cancelled();page.wait_for_timeout(500)
         success,evidence=generic_confirmation(page)
-        if success and evidence.startswith('confirmation_text:'):return {'status':'verified','reason':evidence}
+        if success and evidence.startswith('confirmation_text:'):
+            return {'status':'verified','reason':evidence,'confirmation_text':page.locator('body').inner_text(timeout=1200)[:12000],'confirmation_url':page.url}
         if scope is not page:
             success,evidence=generic_confirmation(scope)
-            if success and evidence.startswith('confirmation_text:'):return {'status':'verified','reason':evidence}
+            if success and evidence.startswith('confirmation_text:'):
+                return {'status':'verified','reason':evidence,'confirmation_text':scope.locator('body').inner_text(timeout=1200)[:12000],'confirmation_url':scope.url}
     return {'status':'uncertain','reason':'No submission confirmation observed. Check the recruiter site; do not resend blindly.'}

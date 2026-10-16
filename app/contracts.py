@@ -15,7 +15,7 @@ DecisionValue = Literal[
     'reject', 'expired',
 ]
 ApplicationStatusValue = Literal[
-    'prefilled', 'needs_human', 'submitted', 'submitted_verified',
+    'prefilled', 'needs_human', 'submitted',
     'withdrawn', 'error', '',
 ]
 TrackerStage = Literal[
@@ -45,6 +45,11 @@ class ApplicationStatus(BaseModel):
 class HumanReview(BaseModel):
     status: Literal['approved', 'declined', 'pending']
     review_token: str = Field(min_length=64, max_length=64)
+
+
+class MaterialApproval(BaseModel):
+    token: str = Field(min_length=64, max_length=64, pattern=r'^[0-9a-f]{64}$')
+    acknowledged: Literal[True]
 
 
 class ReviewExport(BaseModel):

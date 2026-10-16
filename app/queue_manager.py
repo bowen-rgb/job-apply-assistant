@@ -40,6 +40,8 @@ def status() -> dict[str, Any]:
     base['counts'] = counts
     base['items'] = [annotate(dict(r)) for r in rows]
     for item in base['items']:
+        from .application_safety import verification_state
+        item['verification_state'] = verification_state(item['job_id'], item['application_status'])
         item['preparation'] = preparation_summary(item)
         item.pop('fill_audit_path', None)
         for field in ('body', 'review_json', 'human_review_fingerprint'):

@@ -17,6 +17,9 @@ class EmbeddedApplicationTests(unittest.TestCase):
                 canvas = Canvas(str(path)); canvas.drawString(40, 700, text); canvas.save()
             original = cv.read_bytes()
             metadata = build_application_packet(cv, letter, result)
+            packet_bytes = result.read_bytes()
+            self.assertEqual(build_application_packet(cv, letter, result), metadata)
+            self.assertEqual(result.read_bytes(), packet_bytes)
             pages = PdfReader(result).pages
             self.assertEqual(metadata['cv_pages'], 1)
             self.assertEqual(metadata['pages'], 2)

@@ -14,6 +14,7 @@ from .ats import detect_ats
 from .ats_adapters import get_adapter
 from .db import connect
 from .human_review import can_prepare
+from . import application_safety as safety
 from .form_scanner import instrument_and_scan
 from .profile_store import load_profile_raw, runtime_profile, select_resume_for_job
 from .worker_runtime import check_cancelled, Cancelled
@@ -35,6 +36,8 @@ def _record(job_id: int, status: str, note: str = '') -> None:
 
 
 def _update_status(job_id: int, status: str, **extra) -> None:
+    if status == 'submitted_verified':
+        raise ValueError('Verified submissions must be recorded with a receipt')
     allowed = {
         'apply_adapter', 'fill_audit_path', 'review_verdict', 'review_summary', 'ats',
         'agent_status', 'agent_steps', 'agent_trace_path',
@@ -116,6 +119,11 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
         _record(job_id, 'apply_error', 'Human confirmation required')
         _update_status(job_id, 'error')
         raise ValueError('Human confirmation required')
+
+    if safety.has_dispatch(job_id):
+        _update_status(job_id,'needs_human',application_step='submission_check')
+        _record(job_id,'submission_check','A send was initiated. Check the recruiter site before any retry.')
+        return
 
     if job.get('application_step') == 'submission_check':
         try:
@@ -216,6 +224,13 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 packet = build_application_packet(resume_path, Path(profile['cover_letter_path']),
                                                  data_dir() / 'application_packets' / f'job_{job_id}_cv_et_lettre.pdf')
                 upload_path = Path(packet['path'])
+            materials = safety.freeze_materials(job, raw_profile, resume_path,
+                         profile.get('cover_letter_path'), packet['path'] if packet else None,
+                         profile.get('cover_letter_text', ''))
+            sealed = {d['role']: Path(d['path']) for d in materials['documents']}
+            upload_path = sealed.get('packet', sealed['resume'])
+            if 'letter' in sealed:
+                profile['cover_letter_path'] = str(sealed['letter'])
             _update_status(job_id, 'preparing', application_step='filling')
             report = adapter.fill(form_scope, profile, upload_path, job)
             if packet and 'resume' in report.get('filled', []):
@@ -274,7 +289,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                         job_id=job_id,
                         job=job,
                         profile=profile,
-                        resume_path=resume_path,
+                        resume_path=upload_path,
                         ats=ats,
                         chat_cfg=reviewer_cfg,
                         agent_cfg=agent_cfg,
@@ -298,6 +313,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             now = datetime.now(timezone.utc).isoformat()
             audit = {
                 'job_id': job_id,
+                'materials': materials,
                 'url': job.get('url', ''),
                 'page_url_after_prepare': page.url,
                 'form_url': form_scope.url,
@@ -347,8 +363,15 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
 
             if raw_profile.get('automation',{}).get('auto_submit') is True:
                 from .auto_submission import submit_complete_form
+                if not safety.is_approved(safety.get_job(job_id), load_profile_raw(), materials):
+                    _update_status(job_id,'needs_human',application_step='materials_review',fill_audit_path=str(audit_path))
+                    _record(job_id,'materials_review','Review and approve these material versions before automatic sending.')
+                    return
                 _update_status(job_id,'preparing',application_step='submitting')
+                attempt = None
                 def mark_dispatch():
+                    nonlocal attempt
+                    attempt = safety.begin_dispatch(job_id, materials)
                     audit['submission']={'status':'dispatching','reason':'Send initiated; verify outcome before any retry.'}
                     _write_json(audit_path,audit)
                     _update_status(job_id,'preparing',application_step='submission_check',fill_audit_path=str(audit_path))
@@ -357,8 +380,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                 audit['final_submit_performed_by_script']=result['status'] in {'verified','uncertain'}
                 _write_json(audit_path,audit)
                 if result['status']=='verified':
-                    _update_status(job_id,'submitted_verified',application_step='completed',fill_audit_path=str(audit_path))
-                    _record(job_id,'submitted_verified',result['reason'])
+                    safety.record_verified(job_id, attempt, result)
                     return
                 _update_status(job_id,'needs_human',application_step='submission_check',fill_audit_path=str(audit_path))
                 _record(job_id,'submission_check',result['reason'])
@@ -384,7 +406,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             _record(job_id, status, summary)
 
             check_cancelled()
-            print('Application prepared. Review is optional and explicitly requested.')
+            print('Application prepared. Review the form and documents before sending.')
 
             print(f'ATS adapter: {adapter.info.label} ({adapter.info.mode})')
             if agent_trace:
@@ -392,7 +414,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
             if resume_meta:
                 print(f'Resume: {resume_meta.get("label") or resume_meta.get("original_name")}')
             print(f'Deterministic auto-fill: {report.get("filled") or "none"}. Required unanswered: {len(unanswered)}.')
-            print('Final submission remains manual. The agent is hard-blocked from clicking final Submit.')
+            print('Final submission is manual by default. Automatic sending requires approved material versions.')
 
             # CDP application tab remains open for manual review and submission.
         except Cancelled:

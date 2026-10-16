@@ -94,8 +94,11 @@ Use `start_chrome_debug.bat` when you need browser assistance. Its default local
 
 - **Local storage.** Profiles, CVs, browser sessions, credentials and job records are excluded from Git. The server accepts local connections only. Saved website passwords use Windows user encryption.
 - **Optional external assistance.** ChatGPT features send the selected job, profile or CV text needed for the requested task to your signed-in ChatGPT session. On-demand title translation may send public job titles to MyMemory. Local storage does not mean every feature works offline.
-- **Manual sending by default.** Automatic queue start and automatic submission are separate, explicit settings. Supported complete forms may be sent only when automatic sending is enabled; completed AI reviews still require your confirmation.
+- **Manual sending by default.** Automatic queue start and automatic submission are separate settings. Automatic sending also requires your approval of the prepared CV, letter and combined packet versions. Changes to the documents, listing or saved profile require another review. Approval alone never sends an application: explicitly run preparation again to use approved versions.
+- **Submission evidence.** Manual confirmation records an application as sent. The “confirmed by the site” label requires a browser-observed confirmation and an intact local receipt. A recorded send attempt blocks automatic retries after an uncertain result or interruption. A confirmation page is evidence of what the browser observed, not a guarantee of recruiter delivery.
 - **Clear handoffs.** Missing information, CAPTCHA, MFA, consent and uncertain send outcomes pause automation. Gmail connection setup is available; automatic verification-code retrieval and password recovery are not implemented.
+
+See [material review and submission evidence](docs/APPLICATION_SAFETY.md) for the workflow and its limits.
 
 Job-site access and results depend on the source. A matching score or an AI recommendation does not establish that a vacancy is still open. Read the original listing and review prepared forms before sending.
 

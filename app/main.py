@@ -36,6 +36,7 @@ from .profile_store import (
 )
 from .contracts import (
     ApplicationStatus,
+    MaterialApproval,
     HumanReview,
     ReviewExport,
     Decision,
@@ -380,9 +381,46 @@ def set_application_status(job_id: int, payload: ApplicationStatus):
         job_repository.set_application_status(job_id, payload.status)
     except KeyError:
         raise HTTPException(404, 'job not found')
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
     if payload.status in {'submitted', 'submitted_verified', 'withdrawn'}:
         cancel_worker('app.apply_worker', job_id)
     return {'ok': True}
+
+
+@app.get('/api/jobs/{job_id}/materials')
+def application_materials(job_id: int):
+    from .application_safety import material_status
+    try:
+        return material_status(job_id)
+    except KeyError:
+        raise HTTPException(404, 'job not found')
+
+
+@app.post('/api/jobs/{job_id}/materials/approve')
+def approve_application_materials(job_id: int, payload: MaterialApproval):
+    from .application_safety import approve_materials
+    try:
+        approve_materials(job_id, payload.token)
+    except KeyError:
+        raise HTTPException(404, 'Materials unavailable')
+    except (ValueError, OSError, TypeError) as exc:
+        raise HTTPException(409, str(exc))
+    return {'ok': True}
+
+
+@app.get('/api/jobs/{job_id}/materials/{role}')
+def application_material_file(job_id: int, role: Literal['resume', 'letter', 'packet']):
+    from .application_safety import get_job, prepared_snapshot, private_path, file_hash
+    try:
+        snapshot = prepared_snapshot(get_job(job_id))
+        document = next(d for d in snapshot['documents'] if d['role'] == role)
+        path = private_path(document['path'], 'material_versions')
+        if file_hash(path) != document['sha256']:
+            raise ValueError('Application file changed')
+    except (ValueError, OSError, KeyError, TypeError, StopIteration):
+        raise HTTPException(404, 'Application file unavailable')
+    return FileResponse(path, filename=document['name'])
 
 
 @app.post('/api/jobs/{job_id}/human-review')
@@ -480,7 +518,11 @@ def application_audit(job_id: int):
     if audit_root not in path.parents or not path.exists():
         raise HTTPException(404, 'Audit file unavailable')
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
+        audit = json.loads(path.read_text(encoding='utf-8'))
+        from .application_safety import get_job, verification_state, submission_receipt
+        audit['verification_state'] = verification_state(job_id, get_job(job_id)['application_status'])
+        audit['submission_receipt'] = submission_receipt(job_id)
+        return audit
     except Exception as exc:
         raise HTTPException(500, f'Audit read error: {exc}')
 

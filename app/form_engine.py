@@ -472,8 +472,6 @@ def generic_click_apply(page) -> bool:
 
 def generic_confirmation(page) -> tuple[bool, str]:
     url = (page.url or '').lower()
-    if any(x in url for x in ('/thank', '/thanks', '/submitted', '/confirmation', 'application-complete')):
-        return True, f'confirmation_url:{page.url}'
     try:
         text = page.locator('body').inner_text(timeout=1200)[:12000]
     except Exception:
@@ -489,4 +487,6 @@ def generic_confirmation(page) -> tuple[bool, str]:
     for rx in patterns:
         if re.search(rx, text, re.I | re.S):
             return True, f'confirmation_text:{rx}'
+    if any(x in url for x in ('/thank', '/thanks', '/submitted', '/confirmation', 'application-complete')):
+        return True, f'confirmation_url:{page.url}'
     return False, ''

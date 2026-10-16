@@ -73,6 +73,27 @@ def requires_combined_packet(scope):
 
 
 def build_application_packet(cv: Path, letter: Path, target: Path):
+    import json
+    from filelock import FileLock
+    from .application_safety import file_hash
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(target) + '.lock', timeout=30):
+        manifest = target.with_suffix('.manifest.json')
+        inputs = {'cv': file_hash(cv), 'letter': file_hash(letter)}
+        try:
+            cached = json.loads(manifest.read_text(encoding='utf-8'))
+            if cached['inputs'] == inputs and cached['sha256'] == file_hash(target):
+                return cached['result']
+        except (OSError, ValueError, KeyError):
+            pass
+        result = _build_application_packet(cv, letter, target)
+        temporary = manifest.with_suffix('.tmp')
+        temporary.write_text(json.dumps({'inputs': inputs, 'sha256': file_hash(target), 'result': result}), encoding='utf-8')
+        temporary.replace(manifest)
+        return result
+
+
+def _build_application_packet(cv: Path, letter: Path, target: Path):
     from pypdf import PdfReader, PdfWriter
     if cv.suffix.lower() != '.pdf':
         raise ValueError('Ce formulaire accepte un dossier unique : sélectionnez un CV PDF pour y joindre la lettre.')

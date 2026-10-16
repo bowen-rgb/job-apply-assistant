@@ -10,3 +10,16 @@ main{padding:28px 34px;max-width:1500px;width:100%}header{display:flex;justify-c
 .audit-link{font-size:11px;color:var(--cyan);text-decoration:none}.audit-link:hover{text-decoration:underline}
 .subsection{border-top:1px solid var(--line);padding-top:14px}.subsection h3{font-size:13px;margin:0 0 5px}.subsection>p{margin-bottom:10px}
 .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}.metric{background:var(--card,#fff);border:1px solid var(--border,#ddd);border-radius:12px;padding:14px}.metric b{display:block;font-size:24px}.pipeline-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.pipeline-col{background:rgba(127,127,127,.06);border:1px solid var(--border,#ddd);border-radius:12px;padding:10px;min-height:140px}.pipeline-col h3{margin:2px 0 10px}.pipeline-card,.queue-item{background:var(--card,#fff);border:1px solid var(--border,#ddd);border-radius:10px;padding:10px;margin:8px 0}.pipeline-card .small,.queue-item .small{opacity:.7}.queue-list{display:grid;gap:8px}.search-profiles{display:grid;gap:10px}.search-profile-row{border:1px solid var(--border,#ddd);border-radius:10px;padding:12px;background:rgba(127,127,127,.04)}.search-profile-row .sp-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.search-profile-row .form-grid{margin-top:8px}.tag.queue{background:#e9eefb}.tag.stage{background:#edf7ef}
+.material-review{width:min(620px,calc(100vw - 32px));max-height:85dvh;overflow:auto;box-sizing:border-box;border:1px solid var(--border,#d8ddd3);border-radius:14px;padding:24px;background:var(--surface,#fdfcf9);color:var(--text,#24372b)}
+.material-review::backdrop{background:rgb(20 35 25 / .42)}
+.material-review-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.material-review-header button{flex-shrink:0}
+.material-review-header h2{margin:0;font-size:20px}
+.material-review-files{list-style:none;padding:0;margin:20px 0;border-top:1px solid var(--border,#d8ddd3)}
+.material-review-files li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:14px 0;border-bottom:1px solid var(--border,#d8ddd3)}
+.material-review-files a{color:var(--accent,#305c45);font-weight:600}
+.material-review-files .small{overflow-wrap:anywhere;max-width:100%}
+.material-review .material-review-check{display:flex;flex-direction:row;align-items:flex-start;gap:10px;margin:20px 0;line-height:1.5}
+.material-review .material-review-check input{width:18px;height:18px;min-height:18px;flex-shrink:0;margin:2px 0;accent-color:#1938c0}
+.material-review-letter{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.material-review-feedback{color:var(--danger,#9f342b)}

@@ -35,6 +35,37 @@ function errorMessage(value){
   return tr(value||'');
 }
 const statusLabel=value=>tr(statusLabels[value]||value);
+function applicationLabel(job){
+  if(job.application_status==='submitted_verified')return tr(job.verification_state==='verified'?'Envoi confirmé par le site':'Envoyée · preuve à vérifier');
+  return statusLabel(job.application_status);
+}
+
+async function openMaterials(id){
+  let dialog=el('materialReviewDialog');
+  if(!dialog){
+    dialog=document.createElement('dialog');dialog.id='materialReviewDialog';dialog.className='material-review';
+    dialog.setAttribute('aria-labelledby','materialReviewTitle');document.body.appendChild(dialog);
+  }
+  dialog.innerHTML=`<div class="material-review-header"><h2 id="materialReviewTitle">${esc(tr('Vérifier les documents'))}</h2><button class="ghost compact" type="button" onclick="this.closest('dialog').close()">${esc(tr('Fermer'))}</button></div><div class="material-review-body" aria-live="polite">${esc(tr('Chargement…'))}</div>`;
+  if(!dialog.open)dialog.showModal();
+  const body=dialog.querySelector('.material-review-body');
+  try{
+    const data=await requestJson(`/api/jobs/${id}/materials`);
+    const messages={missing:'Préparez la candidature pour vérifier les documents.',stale:'Les documents ou le profil ont changé. Préparez à nouveau la candidature.',pending:'Vérifiez chaque document avant d’approuver ces versions.',approved:'Ces versions sont approuvées.'};
+    const roles={resume:'CV',letter:'Lettre de motivation',packet:'Dossier CV et lettre'};
+    body.innerHTML=`<p class="material-review-state">${esc(tr(messages[data.status]||messages.missing))}</p>${(data.documents||[]).length?`<ul class="material-review-files">${data.documents.map(d=>`<li><a href="/api/jobs/${id}/materials/${encodeURIComponent(d.role)}" target="_blank" rel="noopener">${esc(tr(roles[d.role]||'Document'))} ↗</a><span class="small">${esc(d.name)}</span></li>`).join('')}</ul>`:''}${data.inline_text?`<details><summary>${esc(tr('Texte de la lettre utilisé dans le formulaire'))}</summary><p class="material-review-letter">${esc(data.inline_text)}</p></details>`:''}${data.status==='pending'?`<label class="material-review-check"><input type="checkbox" id="materialAcknowledged">${esc(tr('J’ai vérifié ces documents et les informations du poste.'))}</label><button type="button" class="primary" id="approveMaterials" disabled>${esc(tr('Approuver ces versions'))}</button>`:''}<p class="small">${esc(tr('L’approbation seule n’envoie rien. Relancez la préparation pour utiliser ces versions. Si l’envoi automatique est activé, cette relance peut envoyer la candidature.'))}</p><p class="material-review-feedback" role="status"></p>`;
+    const button=body.querySelector('#approveMaterials'),check=body.querySelector('#materialAcknowledged');
+    if(button){
+      check.onchange=()=>{button.disabled=!check.checked;};
+      button.onclick=async()=>{
+        button.disabled=true;check.disabled=true;
+        try{await requestJson(`/api/jobs/${id}/materials/approve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:data.token,acknowledged:check.checked})});await openMaterials(id);}
+        catch(error){body.querySelector('.material-review-feedback').textContent=error.message;check.disabled=false;button.disabled=!check.checked;}
+      };
+    }
+  }catch(error){body.textContent=error.message;}
+}
+window.openMaterials=openMaterials;
 const titleTranslations=new Map();
 let titleObserver=null, titleTimer=null, titleRequestRunning=false;
 const pendingTitles=new Set();
@@ -273,7 +304,7 @@ function render(){
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
     <div class="top"><div>${titleMarkup(j)}<div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
-    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(statusLabel(j.application_status))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
+    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(applicationLabel(j))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
     ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}
@@ -292,7 +323,7 @@ function render(){
       ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" ${preparable(j)&&!['queued','running','waiting_user'].includes(j.queue_status)?'':'disabled'} onclick="applyJob(${j.id})">${esc(tr('Pré-remplir'))}</button>`}
       <button class="ghost" ${preparable(j)&&!j.queue_status?'':'disabled'} onclick="queueJob(${j.id})">${esc(tr(j.queue_status?'File:':'+ File'))}${j.queue_status?` ${esc(statusLabel(j.queue_status))}`:''}</button>
     </div>
-    <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(tr('Envoyée'))}${j.application_status==='submitted_verified'?` · ${esc(tr('vérifiée'))}`:''}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${hasSubmitted(j)?`<button class="ghost compact" onclick="setStage(${j.id},'rejected')">${esc(tr('Enregistrer un refus du recruteur'))}</button>`:''}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
+    <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(applicationLabel(j))}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${hasSubmitted(j)?`<button class="ghost compact" onclick="setStage(${j.id},'rejected')">${esc(tr('Enregistrer un refus du recruteur'))}</button>`:''}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<button class="ghost compact" onclick="openMaterials(${j.id})">${esc(tr('Vérifier les documents'))}</button><a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
   </article>`).join('');
   observeTitles();
 }
@@ -560,11 +591,11 @@ async function takeOverApplication(id){
 }
 window.takeOverApplication=takeOverApplication;
 function handoffActionsMarkup(job){
-  if(hasSubmitted(job)||job.application_status==='withdrawn')return `<span class="submitted-pill">${esc(statusLabel(job.application_status))}</span>`;
+  if(hasSubmitted(job)||job.application_status==='withdrawn')return `<span class="submitted-pill">${esc(applicationLabel(job))}</span>`;
   const id=job.job_id||job.id;
   const busy=job.status==='running'||['opening','preparing','preparing_letter'].includes(job.application_status);
   const url=/^https?:\/\//i.test(job.url||'')?job.url:'';
-  return `<div class="queue-actions">${!busy?`<button class="primary compact" onclick="takeOverApplication(${id})">${esc(tr('Ouvrir ou reprendre la candidature'))}</button>${url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le poste dans mon navigateur'))}</a>`:''}`:''}<button class="primary compact" onclick="confirmQueueSubmitted(${id})">${esc(tr('J’ai déjà envoyé cette candidature'))}</button></div><p class="small">${esc(tr('Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.'))}</p>`;
+  return `<div class="queue-actions">${!busy?`<button class="ghost compact" onclick="openMaterials(${id})">${esc(tr('Vérifier les documents'))}</button>`:''}${!busy?`<button class="primary compact" onclick="takeOverApplication(${id})">${esc(tr('Ouvrir ou reprendre la candidature'))}</button>${url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le poste dans mon navigateur'))}</a>`:''}`:''}<button class="primary compact" onclick="confirmQueueSubmitted(${id})">${esc(tr('J’ai déjà envoyé cette candidature'))}</button></div><p class="small">${esc(tr('Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.'))}</p>`;
 }
 function renderQueueItems(){
   const value=el('queueFilter').value;
@@ -604,7 +635,7 @@ async function loadPipeline(){
   if(active){el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('Préparation en cours')} · #${focusedId}`;el('queueRunBtn').disabled=true;el('queueBatchBtn').disabled=true;}
   el('queueFocus').innerHTML=focus?`<strong>${esc(tr(active?'En traitement maintenant':'Votre prochaine action'))}</strong>${titleMarkup({id:focusedId,title:focus.title},'h3')}<p>${esc(focus.company||'')} · #${focusedId} · ${esc(tr(focus.status==='error'||focus.application_status==='error'?'Préparation échouée':statusLabels[focus.status||focus.application_status]||focus.status||focus.application_status||'Étape inconnue'))}</p><p>${esc(tr(stepLabels[focus.application_step]||statusLabels[focus.application_status]||'Étape inconnue'))}</p>${focus.application_step_at?`<p class="small">${esc(tr('Depuis'))} ${esc(focus.application_step_at)} UTC</p>`:''}${active?`<p>${esc(tr('L’automatisation travaille dans le navigateur dédié. Pour intervenir, arrêtez-la et attendez sa fin, puis reprenez l’onglet.'))}</p><button class="secondary compact" onclick="stopApplication(${focusedId})">${esc(tr('Arrêter avant de reprendre'))}</button>`:`${failureMarkup(focus)}${handoffActionsMarkup(focus)}`}`:`<p>${esc(tr(q.running?'Démarrage de la préparation…':'Aucune préparation en cours. Choisissez une préparation ou consultez les candidatures à reprendre.'))}</p>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':statusLabels[j.application_status]||j.application_status))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':applicationLabel(j)))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
   observeTitles();
   for(const detail of document.querySelectorAll('[data-error-job]'))if(openErrors.has(detail.dataset.errorJob))detail.open=true;
 }
@@ -682,3 +713,5 @@ document.addEventListener('localechange',()=>{Guide.render();render();load();loa
 async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
+
+Object.assign(stepLabels,{materials_review:'Vérifier les documents'});
