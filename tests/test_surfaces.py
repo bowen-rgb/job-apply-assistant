@@ -17,6 +17,7 @@ class SurfaceTests(unittest.TestCase):
             try:
                 page=browser.new_page(locale='zh-CN',viewport={'width':1440,'height':1000});errors=[]
                 page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(window.failCopy)throw new Error('fixture denied');window.copiedDetail=text;}}})")
                 page.on('pageerror',lambda error:errors.append(str(error)))
                 def respond(route):
                     path=urlparse(route.request.url).path
@@ -55,6 +56,8 @@ class SurfaceTests(unittest.TestCase):
                             page.keyboard.press('Escape')
                             expect(menu).to_have_attribute('aria-expanded','false')
                             expect(menu).to_be_focused()
+                            if nav=='jobsNav':
+                                page.screenshot(path=str(output/'jobsView-mobile.png'))
                     page.evaluate('window.scrollTo(0,0)')
                     page.screenshot(path=str(output/(view+'.png')))
                 page.locator('#profileNav').click()
@@ -81,6 +84,7 @@ class SurfaceTests(unittest.TestCase):
                 expect(filters.first).to_be_focused()
                 page.keyboard.press('Tab')
                 self.assertFalse(page.locator('.filter').evaluate_all('nodes=>nodes.includes(document.activeElement)'))
+                expect(page.locator('#cards .score')).to_have_text('—')
                 query=page.locator('#q')
                 query.dispatch_event('compositionstart')
                 query.fill('不存在的岗位')
@@ -113,6 +117,13 @@ class SurfaceTests(unittest.TestCase):
                 expect(page.locator('#queueFilter option[value=all]')).to_have_text('全部状态')
                 page.locator('[data-error-job] summary').first.click()
                 expect(page.locator('.application-error pre').first).to_be_visible()
+                copy=page.locator('[data-copy-failure]').first
+                copy.click()
+                expect(copy.locator('..').locator('[role="status"]')).to_have_text('已复制')
+                self.assertEqual(page.evaluate('window.copiedDetail'),job['application_error'])
+                page.evaluate('window.failCopy=true');copy.click()
+                expect(copy.locator('..').locator('[role="status"]')).to_contain_text('复制失败')
+                expect(page.locator('.application-error pre').first).to_have_text(job['application_error'])
                 for language in ['en','fr','de','es','pt','zh']:
                     page.locator('#languageSelect').select_option(language)
                     expect(page.locator('#pipelineView h1')).not_to_have_text('undefined')

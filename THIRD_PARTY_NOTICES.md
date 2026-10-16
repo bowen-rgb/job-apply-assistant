@@ -124,7 +124,7 @@ SOFTWARE.
 
 Repository: https://github.com/Caho1/open-claude-ui
 
-The scroll-edge opacity ramp in `static/refinements.css` adapts the ScrollFadeContainer example at commit `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. Other layout and controls use this project's implementation.
+The scroll-edge opacity ramp in `static/refinements.css` adapts the ScrollFadeContainer example at commit `ddf3aea1711db62fd6d24343bbab500a5ae69f64`. The error-detail copy feedback also draws on CodeBlock.tsx at that commit. Other layout and controls use this project's implementation.
 
 MIT License
 

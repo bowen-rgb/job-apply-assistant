@@ -29,3 +29,6 @@
 先检查同页面前后对照，确认品牌特征仍然存在，再检查溢出、字号、间距和交互。桌面和手机集中检查一轮，修复后最多确认一轮。以实际浏览器行为验证输入法、滚动位置、导航和减少动态效果，不用逐值样式断言代替体验判断。
 
 来源与采用范围见 [参考决定](docs/design/REFERENCE_DECISIONS.md)，复用方法见 [practical-ui-design Skill](skills/practical-ui-design/SKILL.md)。
+
+
+本轮视觉增量：保留工业标题、荧光导航、硬边和轨道插画，以表面明度和14px正文/22px岗位标题改善层级；收紧闭合辅助面板，避免说明挤占岗位正文。详情见 [UI设计调整](docs/design/UI_DESIGN_REFINEMENT.md)。

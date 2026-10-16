@@ -40,3 +40,28 @@ aside #simpleModeToggle{color:#e6e9df}
  main :is(input:not([type=checkbox]),textarea,select),dialog :is(input:not([type=checkbox]),textarea,select){font-size:16px}
  .form-grid.cols2,.form-grid.cols3{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Additive detail tools; keep the existing error panel and original text. */
+.failure-copy-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.failure-copy-tools button{min-height:44px}.failure-copy-tools [role=status]{font-size:14px;line-height:1.5}
+/* Visual pass: use the reference's surface hierarchy and reading rhythm in our own palette. */
+#jobsView{--job-reading-size:14px}
+.surface-heading p{font-size:14px;line-height:1.65;max-width:68ch}.surface-heading:after{opacity:.3}
+#jobsView>.small{font-size:12px;line-height:1.65;margin-block:8px}
+#jobsView>.review-export-panel{background:#fafbf8;border-left-width:2px;padding:12px 16px;margin-block:16px}
+#jobsView>.review-export-panel>summary{font-size:14px;min-height:32px}
+#jobsView .toolbar{gap:16px;padding:16px;background:#f4f6fa;margin-block:24px}
+#jobsView .toolbar :is(input,select){min-height:44px;font-size:14px}
+#jobsView>.guide-page-help:not([open]){padding:8px 16px;background:#f4f6fa;margin-bottom:16px}
+#jobsView>.guide-page-help:not([open])>summary{min-height:32px;font-size:14px}
+#welcomeGuide.guide-welcome{padding:12px 20px}
+#jobsView .toolbar{margin-block:16px}
+.card{gap:16px}.card .title{font-size:22px;line-height:1.35;letter-spacing:-.02em}
+.card .company{font-size:14px;line-height:1.5}.card .snippet{line-height:1.7;max-width:72ch}
+.card .facts{gap:8px 16px}.card .fact{line-height:1.6}.card .tag{font-size:12px;padding:4px 8px}
+.card .review-summary{padding:16px;font-size:14px;line-height:1.7}
+.card .actions{gap:8px;padding-top:16px;border-top:1px solid #d3daea}
+.human-review-panel{padding:16px}.human-review-panel p{line-height:1.65;font-size:14px}
+.settings-card .section-head p{font-size:14px;line-height:1.65}.settings-card .form-grid label{gap:8px;font-size:14px}
+.wb-owner,.wb-panel>p{font-size:14px;line-height:1.6}.wb-panel-head{margin-bottom:16px}.wb-data table{font-size:13px}.wb-data th,.wb-data td{padding:8px}
+aside .navtitle{font-size:12px;line-height:1.5}aside .hint{font-size:12px;line-height:1.65}
+@media(max-width:760px){.card{padding:16px}.card .title{font-size:20px}#jobsView .toolbar{padding:16px;gap:8px}.surface-heading p{max-width:45ch}}

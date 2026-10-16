@@ -72,8 +72,8 @@
     {
       "source": "CodeBlock.tsx",
       "sha256": "4f65c683aa4d3d522ccf4651de53c3e9127678cc7949a7549674514ed58a018b",
-      "job": "原有能力：错误详情pre；未加行号/复制组件",
-      "ensam": "待增强：Markdown代码显示已有，代码复制/反馈未做"
+      "job": "新增借鉴：原错误详情加入复制成功/失败/2.5秒复位，保留原文；不引入代码行号",
+      "ensam": "新增借鉴：原Markdown代码块加复制工具条，成功/失败/重试验证通过；未加入行号"
     },
     {
       "source": "ConfirmationDialog.tsx",
@@ -205,7 +205,7 @@
       "source": "useClaudeSharedElementTransition.ts",
       "sha256": "1cfbfe327cd83efd740370c3f7388386de8fef5781c04c8c3e1a794a30301e77",
       "job": "不适用：无缩略图到大图的业务入口",
-      "ensam": "待增强：当前查看器仅面板过渡，没有共享元素转场"
+      "ensam": "新增借鉴：图片打开/关闭配对转场，ready/降级/减少动效/焦点返回已验证；未做全图库"
     },
     {
       "source": "useRateLimitBackoff.ts",
@@ -213,5 +213,6 @@
       "job": "未采用：只读工作台定时刷新/超时不是指数退避，投递重试需业务约束",
       "ensam": "待增强：knowledgeProvider读取错误直报；没有有界指数退避；写学习记录不盲重试"
     }
-  ]
+  ],
+  "latestVisualRefinement": "UI_DESIGN_REFINEMENT.md"
 }

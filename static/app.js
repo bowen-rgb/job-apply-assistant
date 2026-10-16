@@ -311,7 +311,7 @@ function render(){
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   cards.innerHTML=jobs.map(j=>`<article class="card">
     <div class="top"><div>${titleMarkup(j)}<div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
-    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(applicationLabel(j))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${j.score}</span>${reviewBadge(j)}</div>
+    <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(applicationLabel(j))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${Number.isFinite(j.score)?j.score:'—'}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
     <div class="snippet">${esc(j.snippet||j.body?.slice(0,430)||'')}</div>
     ${j.reason?`<details class="match-details"><summary>${esc(tr('Détails du matching'))}</summary><div class="reason">${esc(j.reason)}</div></details>`:''}
@@ -602,11 +602,26 @@ function applicationFailure(value){
   else if(/(?:gbk|charmap).*codec/.test(text))message='La préparation précédente a été interrompue par une erreur d’encodage. Réessayez.';
   return tr(message);
 }
+// CodeBlock.tsx reference: explicit copy result and a 2.5s reset, keeping the original details.
+function failureCopyText(state){
+  const rows={zh:['复制详情','已复制','复制失败，请选中详情手动复制。'],fr:['Copier le détail','Copié','Copie impossible. Sélectionnez le détail et copiez-le manuellement.'],en:['Copy details','Copied','Could not copy. Select the details and copy manually.'],de:['Details kopieren','Kopiert','Kopieren fehlgeschlagen. Details auswählen und manuell kopieren.'],es:['Copiar detalles','Copiado','No se pudo copiar. Selecciona los detalles y copia manualmente.'],pt:['Copiar detalhes','Copiado','Não foi possível copiar. Selecione os detalhes e copie manualmente.']};
+  return (rows[Locale.language]||rows.fr)[state];
+}
+async function copyFailureDetail(button){
+  const detail=button.closest('details').querySelector('pre').textContent;
+  const status=button.parentElement.querySelector('[role="status"]');
+  button.disabled=true;status.textContent='';
+  try{
+    await navigator.clipboard.writeText(detail);
+    if(button.isConnected){status.textContent=failureCopyText(1);setTimeout(()=>{if(status.isConnected)status.textContent='';},2500);}
+  }catch{if(button.isConnected)status.textContent=failureCopyText(2);}
+  finally{if(button.isConnected)button.disabled=false;}
+}
 function failureMarkup(job){
   if(!hasSubmitted(job)&&job.application_status==='needs_human'&&(job.failure_reason||job.application_error))return `<div class="application-error"><p>${esc(tr(job.failure_reason||job.application_error))}</p></div>`;
   if(hasSubmitted(job)||job.application_status==='withdrawn'||(job.application_status!=='error'&&job.status!=='error'))return '';
   const detail=job.application_error||job.failure_reason||job.note||'';
-  return `<div class="application-error"><strong>${esc(tr('Préparation échouée'))}</strong><p>${esc(applicationFailure(detail))}</p><p class="small">${esc(tr('Ce statut ne signifie pas un refus du recruteur.'))}</p>${detail?`<details data-error-job="${job.job_id||job.id}"><summary>${esc(tr('Détail de l’échec'))}</summary><pre>${esc(detail)}</pre></details>`:''}</div>`;
+  return `<div class="application-error"><strong>${esc(tr('Préparation échouée'))}</strong><p>${esc(applicationFailure(detail))}</p><p class="small">${esc(tr('Ce statut ne signifie pas un refus du recruteur.'))}</p>${detail?`<details data-error-job="${job.job_id||job.id}"><summary>${esc(tr('Détail de l’échec'))}</summary><div class="failure-copy-tools"><button type="button" class="ghost compact" data-copy-failure onclick="copyFailureDetail(this)">${esc(failureCopyText(0))}</button><span role="status"></span></div><pre tabindex="0">${esc(detail)}</pre></details>`:''}</div>`;
 }
 async function takeOverApplication(id){
   try{const result=await requestJson(`/api/jobs/${id}/take-over`,{method:'POST'});el('pipelineStatus').textContent=tr(result.message);}
