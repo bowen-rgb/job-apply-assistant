@@ -4,6 +4,7 @@ window.Surfaces=(()=>{
   function stamp(root){
     const header=root.querySelector(':scope > header');if(!header)return;
     header.classList.add('surface-heading');
+    if(!header.querySelector('.surface-mark')){const mark=document.createElement('span');mark.className='surface-mark';mark.setAttribute('aria-hidden','true');mark.textContent=names[root.id];header.prepend(mark);}
     if(root.tagName==='DIALOG'){const title=header.querySelector('h2');if(title){title.id=root.id+'Title';root.setAttribute('aria-labelledby',title.id);}}
   }
   function rail(root,sections,id){

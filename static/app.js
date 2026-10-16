@@ -20,6 +20,7 @@ const scanCounts=document.querySelector('#scanCounts');
 const scanCurrent=document.querySelector('#scanCurrent');
 const progressBar=document.querySelector('#progressBar');
 const qInput=document.querySelector('#q');
+let queryComposing=false;
 const sourceSelect=document.querySelector('#sourceSelect');
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -283,6 +284,7 @@ function reviewDetails(j){
 }
 
 function render(){
+  if(queryComposing)return;
   Guide.jobs(allJobs);
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
@@ -415,7 +417,10 @@ async function pollScan(){
 }
 
 for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');current=b.dataset.filter;render();};
-qInput.oninput=render; sourceSelect.onchange=render;
+qInput.addEventListener('compositionstart',()=>{queryComposing=true;});
+qInput.addEventListener('compositionend',()=>{queryComposing=false;render();});
+qInput.oninput=event=>{if(!queryComposing&&!event.isComposing)render();};
+sourceSelect.onchange=render;
 el('searchBtn').onclick=async()=>{statusEl.textContent=tr('Démarrage du scan…');const x=await requestJson('/api/search',{method:'POST'});statusEl.textContent=tr(x.running?'Scan lancé':'Scan déjà actif');await pollScan();};
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
 el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;await requestJson('/api/review/batch?mode=strong',{method:'POST'});statusEl.textContent=tr('Batch review lancé');setTimeout(load,1000);};

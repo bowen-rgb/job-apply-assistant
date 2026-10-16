@@ -1,0 +1,42 @@
+/* Incremental refinements. Preserve the existing industrial identity and artwork. */
+:root{--ui-space-1:8px;--ui-space-2:16px;--ui-space-3:24px;--ui-space-4:32px;--ui-press:120ms;--ui-panel:300ms}
+.settings-grid{gap:var(--ui-space-3)}.form-grid{gap:var(--ui-space-2) var(--ui-space-3)}
+.card .fact,.card .snippet,.queue-guidance{font-size:14px;line-height:1.6}
+.card .top>div{min-width:0}.card .source{overflow-wrap:anywhere}
+.surface-jumps{gap:var(--ui-space-1)}.surface-jumps button{min-height:40px}
+button{transition:background-color var(--ui-press),color var(--ui-press),border-color var(--ui-press)}
+button:disabled{cursor:not-allowed}button[aria-busy=true]{cursor:progress}
+:focus-visible{outline:3px solid #1938c0;outline-offset:3px}
+aside :focus-visible{outline-color:#e3e939}
+::selection{background:#e3e939;color:#191c22}
+input,textarea{caret-color:#1938c0}
+aside #simpleModeToggle{color:#e6e9df}
+#mobileNavToggle{display:none}
+.form-grid.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.form-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.surface-jumps{max-height:none;overflow:visible}
+/* Panel entry is quieter and slower than a control release. */
+@media(prefers-reduced-motion:no-preference){dialog[open]{animation:ui-panel-in var(--ui-panel) cubic-bezier(.16,1,.3,1)}}
+@keyframes ui-panel-in{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Seven-stop ramp adapted from open-claude-ui (MIT); see THIRD_PARTY_NOTICES.md. */
+@supports(mask-image:linear-gradient(#000,transparent)){
+ @media(min-width:761px){
+  aside.scroll-edges{mask-image:linear-gradient(to bottom,transparent,#0000000d calc(var(--fade-top)*.15),#00000026 calc(var(--fade-top)*.3),#0000004d calc(var(--fade-top)*.45),#00000080 calc(var(--fade-top)*.6),#000000b3 calc(var(--fade-top)*.75),#000000d9 calc(var(--fade-top)*.87),#000 var(--fade-top),#000 calc(100% - var(--fade-bottom)),#000000d9 calc(100% - var(--fade-bottom)*.87),#000000b3 calc(100% - var(--fade-bottom)*.75),#00000080 calc(100% - var(--fade-bottom)*.6),#0000004d calc(100% - var(--fade-bottom)*.45),#00000026 calc(100% - var(--fade-bottom)*.3),#0000000d calc(100% - var(--fade-bottom)*.15),transparent)}
+  aside.scroll-edges:focus-within,aside.scroll-edges[data-edge-top=false][data-edge-bottom=false]{mask-image:none}
+ }
+}
+@media(max-width:760px){
+ .shell{display:block}aside{position:relative;height:auto;overflow:visible;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+ aside .brand{margin:0;padding-bottom:16px}.brand small{font-size:10px}
+ #mobileNavToggle{display:block;background:#303c57;color:#fff;border:1px solid #788399;min-height:44px;width:100%;text-align:left}
+ aside:not(.navigation-open)>:is(.language-control,.profile-switcher,.primary-nav,.hint,#simpleModeToggle,#jobSidebar){display:none!important}
+ aside.navigation-open :is(.language-control,.profile-switcher){width:100%;margin:0;display:block}
+ aside.navigation-open .primary-nav{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;padding-bottom:16px}
+ aside .primary-nav button{width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;min-height:44px;padding:8px}
+ aside #jobSidebar{width:100%;margin:0}aside #jobSidebar .filter{display:inline-block;width:auto;margin:0 8px 8px 0}
+ aside #simpleModeToggle{margin:0}.surface-jumps{max-height:none;overflow:visible}
+ main :is(button,.compact),dialog button{min-height:44px}
+ main :is(input:not([type=checkbox]),textarea,select),dialog :is(input:not([type=checkbox]),textarea,select){font-size:16px}
+ .form-grid.cols2,.form-grid.cols3{grid-template-columns:minmax(0,1fr)}
+}
