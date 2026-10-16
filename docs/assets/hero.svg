@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="520" viewBox="0 0 1440 520" role="img" aria-labelledby="title desc">
+  <title id="title">Job Apply Assistant — your next role, one clear workspace</title>
+  <desc id="desc">An original editorial illustration of application documents moving through discovery, review, preparation and tracking.</desc>
+  <rect width="1440" height="520" rx="18" fill="#f3f2ec"/>
+  <path d="M815 0v460M863 0v460M911 0v460M959 0v460M1007 0v460M1055 0v460M1103 0v460M1151 0v460M1199 0v460M1247 0v460M1295 0v460M1343 0v460M1391 0v460M815 76h625M815 124h625M815 172h625M815 220h625M815 268h625M815 316h625M815 364h625M815 412h625" stroke="#deded6" stroke-width="1"/>
+  <rect x="62" y="50" width="43" height="43" rx="5" fill="#2247df"/>
+  <path d="M76 79l15-15m-14 0h14v14" fill="none" stroke="#e4f883" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="121" y="77" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="2" fill="#26332f">JOB APPLY ASSISTANT</text>
+  <text x="62" y="207" font-family="Arial, Helvetica, sans-serif" font-size="73" font-weight="700" letter-spacing="-3" fill="#1e2a29">Your next role.</text>
+  <text x="62" y="288" font-family="Arial, Helvetica, sans-serif" font-size="73" font-weight="700" letter-spacing="-3" fill="#2247df">One clear workspace.</text>
+  <text x="66" y="344" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#5b645e">Discover opportunities. Prepare thoughtfully. Keep track.</text>
+  <rect x="64" y="382" width="115" height="31" rx="15" fill="#e3e7dc"/>
+  <text x="121" y="403" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" letter-spacing="1" fill="#384638">LOCAL DATA</text>
+  <text x="198" y="403" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#5b645e">Windows · Python · Six interface languages</text>
+  <g transform="translate(992 69) rotate(8 144 166)">
+    <rect width="266" height="318" rx="10" fill="#d7e0f8" stroke="#2247df" stroke-width="2"/>
+  </g>
+  <g transform="translate(947 94) rotate(-5 145 163)">
+    <rect width="267" height="319" rx="10" fill="#fffef9" stroke="#263b32" stroke-width="2"/>
+    <rect x="24" y="26" width="42" height="42" rx="6" fill="#e5eddb"/>
+    <circle cx="45" cy="41" r="7" fill="#788d6c"/>
+    <path d="M31 59c1-13 27-13 28 0" fill="#788d6c"/>
+    <path d="M82 35h142M82 52h101M26 94h211M26 113h177M26 154h98M26 173h206M26 192h190M26 233h114M26 252h198M26 271h163" stroke="#b5beb2" stroke-width="7" stroke-linecap="round"/>
+    <path d="M26 94h211M26 154h98M26 233h114" stroke="#344b3b" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <circle cx="1270" cy="344" r="56" fill="#e4f883" stroke="#263b32" stroke-width="2"/>
+  <path d="M1248 344l15 15 29-32" fill="none" stroke="#263b32" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect y="460" width="1440" height="60" fill="#20342b"/>
+  <text x="64" y="497" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#e4f883">01 DISCOVER</text>
+  <path d="M272 489h57m-7-6 7 6-7 6" stroke="#7c9385" fill="none" stroke-width="2"/>
+  <text x="374" y="497" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#fffef9">02 REVIEW</text>
+  <path d="M583 489h57m-7-6 7 6-7 6" stroke="#7c9385" fill="none" stroke-width="2"/>
+  <text x="686" y="497" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#fffef9">03 PREPARE</text>
+  <path d="M904 489h57m-7-6 7 6-7 6" stroke="#7c9385" fill="none" stroke-width="2"/>
+  <text x="1007" y="497" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#fffef9">04 TRACK</text>
+  <text x="1376" y="497" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#b1c5b7">V8.4</text>
+</svg>
