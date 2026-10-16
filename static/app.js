@@ -285,6 +285,11 @@ function reviewDetails(j){
 
 function render(){
   if(queryComposing)return;
+  document.querySelectorAll('.filter').forEach(button=>{
+    const selected=button.dataset.filter===current;
+    button.setAttribute('aria-pressed',String(selected));
+    button.tabIndex=selected?0:-1;
+  });
   Guide.jobs(allJobs);
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
@@ -417,6 +422,19 @@ async function pollScan(){
 }
 
 for(const b of document.querySelectorAll('.filter')) b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');current=b.dataset.filter;render();};
+document.getElementById('jobSidebar').addEventListener('keydown',event=>{
+  if(event.isComposing||event.keyCode===229||event.altKey||event.ctrlKey||event.metaKey)return;
+  const items=[...document.querySelectorAll('.filter')].filter(button=>!button.disabled);
+  const index=items.indexOf(event.target);if(index<0)return;
+  let next;
+  if(event.key==='ArrowDown')next=index+1;
+  else if(event.key==='ArrowUp')next=index-1;
+  else if(event.key==='Home')next=0;
+  else if(event.key==='End')next=items.length-1;
+  if(next===undefined)return;
+  event.preventDefault();const target=items[(next+items.length)%items.length];
+  target.focus({preventScroll:true});target.click();
+});
 qInput.addEventListener('compositionstart',()=>{queryComposing=true;});
 qInput.addEventListener('compositionend',()=>{queryComposing=false;render();});
 qInput.oninput=event=>{if(!queryComposing&&!event.isComposing)render();};

@@ -1,0 +1,217 @@
+{
+  "referenceCommit": "ddf3aea1711db62fd6d24343bbab500a5ae69f64",
+  "trackedFiles": 71,
+  "missing": [],
+  "modules": [
+    {
+      "source": "ArtifactsSplitPaneResizer.tsx",
+      "sha256": "fcfad885ea11c655497af013e5a01775503d9b817f47cb9d8406b3bd825a1448",
+      "job": "不适用：当前无可调宽编辑器分栏",
+      "ensam": "待增强：正文/辅助栏现为固定布局，未实现用户拖动调宽"
+    },
+    {
+      "source": "AttachmentCard.tsx",
+      "sha256": "0a145aac07fd21cdaee31b2194385f79125d54e4a88e5f3cb449f36bf62c4b1b",
+      "job": "原有能力：简历和材料列表；未采用参考附件卡组件",
+      "ensam": "原有能力：来源/原文件入口；未采用参考附件磁贴"
+    },
+    {
+      "source": "cds-theme.css",
+      "sha256": "a9bc8b732a5aa9dc3bf4ad1e71543de4385a516bda433c448ed97a4cf98c2108",
+      "job": "部分借鉴：间距/层级；保留工业风、插画和强调色",
+      "ensam": "部分借鉴：阅读间距/辅助文字；保留钴蓝和课程插画"
+    },
+    {
+      "source": "CdsButton.tsx",
+      "sha256": "7dcce467f0041fba58f1194d5dbeed2de38260b4b6cb6599982bedaa5f567ec8",
+      "job": "原有能力：原生按钮禁用/加载；局部反馈另见动效项",
+      "ensam": "原有能力：原生按钮/禁用；未移植参考按钮组件"
+    },
+    {
+      "source": "CdsMotionEngine.tsx",
+      "sha256": "c3b05c6f1ac0e4d035f8bdcb940ab699a6bc5fa928fbe26dcbd8f6a434fbfb3c",
+      "job": "未采用：保留本项目反馈，未引入该演示引擎",
+      "ensam": "未采用：保留课程过渡，未引入该演示引擎"
+    },
+    {
+      "source": "ChatComposer.tsx",
+      "sha256": "ef4f7b593cd5b885219c0943824a9bab8d00035f62c76f0ed0c476fe998fdb0a",
+      "job": "部分借鉴：app.js 合成输入保护；无聊天输入器",
+      "ensam": "部分借鉴：AppHeader 合成输入保护；无聊天输入器"
+    },
+    {
+      "source": "ChatComposerChin.tsx",
+      "sha256": "946e5d1019f18d0215a3b8b890a86e4e0da5ff3d3de866e4fe58d92119411a6a",
+      "job": "不适用：无聊天输入工具底栏",
+      "ensam": "不适用：共享讨论为静态导入，无聊天输入工具底栏"
+    },
+    {
+      "source": "ChatMessageBubbles.tsx",
+      "sha256": "2fb61221fa179321d2a418402637d497a3082abbb9c822dd339657d57d426026",
+      "job": "不适用：当前无实时聊天流",
+      "ensam": "原有能力：SharedChatCard 折叠静态讨论；没有气泡聊天组件"
+    },
+    {
+      "source": "ClaudeAudioPlayer.ts",
+      "sha256": "026ede3ed6f464bbd6a6a4935541b23f1ad0739425cf8e8b1dd9dcef05010bed",
+      "job": "不适用：无音频任务",
+      "ensam": "不适用：当前无课程音频播放器"
+    },
+    {
+      "source": "ClaudeDesktopHeader.tsx",
+      "sha256": "8205e3e84794cb355e83614869e364445817850f0126f37a354f80cdd05ae943",
+      "job": "不适用：普通浏览器页面",
+      "ensam": "不适用：当前网页无macOS窗口控制"
+    },
+    {
+      "source": "ClaudeMotionPresets.ts",
+      "sha256": "dbb1f82fb7cde25216f7ee9606ab222434f465d1a3d30752f7d0ba539c2b2900",
+      "job": "部分借鉴：600/30/1按钮；面板为CSS过渡，其余三套未采用",
+      "ensam": "部分借鉴：按场景区分直接拖动和面板过渡；四套弹簧未采用"
+    },
+    {
+      "source": "CodeBlock.tsx",
+      "sha256": "4f65c683aa4d3d522ccf4651de53c3e9127678cc7949a7549674514ed58a018b",
+      "job": "原有能力：错误详情pre；未加行号/复制组件",
+      "ensam": "待增强：Markdown代码显示已有，代码复制/反馈未做"
+    },
+    {
+      "source": "ConfirmationDialog.tsx",
+      "sha256": "63e8fc1844011da5e4e22598d25ebff1cfcf8366c6aef71f80c2cd6e8b0e6d0f",
+      "job": "原有能力：native dialog；不是移植参考不完整focus trap",
+      "ensam": "原有能力：useDialogFocus；图片查看器加native dialog与焦点返回"
+    },
+    {
+      "source": "ContainerResponsiveBar.tsx",
+      "sha256": "4b4d20e169248c2ddbceed6fe04a6bd01cc742562bf8d9a3c18490e9f1c3fd10",
+      "job": "原有能力：媒体查询/手机导航；未采用容器查询工具栏",
+      "ensam": "原有能力：媒体查询/手机布局；未采用容器查询工具栏"
+    },
+    {
+      "source": "CoworkAgentCanvas.tsx",
+      "sha256": "10f6f67ad10f4ba1f763c3528691b361301bca034890c3ee9e22ce39e36db09a",
+      "job": "不适用：无代理协作画布",
+      "ensam": "不适用：无代理协作画布"
+    },
+    {
+      "source": "createClaudeMainWindow.ts",
+      "sha256": "3d7abf0d17e1ad86a0d31b722d7d658e5cd449a5943a339409c17ffdcff5e4e9",
+      "job": "不适用：无Electron主进程",
+      "ensam": "不适用：当前网页无该Electron主进程"
+    },
+    {
+      "source": "DraggableSessionList.tsx",
+      "sha256": "858ddab62fae6b089919b0be6e8078c2370eebe1a093b3fe6142f3ad409d9441",
+      "job": "不适用：档案列表不是聊天会话列表",
+      "ensam": "不适用：课程目录不是聊天会话列表"
+    },
+    {
+      "source": "EpitaxyIframeBridge.tsx",
+      "sha256": "d12178d792f43335a42da5e598e8a3014517ba05b9cb9011c8ba3b8f96704b7c",
+      "job": "不适用：本地工作台不提供iframe跨窗消息桥",
+      "ensam": "不适用：原文件访问不需要该iframe消息桥"
+    },
+    {
+      "source": "LiveMicActivityBars.tsx",
+      "sha256": "314b9b34cb2c53efa583ca7a92bfa0bb48f94a2317cbd6f662bc7e624620e5a9",
+      "job": "不适用：无录音/麦克风波形",
+      "ensam": "不适用：无录音/麦克风波形"
+    },
+    {
+      "source": "McpToolDecisionCard.tsx",
+      "sha256": "911442362a13b03b27b26126add0651da90ceccb5e710b31867f0bb6dc393610",
+      "job": "原有能力：材料审批/可信回执由服务端约束；未采用模拟卡",
+      "ensam": "不适用：学习站无该MCP工具执行审批"
+    },
+    {
+      "source": "MediaLightboxViewer.tsx",
+      "sha256": "fcfa5d1d95db8ec684703684aedea3076f76c771658bc1798c6cf30263aac91d",
+      "job": "不适用：当前无课程式图片画廊",
+      "ensam": "部分借鉴：缩放、平移、死区、双指逻辑、键盘；多图跑道/切换未做；真实触屏未验"
+    },
+    {
+      "source": "ModelSelectorEffort.tsx",
+      "sha256": "6029c7f9280b0bc93dcb6d53771ad8e6b88ffeceffb25ef24be3a088d81736b6",
+      "job": "不适用：无此模型推理档位接口",
+      "ensam": "不适用：无此模型推理档位接口"
+    },
+    {
+      "source": "ModelSwitcherWithTokenGauge.tsx",
+      "sha256": "441bfd766fdf89733e9123b85c7f41e96b4d65601a855377a7184bee8bc3ab0e",
+      "job": "不适用：无实时Token预算仪表",
+      "ensam": "不适用：无实时Token预算仪表"
+    },
+    {
+      "source": "ReasoningAmbientGlow.tsx",
+      "sha256": "036ca87a05f1113f556f28fe9386d94cbcc451963b4abe3cf7bac397ffab32a6",
+      "job": "未采用：现有运行文字状态满足任务，不新增思考光晕",
+      "ensam": "不适用：静态课程阅读无实时模型推理状态"
+    },
+    {
+      "source": "RichComposerWithMentions.tsx",
+      "sha256": "866da5d5486394479a9c74cd2ce55d90d08ce9cac572d28f402bf1cab092780c",
+      "job": "部分借鉴：IME原则；slash/mention无业务场景",
+      "ensam": "部分借鉴：IME原则；slash/mention无业务场景"
+    },
+    {
+      "source": "ScrollFadeContainer.tsx",
+      "sha256": "8505c373f708579462f6d19e73ba400ecda99ab3f1814dc9ec9693b9f7cb96ba",
+      "job": "已借鉴：侧栏七档alpha、上下边界/焦点保护",
+      "ensam": "已借鉴：目录七档alpha、尺寸/边界/焦点保护"
+    },
+    {
+      "source": "SegmentedControl.tsx",
+      "sha256": "9e86fa91577b6fb9c0c4433228b02ca112b435cd51497d8c45f23d956fd205dc",
+      "job": "原有能力：筛选按钮；本次补选中语义/键盘，不含滑块弹簧",
+      "ensam": "原有能力：阅读/状态标签；本次补键盘，不含滑块弹簧"
+    },
+    {
+      "source": "StatusIndicators.tsx",
+      "sha256": "424017fec306d3ebc32e0dccb7515570dd9ed05d3c92a436fb227938abb269fc",
+      "job": "原有能力：aria-busy/status与错误提示；未移植参考动画",
+      "ensam": "原有能力：加载/错误/练习状态；未移植参考状态组件"
+    },
+    {
+      "source": "StreamingDiffViewer.tsx",
+      "sha256": "4f5b162422dc25fe77d46126e7a8247c0334862eb58dca68de572cbf73e9c9fa",
+      "job": "不适用：材料核对不是代码diff审查器",
+      "ensam": "不适用：课程阅读不是代码diff审查器"
+    },
+    {
+      "source": "tailwind.config.js",
+      "sha256": "c7918308ae05c68d6fc6a707eca551a35759862adc2ddfb82b5987155ded1984",
+      "job": "未采用：保留现有CSS，无Tailwind迁移需要",
+      "ensam": "未采用：保留现有CSS，无Tailwind迁移需要"
+    },
+    {
+      "source": "ThinkingAccordion.tsx",
+      "sha256": "9398d47bef971a0128d17090bcb997fc73559a7a0fc8867e3ee8fa054544064c",
+      "job": "原有能力：details展开评审；没有流式思考强制展开",
+      "ensam": "原有能力：details教学/讨论；没有流式思考强制展开"
+    },
+    {
+      "source": "useClaudeRovingFocus.ts",
+      "sha256": "ca47232d96078ac822f3a6a902be627475a87a2157bf7830e662525c72470d6f",
+      "job": "本次借鉴：岗位筛选上下/Home/End/回绕/单Tab入口，保留原生按钮",
+      "ensam": "本次借鉴：radio/tab左右/Home/End/回绕/RTL/单Tab入口，修正反向边界"
+    },
+    {
+      "source": "useClaudeScrollPinning.ts",
+      "sha256": "1b69dd9dce9dddfb44bed84bda41f80a940d4833a6ac8ce310ca7d46c8a090a0",
+      "job": "部分借鉴原则：工作台轮询保留位置；未移植聊天自动跟随",
+      "ensam": "不适用：无流式生成聊天容器，不强制阅读滚动到底"
+    },
+    {
+      "source": "useClaudeSharedElementTransition.ts",
+      "sha256": "1cfbfe327cd83efd740370c3f7388386de8fef5781c04c8c3e1a794a30301e77",
+      "job": "不适用：无缩略图到大图的业务入口",
+      "ensam": "待增强：当前查看器仅面板过渡，没有共享元素转场"
+    },
+    {
+      "source": "useRateLimitBackoff.ts",
+      "sha256": "7d0fc6eca5b5ee26dac59e65c4a2ed657e864f721ba43f5c40be0318b91d3cb0",
+      "job": "未采用：只读工作台定时刷新/超时不是指数退避，投递重试需业务约束",
+      "ensam": "待增强：knowledgeProvider读取错误直报；没有有界指数退避；写学习记录不盲重试"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 ---
 name: practical-ui-design
-description: Design production frontend interfaces from visual references, or refine existing pages using a consistent type scale, spacing system and task-focused interactions. Use when the user provides design examples or asks to turn UI reference material into an implementable design method.
+description: Refine production frontends from visual references while preserving their identity. Use for reference-driven UI improvements, reconciling conflicting design advice, and auditing whether reference material actually reached the implementation.
 ---
 
 # 从参考到可落地界面
@@ -15,11 +15,15 @@ description: Design production frontend interfaces from visual references, or re
 
 ## 拆解参考
 
+用户提供源码仓库，或询问是否完整阅读、采用时，先执行 [参考覆盖核验](references/reference-audit.md)。完成条件是用户列举的每项素材和当前参考模块都在核验表中有去向，而不是所有模块都移植。按实际范围分别表述“文件齐全、浏览、精读、采用、测试”；以每个目标项目独立记录证据。
+
 从用户提供的案例提取：文字层级、网格与对齐、留白节奏、信息分组、表面/色彩角色、操作反馈。每项决定说明它如何帮助当前任务。采用新的业务内容和现有品牌表达，不把参考页面的栏目、素材或事实直接当成本项目需求。
 
 需要查验项目时，读实现而不只看 README。区分已验证源码、作者声明、截图观察和自己的推断。保存可复查的文件链接与版本；如果参考已随用户提供，可先据其内容工作。
 
 完整拆解用户列举的交互，分别说明“本次实现、当前已有、缺少适用场景”。优先补齐能改善现有任务的细节，不按固定数量挑选；引入新业务能力则依据用户范围决定。
+
+冲突优先级：用户已确认的目标与品牌 → 产品任务、内容权威与可访问性 → 实际源码及行为验证 → 参考数值和作者介绍。保留不同经验的适用条件，例如数学阅读可以用较宽行距、图片平移应直接跟手、按钮可以短回弹。把决定和理由写入项目设计记录。
 
 ## 建立小型规范
 
@@ -50,6 +54,10 @@ description: Design production frontend interfaces from visual references, or re
 
 ## 有界验证
 
+先按实际页面检查覆盖面：控件/分组选中、输入/IME、长内容/复制、滚动/刷新、图片/媒体、对话框/焦点、响应式/容器、加载/错误/恢复；只深入存在的场景。语义标记也要验行为，例如 radio/tab 必须检查方向键、首尾循环、单一 Tab 入口和 Tab 退出。参考项缺失但场景存在时标记“待增强”，不能写成“不适用”。
+
 完成一轮实现后，在同一批检查桌面和手机、真实或清楚标注的样例内容、中文及较长翻译、空态/错误态、键盘和减少动态效果。重点看阅读层级、横向溢出、重叠、点击目标和滚动位置；有条件时加入 200% 缩放检查。先整理缺陷再集中修复，最多再确认一轮，避免无止境微调。
 
 变更涉及流程或交互语义时补行为验证；纯视觉数值无需编写逐值匹配测试。交付可运行页面、少量前后对照证据、设计规范位置和仍未验证的限制。练习可以临摹，发布时使用适合产品的原创内容，并遵守引用素材和代码的许可。
+
+交付前回看核验表：空白项补查，采用项链接实际生效入口和测试，待增强项明确保留。单张图片、隔离组件或手机尺寸模拟各有验证边界；通过这些检查不能推导全站、真实触屏或生产网络均已验收。
