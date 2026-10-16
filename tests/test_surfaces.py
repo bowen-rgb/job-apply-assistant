@@ -44,6 +44,17 @@ class SurfaceTests(unittest.TestCase):
                     for width in [320,768,1440]:
                         page.set_viewport_size({'width':width,'height':1000})
                         self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
+                        if width==320:
+                            menu=page.locator('#mobileNavToggle')
+                            expect(menu).to_be_visible()
+                            expect(page.locator('.primary-nav')).not_to_be_visible()
+                            menu.click()
+                            expect(menu).to_have_attribute('aria-expanded','true')
+                            expect(page.locator('.primary-nav')).to_be_visible()
+                            self.assertTrue(page.locator('.primary-nav button').evaluate_all('(nodes)=>nodes.every(n=>!n.getClientRects().length || n.clientWidth>=120)'))
+                            page.keyboard.press('Escape')
+                            expect(menu).to_have_attribute('aria-expanded','false')
+                            expect(menu).to_be_focused()
                     page.evaluate('window.scrollTo(0,0)')
                     page.screenshot(path=str(output/(view+'.png')))
                 page.locator('#profileNav').click()

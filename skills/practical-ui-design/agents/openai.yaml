@@ -1,0 +1,4 @@
+interface:
+  display_name: "实用前端设计"
+  short_description: "拆解参考界面，统一字体与网格，让布局和交互细节适合真实业务任务"
+  default_prompt: "使用 $practical-ui-design，结合参考资料优化当前前端，并验证桌面与手机布局。"

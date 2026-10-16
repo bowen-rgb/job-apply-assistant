@@ -1,10 +1,9 @@
-/* Shared chrome decorates dynamic views without replacing controls or their handlers. */
+/* Shared headings, section navigation and responsive primary navigation. */
 window.Surfaces=(()=>{
   const names={jobsView:'JOB DISCOVERY',profileView:'PERSONAL FILE',pipelineView:'APPLICATION QUEUE',guideView:'GET STARTED',accountsDialog:'PROFILES / ACCOUNTS',pendingTasksDialog:'PERSONAL TASKS'};
   function stamp(root){
     const header=root.querySelector(':scope > header');if(!header)return;
     header.classList.add('surface-heading');
-    if(!header.querySelector('.surface-mark')){const mark=document.createElement('span');mark.className='surface-mark';mark.setAttribute('aria-hidden','true');mark.textContent=names[root.id];header.prepend(mark);}
     if(root.tagName==='DIALOG'){const title=header.querySelector('h2');if(title){title.id=root.id+'Title';root.setAttribute('aria-labelledby',title.id);}}
   }
   function rail(root,sections,id){
@@ -31,6 +30,29 @@ window.Surfaces=(()=>{
     if(dialog?.querySelector('.surface-account-section'))rail(dialog,[...dialog.querySelectorAll(':scope > .surface-account-section')],'account');
   }
   function init(){
+    const aside=document.querySelector('aside'),primary=document.querySelector('.primary-nav');
+    primary.id='primaryNavigation';
+    const toggle=document.createElement('button');toggle.id='mobileNavToggle';toggle.type='button';
+    toggle.setAttribute('aria-controls',primary.id);toggle.setAttribute('aria-expanded','false');
+    toggle.onclick=()=>{const open=aside.classList.toggle('navigation-open');toggle.setAttribute('aria-expanded',String(open));};
+    aside.addEventListener('keydown',event=>{if(event.key==='Escape'&&aside.classList.contains('navigation-open')){aside.classList.remove('navigation-open');toggle.setAttribute('aria-expanded','false');toggle.focus();}});
+    aside.querySelector('.brand').after(toggle);
+    const updateNavigation=()=>{toggle.textContent=Locale.t('Navigation principale')+' · '+(primary.querySelector('[aria-current="page"]')?.textContent||'');};
+    primary.addEventListener('click',event=>{if(event.target.closest('button')&&matchMedia('(max-width:760px)').matches){aside.classList.remove('navigation-open');toggle.setAttribute('aria-expanded','false');toggle.focus();}});
+    new MutationObserver(updateNavigation).observe(primary,{attributes:true,subtree:true,characterData:true,childList:true});
+    updateNavigation();document.addEventListener('localechange',updateNavigation);
+    // A fade indicates additional content; endpoints and keyboard focus stay clear.
+    const updateEdges=()=>{
+      const distance=aside.scrollHeight-aside.clientHeight;
+      aside.classList.add('scroll-edges');
+      aside.dataset.edgeTop=String(aside.scrollTop>2);
+      aside.dataset.edgeBottom=String(distance-aside.scrollTop>2);
+      aside.style.setProperty('--fade-top',aside.scrollTop>2?'24px':'0px');
+      aside.style.setProperty('--fade-bottom',distance-aside.scrollTop>2?'24px':'0px');
+    };
+    aside.addEventListener('scroll',updateEdges,{passive:true});
+    new ResizeObserver(updateEdges).observe(aside);
+    new MutationObserver(updateEdges).observe(aside,{childList:true,subtree:true});updateEdges();
     decorate();let scheduled=false;
     new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;decorate();});}).observe(document.querySelector('.shell'),{childList:true,subtree:true,characterData:true});
     ['accountsDialog','pendingTasksDialog'].forEach(id=>{const dialog=document.getElementById(id);if(dialog)new MutationObserver(decorate).observe(dialog,{childList:true,subtree:true,characterData:true});});

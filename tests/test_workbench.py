@@ -65,6 +65,8 @@ class WorkbenchTests(unittest.TestCase):
                 for width in [320,768,1440]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
+                    if width==320:
+                        page.screenshot(path='data/workbench-mobile-preview.png')
                 for language in ['en','fr','de','es','pt','zh']:
                     page.locator('#languageSelect').select_option(language)
                     expect(page.locator('#overviewTitle')).not_to_have_text('undefined')

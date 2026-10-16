@@ -1,25 +1,41 @@
-# Dashboard design system
+# 求职助手界面规范
 
-## Product read
+这是完成求职任务的操作界面。阅读顺序是当前状态、下一步操作、进度与详细数据。工作台的真实记录、岗位判断和投递操作保持可区分。
 
-This is an **operate** dashboard: a calm local control room for finding, reviewing and tracking job applications. The primary jobs are scanning, filtering, deciding, queueing and moving a candidate through the pipeline. The interface should feel focused and dependable while remaining dense enough for daily use.
+## 视觉来源与实现
 
-## Visual direction
+`static/surfaces.css` 是共享颜色、字体、间距、控件和响应式规范的唯一权威；`static/workbench.css` 只负责工作台结构。更早的兼容样式仍服务现有模块，新改动优先使用共享变量，逐步接管，不再叠加新的风格版本。
 
-- **Shape:** one coherent language. Cards and settings panels use a 12–16px radius; controls use 8–10px; pills are reserved for status and compact labels.
-- **Color:** warm paper surfaces (`#f6f5f0`, `#fdfcf9`) support daytime reading; forest green (`#305c45`) marks the next action. A slightly darker neutral sidebar separates navigation. Amber and red indicate attention and errors. No decorative gradients.
-- **Typography:** use the system UI stack for fast local rendering and multilingual coverage. Headings are compact with negative tracking; body text stays readable at 13–14px; counts use tabular numerals where available.
-- **Density:** compact metric rows, quiet status labels, and collapsible matching details support scanning. The primary pre-fill action leads each card; queue controls spell out their behavior. A single filtered offer gets a wider reading column. The horizontal pipeline stays scrollable and mobile navigation wraps above content.
-- **Motion:** short hover/focus transitions only. `prefers-reduced-motion` disables movement.
+现有的深色导航、蓝色操作和浅色内容构成产品识别。借鉴参考图的温和表面层次，统一背景 `#f5f5f2`、内容 `#fffefa`、次级分组 `#eceeea`、浮层白色。主要操作蓝 `#1938c0`；状态色配文字表达结果。装饰不占据标题或主要操作的位置。
 
-## Interaction rules
+## 排版与间距
 
-- Every request has a visible loading, success, error or empty state.
-- Keyboard focus uses a high-contrast outline; controls must remain usable without a pointer.
-- The language selector changes interface copy only. Job descriptions, search terms, saved answers and profile data are user data and stay untouched.
-- Reviewer and browser actions surface their current state in the page status area. Sending is manual by default; opt-in automatic sending requires approval of the actual document versions. Approval alone never sends an application.
-- Mobile layouts stack controls and keep the pipeline horizontally scrollable rather than shrinking text below a comfortable size.
+| 角色 | 共享变量 | 数值 |
+| --- | --- | --- |
+| 桌面主标题/关键数字 | `--text-display` | 32px |
+| 页面/分区标题 | `--text-section` | 24px |
+| 内容标题 | `--text-title` | 18px |
+| 正文/输入 | `--text-body` | 16px |
+| 说明/次级事实 | `--text-support` | 14px |
+| 简短标签 | `--text-caption` | 12px |
 
-## Reference implementation
+标题行高 1.25，正文 1.55，使用系统字体保证中、法、英等字符覆盖。手机主标题用 24px，紧凑组件标题用 18px。关键条件与恢复说明使用 14px 或以上，数字用等宽数字特性。
 
-The tokens and dashboard-specific overrides live in `static/style.css` and `static/dashboard.css`. Locale dictionaries live in `static/locales/`; `static/locale.js` applies them without translating user data. New screens should reuse the existing metric, settings-card, status, empty-state and pipeline classes before adding a new visual treatment.
+`--space-1` 到 `--space-6` 分别为 8/16/24/32/40/48px。分组内部 8–16px，组件内边距 24px，模块间 32px；手机边距与组件内边距 16px。边框、圆角、图标和光学校正不受 8 的倍数限制。
+
+## 布局和交互
+
+- 主操作采用实心蓝色，次要操作使用浅色或描边。同一决策区域的强调顺序明确。
+- 标题和同步信息处于正常文档流，内容决定高度。岗位摘要完整换行，避免像素限高切掉半行。
+- 手机导航先显示当前位置和展开按钮；展开后分区两列排列，选择分区或按 Escape 后关闭。桌面侧栏固定在视口内独立滚动。
+- 表单采用可收缩列并在窄屏减列；资料分区导航自然换行。手机流水线按阶段顺序单列显示。
+- 常用控件目标至少 44px，输入至少 48px；焦点环清晰，长文本和网址允许换行。模态框保留标题、关闭和原生键盘行为。
+- 控件颜色反馈约 120ms，面板出现约 300ms，仅用于传达状态。减少动态效果时关闭动画和非必要过渡。
+- 侧栏存在溢出时使用边缘淡出；触顶/触底分别取消对应边缘，键盘焦点进入时关闭遮罩，避免降低可读性。
+- 加载、空态、错误、禁用和成功提供真实反馈。保存、批准和发送的含义遵循实际流程；批准本身不发送申请。
+
+## 维护与验证
+
+本次案例拆解及采用边界见 [参考决定](docs/design/REFERENCE_DECISIONS.md)。复用方法见 [practical-ui-design Skill](skills/practical-ui-design/SKILL.md)。
+
+桌面和手机合并为一轮视觉检查，集中修复后最多确认一轮。自动化验证覆盖 320/768/1440px 下的主要页面、六语、长内容与弹窗；手机导航验证展开/关闭、Escape 和焦点。新增实际流程才补行为测试，纯视觉数值不逐值锁死。

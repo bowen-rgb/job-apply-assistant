@@ -109,6 +109,7 @@ Job-site access and results depend on the source. A matching score or an AI reco
 | [User guide · French / Chinese](USER_GUIDE.md) | [Architecture and module boundaries](ARCHITECTURE.md) |
 | [Candidate profiles, website accounts and Gmail](ACCOUNT_SETUP.md) | [Dashboard design and metric definitions](DASHBOARD_DESIGN.md) |
 | [Research and application workflow](RESEARCH_WORKFLOW.md) | [Interface design](DESIGN.md) |
+| [Reusable frontend design Skill](skills/practical-ui-design/SKILL.md) | [UI reference decisions](docs/design/REFERENCE_DECISIONS.md) |
 | [V8.4 changes](CHANGELOG_V8_4.md) | [Earlier feature and release notes](docs/archive/README-before-refresh.md) |
 
 ## Development
