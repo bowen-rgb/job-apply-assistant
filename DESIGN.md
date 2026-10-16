@@ -32,3 +32,6 @@
 
 
 本轮视觉增量：保留工业标题、荧光导航、硬边和轨道插画，以表面明度和14px正文/22px岗位标题改善层级；收紧闭合辅助面板，避免说明挤占岗位正文。详情见 [UI设计调整](docs/design/UI_DESIGN_REFINEMENT.md)。
+
+
+直接源码适配层 `static/reference-system.css` 以原仓库四层表面、8/12/16圆角、alpha边界、双层投影和分段轨道组织控件；原有插画与工业标题保留。具体范围见 [逐项源码适配](docs/design/DIRECT_SOURCE_ADAPTATION.md)。

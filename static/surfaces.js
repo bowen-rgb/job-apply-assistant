@@ -54,6 +54,20 @@ window.Surfaces=(()=>{
     aside.addEventListener('scroll',updateEdges,{passive:true});
     new ResizeObserver(updateEdges).observe(aside);
     new MutationObserver(updateEdges).observe(aside,{childList:true,subtree:true});updateEdges();
+    // Separate track and selected thumb from SegmentedControl.tsx; retain every metric.
+    const metrics=document.getElementById('jobMetrics');
+    if(metrics){
+      const updateSelection=()=>{
+        const item=metrics.querySelector('.selected');
+        metrics.dataset.selection=String(Boolean(item?.getClientRects().length));
+        if(!item)return;
+        const group=metrics.getBoundingClientRect(),box=item.getBoundingClientRect();
+        for(const [key,value] of Object.entries({x:box.left-group.left-metrics.clientLeft,y:box.top-group.top-metrics.clientTop,width:box.width,height:box.height}))metrics.style.setProperty('--selection-'+key,value+'px');
+      };
+      new ResizeObserver(updateSelection).observe(metrics);
+      new MutationObserver(updateSelection).observe(metrics,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+      document.addEventListener('localechange',updateSelection);updateSelection();
+    }
     decorate();let scheduled=false;
     new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;decorate();});}).observe(document.querySelector('.shell'),{childList:true,subtree:true,characterData:true});
     ['accountsDialog','pendingTasksDialog'].forEach(id=>{const dialog=document.getElementById(id);if(dialog)new MutationObserver(decorate).observe(dialog,{childList:true,subtree:true,characterData:true});});

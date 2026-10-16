@@ -12,20 +12,20 @@
     {
       "source": "AttachmentCard.tsx",
       "sha256": "0a145aac07fd21cdaee31b2194385f79125d54e4a88e5f3cb449f36bf62c4b1b",
-      "job": "原有能力：简历和材料列表；未采用参考附件卡组件",
-      "ensam": "原有能力：来源/原文件入口；未采用参考附件磁贴"
+      "job": "部分照改：简历/档案附件表面、嵌套圆角与投影；未采用文件名截断或120px磁贴",
+      "ensam": "部分照改：既有来源/讨论表面与嵌套圆角；没有上传附件磁贴，不声称做了文件名算法"
     },
     {
       "source": "cds-theme.css",
       "sha256": "a9bc8b732a5aa9dc3bf4ad1e71543de4385a516bda433c448ed97a4cf98c2108",
-      "job": "部分借鉴：间距/层级；保留工业风、插画和强调色",
-      "ensam": "部分借鉴：阅读间距/辅助文字；保留钴蓝和课程插画"
+      "job": "部分照改：四层表面、alpha边界、双层投影、8/12/16圆角；保留荧光导航/轨道插画/工业标题",
+      "ensam": "部分照改：明暗表面、alpha边界、双层投影、8/12/16圆角；保留钴蓝/大标题/几何插画"
     },
     {
       "source": "CdsButton.tsx",
       "sha256": "7dcce467f0041fba58f1194d5dbeed2de38260b4b6cb6599982bedaa5f567ec8",
-      "job": "原有能力：原生按钮禁用/加载；局部反馈另见动效项",
-      "ensam": "原有能力：原生按钮/禁用；未移植参考按钮组件"
+      "job": "部分照改：8px控件、浅填充次操作、ghost、主按钮微投影和状态；保留原生按钮，不复制paint span组件",
+      "ensam": "部分照改：浅填充/ghost、8px控件、搜索结果与按钮主次；沿用Phosphor图标与原生状态"
     },
     {
       "source": "CdsMotionEngine.tsx",
@@ -78,14 +78,14 @@
     {
       "source": "ConfirmationDialog.tsx",
       "sha256": "63e8fc1844011da5e4e22598d25ebff1cfcf8366c6aef71f80c2cd6e8b0e6d0f",
-      "job": "原有能力：native dialog；不是移植参考不完整focus trap",
-      "ensam": "原有能力：useDialogFocus；图片查看器加native dialog与焦点返回"
+      "job": "部分照改：16px弹窗、双环阴影、2px遮罩模糊、视口限制；保留native dialog与原有分区",
+      "ensam": "部分照改：设置/关于/导入/练习弹窗16px/投影/视口限制，保留各自焦点管理"
     },
     {
       "source": "ContainerResponsiveBar.tsx",
       "sha256": "4b4d20e169248c2ddbceed6fe04a6bd01cc742562bf8d9a3c18490e9f1c3fd10",
-      "job": "原有能力：媒体查询/手机导航；未采用容器查询工具栏",
-      "ensam": "原有能力：媒体查询/手机布局；未采用容器查询工具栏"
+      "job": "新增：workspace-page命名容器查询，在页面内部560px时重排表单/工具栏/操作",
+      "ensam": "新增：study-page命名容器查询，在页面内部560px时重排筛选与阅读标签；未复制模型工具栏"
     },
     {
       "source": "CoworkAgentCanvas.tsx",
@@ -162,8 +162,8 @@
     {
       "source": "SegmentedControl.tsx",
       "sha256": "9e86fa91577b6fb9c0c4433228b02ca112b435cd51497d8c45f23d956fd205dc",
-      "job": "原有能力：筛选按钮；本次补选中语义/键盘，不含滑块弹簧",
-      "ensam": "原有能力：阅读/状态标签；本次补键盘，不含滑块弹簧"
+      "job": "新增：岗位统计独立轨道/测量滑块、尺寸监听和减少动效；不是Framer组件",
+      "ensam": "新增：题库/阅读标签独立轨道与滑块，真实尺寸/换行定位，保持键盘；未引Framer"
     },
     {
       "source": "StatusIndicators.tsx",
@@ -214,5 +214,11 @@
       "ensam": "待增强：knowledgeProvider读取错误直报；没有有界指数退避；写学习记录不盲重试"
     }
   ],
-  "latestVisualRefinement": "UI_DESIGN_REFINEMENT.md"
+  "latestVisualRefinement": "DIRECT_SOURCE_ADAPTATION.md",
+  "downloadState": {
+    "trackedFiles": 71,
+    "missing": 0,
+    "shallow": false,
+    "currentBranchCommits": 40
+  }
 }
