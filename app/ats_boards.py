@@ -112,6 +112,9 @@ def discover_boards(rows, report=None) -> Iterable[dict]:
                 count += 1
                 yield row
             emit(report, source, 'board', 'success' if count else 'empty', results=count)
+            from .pfe import mark_polled
+            try:mark_polled(cfg.ats,cfg.board)
+            except Exception:pass  # An ordinary non-PFE scan has no source registry.
         except Exception as exc:
             emit(report, source, 'board', 'failed', error=str(exc))
             # One broken/renamed company board must not abort the global scan.

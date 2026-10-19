@@ -788,3 +788,72 @@ def queue_pending_task(identifier: str):
     try:return queue_task(identifier)
     except ValueError as exc:raise HTTPException(409,str(exc))
     except KeyError:raise HTTPException(404,'Task not found in this profile')
+
+
+# PFE data and research leads share the candidate-owned SQLite workspace.
+from .pfe_config import PFESettings
+
+@app.get('/api/pfe')
+def pfe_overview():
+    from .pfe import overview
+    return overview(runtime_profile())
+
+@app.put('/api/pfe/settings')
+def pfe_settings(payload: PFESettings):
+    if scan_status().get('running') or queue_status().get('running'):
+        raise HTTPException(409,'Stop the current scan or queue before changing the discovery plan')
+    raw=load_profile_raw();cfg=payload.model_dump();raw['pfe']=cfg
+    if cfg['enabled']:
+        raw['automation']['search_queries_per_run']=max(36,raw['automation'].get('search_queries_per_run',18))
+        raw['automation']['jobspy_enabled']=cfg['use_jobspy']
+        raw['automation']['jobspy_sites']=['hellowork','indeed','linkedin']
+        raw['automation']['jobspy_country_indeed']='France'
+        raw['automation']['jobspy_hours_old']=0
+    save_profile_raw(raw)
+    if cfg['enabled']:
+        from .pfe import analyze_saved
+        analyze_saved(runtime_profile(raw))
+    return {'ok':True}
+
+@app.post('/api/pfe/jobs/{job_id}/verify')
+def pfe_verify(job_id:int):
+    from .application_safety import get_job
+    from .pfe_discovery import verify
+    try:return verify(get_job(job_id),runtime_profile())
+    except KeyError:raise HTTPException(404,'Job not found in this profile')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+@app.post('/api/pfe/leads')
+def add_pfe_lead(payload:dict):
+    from .pfe import save_lead
+    try:return {'id':save_lead(str(payload.get('kind','team')),str(payload.get('title','')),str(payload.get('url','')),str(payload.get('evidence','')),str(payload.get('contact','')))}
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+@app.patch('/api/pfe/leads/{identifier}')
+def update_pfe_lead(identifier:str,payload:dict):
+    from .pfe import init_tables
+    from .db import connect
+    if payload.get('status') not in {'unconfirmed','contact_planned','contacted','responded','closed'}:raise HTTPException(400,'Invalid lead status')
+    init_tables()
+    with connect() as c:
+        result=c.execute('UPDATE opportunity_leads SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(payload['status'],identifier))
+        if not result.rowcount:raise HTTPException(404,'Lead not found in this profile')
+    return {'ok':True}
+
+
+@app.post('/api/pfe/import')
+def import_pfe_job(payload:dict):
+    from .pfe import public_url,record_evidence
+    from .searcher import Hit
+    from .scan_manager import _upsert_hit
+    from .db import connect
+    title=str(payload.get('title','')).strip();url=str(payload.get('url',''));text=str(payload.get('text',''))
+    if not title or len(title)>500 or not public_url(url) or not 80<=len(text)<=100000:raise HTTPException(400,'Provide a title, a public original URL and 80–100000 characters of source text')
+    profile=runtime_profile()
+    if not (profile.get('pfe') or {}).get('enabled'):raise HTTPException(409,'Enable and save the PFE discovery profile first')
+    pre={'title':title,'body':text,'company':str(payload.get('company',''))[:500],'user_supplied_text':True}
+    from urllib.parse import urlparse
+    action,identifier=_upsert_hit(Hit(url,title,text[:1000],urlparse(url).hostname,'pfe_student','user-provided',pre),profile)
+    with connect() as c:job=dict(c.execute('SELECT * FROM jobs WHERE id=?',(identifier,)).fetchone())
+    record_evidence(identifier,job,profile,False,url)
+    return {'job_id':identifier,'action':action,'verification':'unverified'}

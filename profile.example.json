@@ -1,5 +1,21 @@
 {
   "schema_version": 8,
+  "pfe": {
+    "enabled": false,
+    "directions": [],
+    "locations": [
+      "France"
+    ],
+    "start_month": "",
+    "duration_months": 6,
+    "start_flexibility_months": 1,
+    "phd_goal": false,
+    "skills": [],
+    "school_portal_url": "",
+    "searxng_url": "",
+    "research_sources": true,
+    "team_discovery": true
+  },
   "identity": {
     "first_name": "",
     "last_name": "",
@@ -18,6 +34,9 @@
     "years_experience": "",
     "school": "",
     "degree": "",
+    "education_level": "",
+    "prepared_degree_level": "",
+    "prepared_degree": "",
     "field_of_study": "",
     "graduation_year": ""
   },
@@ -29,7 +48,9 @@
     "night_shifts": "flexible",
     "holiday_work": "flexible",
     "hours_per_week_min": "",
-    "hours_per_week_max": ""
+    "hours_per_week_max": "",
+    "duration_min_months": "",
+    "duration_max_months": ""
   },
   "preferences": {
     "roles": [],
@@ -48,6 +69,7 @@
   "application": {
     "active_resume_id": "",
     "cover_letter_path": "",
+    "generate_cover_letter": true,
     "saved_answers": [],
     "custom_fields": [],
     "auto_resume_routing": false
@@ -60,23 +82,8 @@
     ]
   },
   "automation": {
-    "enabled_sources": [
-      "france_travail",
-      "hellowork",
-      "indeed",
-      "wttj",
-      "cityone",
-      "plany",
-      "staffme",
-      "adecco",
-      "manpower",
-      "randstad",
-      "synergie",
-      "meteojob",
-      "crit",
-      "samsic",
-      "actual"
-    ],
+    "auto_start_queue": false,
+    "enabled_sources": [],
     "search_engines": [
       "bing",
       "duckduckgo"
@@ -89,11 +96,8 @@
     "scan_delay_seconds": 0.25,
     "browser_mode": "cdp",
     "chrome_cdp_endpoint": "http://127.0.0.1:9222",
-    "direct_source_discovery": true,
-    "direct_sources": [
-      "plany",
-      "cityone"
-    ],
+    "direct_source_discovery": false,
+    "direct_sources": [],
     "direct_source_pages": 3,
     "auto_submit": false,
     "chatgpt_web_reviewer": {

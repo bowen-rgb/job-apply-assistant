@@ -601,5 +601,8 @@
   "Wait for preparation to finish before reviewing materials.": "Aguarde o fim da preparação para rever os documentos.",
   "Material review unavailable. Prepare again.": "A revisão está indisponível. Prepare novamente.",
   "A closed application cannot be reopened for preparation": "Uma candidatura encerrada não pode ser preparada novamente.",
-  "A withdrawn application cannot be reopened": "Uma candidatura retirada não pode ser reaberta."
+  "A withdrawn application cannot be reopened": "Uma candidatura retirada não pode ser reaberta.",
+  "Durée minimale (mois)": "Duração mínima (meses)",
+  "Durée maximale (mois)": "Duração máxima (meses)",
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Deixe em branco para não limitar a duração. Aplica-se apenas a este perfil. Configure a duração PFE em «Estágio e investigação»."
 }

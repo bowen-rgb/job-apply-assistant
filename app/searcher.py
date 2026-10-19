@@ -306,6 +306,8 @@ def _expand_listing(hit: Hit, limit: int, report=None) -> list[Hit]:
 def search_web(query: str, limit: int, provider_key: str, engines: list[str], market: str = '', report=None) -> list[Hit]:
     errors = []
     for engine in engines:
+        if engine == 'searxng':
+            continue  # Configured endpoint is handled by the PFE discovery wrapper.
         method = 'web:' + engine
         emit(report, provider_key, method, 'running', query=query)
         try:
@@ -316,10 +318,16 @@ def search_web(query: str, limit: int, provider_key: str, engines: list[str], ma
             else:
                 emit(report, provider_key, method, 'unavailable', error='Unsupported search engine')
                 continue
+            if provider_key.startswith('pfe_'):
+                for hit in hits:hit.provider_key=provider_key
             site_filter = re.search(r'\bsite:([^\s]+)', query)
             if site_filter:
                 domain = site_filter.group(1).lower().strip('"')
                 hits = [hit for hit in hits if _host(hit.url) == domain or _host(hit.url).endswith('.' + domain)]
+            if provider_key.startswith('pfe_'):
+                emit(report, provider_key, method, 'success' if hits else 'empty', results=len(hits))
+                if hits:return hits[:limit]
+                continue
             listings = [hit for hit in hits if (hit.prefetched or {}).get('discovery_listing')]
             hits = [hit for hit in hits if not (hit.prefetched or {}).get('discovery_listing')]
             for listing in listings[:2]:
@@ -346,10 +354,21 @@ def discover(profile: dict, report=None) -> Iterable[Hit]:
     for source in enabled_sources(profile):
         emit(report, source.key, 'web', 'pending' if source.key in planned else 'not_run')
 
+    pfe_enabled = bool((profile.get('pfe') or {}).get('enabled'))
+    if pfe_enabled:
+        from .pfe import remembered_boards, settings
+        from .pfe_discovery import research_hits
+        for hit in research_hits(profile, report):
+            if _dedupe_key(hit.url) not in seen:
+                seen.add(_dedupe_key(hit.url));early_hits.append(hit)
+        remembered = remembered_boards()
+    else:
+        remembered = []
+
     # Public ATS board APIs configured by the user. This mirrors the robust scouting
     # pattern used by mature open-source auto-apply projects, while keeping the board
     # identifiers explicit and local rather than scraping private endpoints.
-    for row in discover_boards(profile.get('company_boards', []), report=report):
+    for row in discover_boards(list(profile.get('company_boards', [])) + remembered, report=report):
         hit = Hit(**row)
         key = _dedupe_key(hit.url)
         if key in seen:
@@ -373,7 +392,17 @@ def discover(profile: dict, report=None) -> Iterable[Hit]:
     market = str(profile.get('search_market', '') or '').strip()
     for provider_key, query in queries:
         try:
-            hits = search_web(query, limit, provider_key, engines, market, report=report)
+            endpoint=(profile.get('pfe') or {}).get('searxng_url','')
+            hits=[]
+            if pfe_enabled and endpoint:
+                from .pfe_discovery import searx_search
+                try:
+                    hits=searx_search(endpoint,query,limit,provider_key)
+                    emit(report,provider_key,'web:searxng','success' if hits else 'empty',results=len(hits))
+                except Exception as exc:
+                    emit(report,provider_key,'web:searxng','failed',error=str(exc))
+            if not hits:
+                hits = search_web(query, limit, provider_key, engines, market, report=report)
         except Exception:
             continue  # Each engine failure has already been reported.
         for hit in hits:

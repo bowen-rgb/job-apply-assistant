@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/static/pending-tasks.css" />
   <link rel="stylesheet" href="/static/workbench.css" />
   <link rel="stylesheet" href="/static/surfaces.css" />
+  <link rel="stylesheet" href="/static/pfe.css" />
   <link rel="stylesheet" href="/static/refinements.css" />
   <link rel="stylesheet" href="/static/reference-system.css" />
 </head>
@@ -68,6 +69,7 @@
     <section id="overviewView" class="hidden" aria-labelledby="overviewTitle"></section>
     <section id="guideView" class="hidden" aria-labelledby="guideTitle"></section>
     <div id="welcomeGuide" class="guide-welcome"></div>
+    <section id="pfeView" class="hidden"></section>
     <section id="jobsView">
       <header>
         <div>
@@ -178,6 +180,9 @@
             <label>Jours fériés / fêtes<select id="holiday_work"><option value="yes">Oui</option><option value="no">Non</option><option value="flexible">Flexible</option></select></label>
             <label>Heures / semaine min<input id="hours_min" type="number" min="0"></label>
             <label>Heures / semaine max<input id="hours_max" type="number" min="0"></label>
+            <label>Durée minimale (mois)<input id="duration_min_months" type="number" min="1" max="60"></label>
+            <label>Durée maximale (mois)<input id="duration_max_months" type="number" min="1" max="60"></label>
+            <p class="small wide">Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».</p>
           </div>
         </section>
 
@@ -304,6 +309,7 @@
 <script src="/static/workbench.js"></script>
 <script src="/static/surfaces.js"></script>
 <script src="/static/interaction-refinements.js"></script>
+<script src="/static/pfe.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

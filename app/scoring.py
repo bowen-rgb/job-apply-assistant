@@ -99,6 +99,10 @@ def evaluate(job: dict, profile: dict):
         if not re.search(r'\b(?:cdd|interim|extra)\b', employment):
             return -100, 'reject', 'contract_conflict:CDI', ['hard_contract_conflict']
 
+    if (profile.get('pfe') or {}).get('enabled'):
+        from .pfe import evaluate_pfe
+        return evaluate_pfe(job, profile)
+
     holiday = _holiday_conflict(body + '\n' + title)
     holiday_pref = str((profile.get('availability') or {}).get('holiday_work', 'flexible')).lower()
     if holiday and holiday_pref == 'no':
@@ -182,18 +186,17 @@ def evaluate(job: dict, profile: dict):
         score += 4
         reasons.append('structured_jobposting')
 
-    # Penalize clearly long durations when no exact end date was found.
-    if not end:
-        m = re.search(r'\b(?:cdd|contrat|mission|duree)[^\n.]{0,25}?\b(\d{1,2})\s*mois\b', t)
-        if m:
-            months = int(m.group(1))
-            if months >= 4:
-                score -= 35
-                reasons.append(f'long_duration:{months}m')
-                flags.append('duration_risk')
-            elif months <= 3:
-                score += 6
-                reasons.append(f'short_duration:{months}m')
+    # Duration is a candidate constraint, never a universal preference for short work.
+    availability = profile.get('availability') or {}
+    from .constraints import advertised_duration
+    duration, _ = advertised_duration(t)
+    if duration:
+        minimum = availability.get('duration_min_months')
+        maximum = availability.get('duration_max_months')
+        if minimum not in (None, '') and duration[1] < float(minimum):
+            return -95, 'reject', f'duration_below_min:{duration[1]}m', ['duration_conflict']
+        if maximum not in (None, '') and duration[0] > float(maximum):
+            return -95, 'reject', f'duration_above_max:{duration[0]}m', ['duration_conflict']
 
     score = max(-100, min(100, score))
     # Local relevance and final eligibility are separate: unknown dates need review,

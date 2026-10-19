@@ -161,6 +161,10 @@ def build_queries(profile: dict) -> list[tuple[str, str]]:
     provide a fast path for sources such as Plany and City One. We avoid depending
     on undocumented/private job-board APIs.
     """
+    if (profile.get('pfe') or {}).get('enabled'):
+        from .pfe import query_plan
+        return [('pfe_'+row['channel'], row['query']) for row in query_plan(profile)]
+
     role_expr = _role_expr(profile)
     contract_expr = _contract_expr(profile)
     location_expr = _location_expr(profile)
@@ -185,4 +189,7 @@ def build_queries(profile: dict) -> list[tuple[str, str]]:
     ])
 
     cap = int(profile.get('search_queries_per_run', 18))
-    return queries[:max(1, cap)]
+    global_queries = [row for row in queries if row[0] == 'global']
+    source_queries = [row for row in queries if row[0] != 'global']
+    ordered = global_queries[:1] + source_queries + global_queries[1:]
+    return ordered[:max(1, cap)]

@@ -50,6 +50,11 @@ def build_job_dedupe_key(*, title: str, company: str, location: str = '', scope:
 
 
 SOURCE_PRIORITY = {
+    'pfe_research': 1,
+    'pfe_ats': 2,
+    'pfe_student': 3,
+    'pfe_global': 45,
+    'pfe_learned': 2,
     'greenhouse_board': 0,
     'ashby_board': 0,
     'lever_board': 0,

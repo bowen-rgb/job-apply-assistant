@@ -50,7 +50,11 @@ class MatchingTests(unittest.TestCase):
         job = dict(title='Serveur CDD Paris', body='Expérience : 6 mois', employment_type='CDD')
         self.assertNotIn('duration_risk', evaluate(job, self.profile)[3])
         job['body'] = 'Contrat de 6 mois'
-        self.assertIn('duration_risk', evaluate(job, self.profile)[3])
+        self.assertNotIn('duration_risk', evaluate(job, self.profile)[3])
+        constrained=dict(self.profile,availability={'duration_max_months':3})
+        self.assertEqual(evaluate(job,constrained)[1],'reject')
+        job['body']='Expérience : 6 mois'
+        self.assertNotEqual(evaluate(job,constrained)[1],'reject')
 
     def test_structured_description_excludes_navigation_and_related_dates(self):
         html = '<nav>CDI Bordeaux</nav><main><h1>Serveur Paris</h1><p>Related role: CDI Lyon jusqu’au 31 décembre 2030</p></main>'
@@ -67,7 +71,7 @@ class MatchingTests(unittest.TestCase):
         profile = dict(self.profile, enabled_sources=['france_travail', 'cityone'], search_queries_per_run=2,
                        include_terms=['disponible immédiatement', 'CDD', 'intérim'])
         queries = build_queries(profile)
-        self.assertEqual([key for key, _ in queries], ['france_travail', 'cityone'])
+        self.assertEqual([key for key, _ in queries], ['global', 'france_travail'])
         self.assertTrue(all('disponible immédiatement' not in query for _, query in queries))
         self.assertTrue(all('-"CDI"' not in query for _, query in queries))
 

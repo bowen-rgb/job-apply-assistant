@@ -29,6 +29,7 @@ frame = scrape_jobs(
     hours_old=p.get("hours_old") or None,
     country_indeed=p.get("country_indeed") or "worldwide",
     linkedin_fetch_description=bool(p.get("linkedin_fetch_description", False)),
+    job_type=p.get("job_type") or None,
     verbose=0,
 )
 rows = [] if frame is None else frame.to_dict(orient="records")
@@ -108,6 +109,11 @@ def discover(profile: dict[str, Any], report=None) -> Iterable[JobSpyResult]:
         sites = ['indeed', 'linkedin', 'google']
     roles = [str(x).strip() for x in profile.get('preferred_roles', []) if str(x).strip()]
     locations = [str(x).strip() for x in profile.get('locations', []) if str(x).strip()] or ['']
+    if (profile.get('pfe') or {}).get('enabled'):
+        from .pfe import settings, DIRECTIONS
+        cfg=settings(profile)
+        roles=['stage '+DIRECTIONS[key][0] for key in (cfg['directions'] or list(DIRECTIONS))]
+        locations=cfg['locations'] or ['France']
     if not roles:
         return
     results_wanted = max(1, min(200, int(profile.get('jobspy_results_wanted', 20))))
@@ -125,6 +131,7 @@ def discover(profile: dict[str, Any], report=None) -> Iterable[JobSpyResult]:
                     continue
                 payload = {
                     'sites': [requested_site],
+                    'job_type': 'internship' if (profile.get('pfe') or {}).get('enabled') else None,
                     'search_term': role,
                     'google_search_term': f'{role} jobs {location}'.strip(),
                     'location': location,

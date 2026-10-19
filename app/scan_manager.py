@@ -113,7 +113,12 @@ def _upsert_hit(hit, profile: dict, report=None) -> tuple[str, int | None]:
     fetch_error = ''
     html = ''
     try:
-        html, fetch_mode = fetch_html(hit.url, dynamic_fallback=bool(profile.get('dynamic_fetch_fallback', True)))
+        if pre.get('user_supplied_text'):raise ValueError('User-provided text; original access is not verified')
+        if (profile.get('pfe') or {}).get('enabled'):
+            from .pfe_discovery import fetch_document
+            html,fetch_mode=fetch_document(hit.url,hit.title)
+        else:
+            html, fetch_mode = fetch_html(hit.url, dynamic_fallback=bool(profile.get('dynamic_fetch_fallback', True)))
         if fetch_mode == 'static-blocked':
             raise RuntimeError('Job page blocked or unreadable')
         doc = extract_job_document(html, hit.url, fallback_title=hit.title, fallback_snippet=hit.snippet)
@@ -162,10 +167,15 @@ def _upsert_hit(hit, profile: dict, report=None) -> tuple[str, int | None]:
             'valid_through': valid_through, 'salary': salary, 'snippet': hit.snippet,
         }
 
-    score, decision, reason, _flags = evaluate(payload, profile)
     if report:
         report(hit.provider_key, 'detail', 'failed' if fetch_error else 'success',
                results=0 if fetch_error else 1, error=fetch_error)
+    if (profile.get('pfe') or {}).get('enabled'):
+        from .pfe_discovery import process_page
+        classification=process_page(hit,payload,html,not fetch_error)
+        if classification!='vacancy':return classification,None
+
+    score, decision, reason, _flags = evaluate(payload, profile)
     if fetch_error:
         marker = 'unverified_prefetched' if pre else 'unverified_search_snippet'
         reason = (reason + '; ' if reason else '') + marker
@@ -266,6 +276,19 @@ def _worker(base_profile: dict, scan_id: int):
             label = campaign.get('search_profile_label', 'Default')
             _set(current_campaign=label, message=f'Scanning campaign: {label}')
             report = lambda source, method, state, **details: _source_event(label, source, method, state, **details)
+            if (campaign.get('pfe') or {}).get('enabled'):
+                from .pfe import init_tables
+                from .pfe_discovery import verify
+                init_tables()
+                with connect() as c:
+                    stale=[dict(row) for row in c.execute("SELECT j.* FROM jobs j JOIN pfe_evidence p ON j.id=p.job_id WHERE julianday('now')-julianday(p.checked_at)>1.0/6 AND j.application_status NOT IN ('submitted','submitted_verified','opening','preparing','preparing_letter') LIMIT 10")]
+                for row in stale:
+                    try:
+                        result=verify(row,campaign)
+                        report('pfe_research','reverify','success' if result['state']!='unverified' else 'failed',results=1 if result['state']!='unverified' else 0)
+                    except ValueError:
+                        pass
+
             for hit in discover(campaign, report=report):
                 s = status()
                 _set(
@@ -275,7 +298,11 @@ def _worker(base_profile: dict, scan_id: int):
                     message=f'Fetching · {label}',
                 )
                 try:
-                    action, _ = _upsert_hit(hit, campaign, report=report)
+                    action, job_id = _upsert_hit(hit, campaign, report=report)
+                    if job_id and (campaign.get('pfe') or {}).get('enabled'):
+                        from .pfe import record_evidence
+                        with connect() as c:stored=dict(c.execute('SELECT * FROM jobs WHERE id=?',(job_id,)).fetchone())
+                        record_evidence(job_id,stored,campaign,'unverified_' not in stored['reason'],hit.url)
                     s = status()
                     _set(
                         fetched=s['fetched'] + 1,

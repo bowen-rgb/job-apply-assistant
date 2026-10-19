@@ -601,5 +601,8 @@
   "Wait for preparation to finish before reviewing materials.": "Wait for preparation to finish before reviewing materials.",
   "Material review unavailable. Prepare again.": "Material review unavailable. Prepare again.",
   "A closed application cannot be reopened for preparation": "A closed application cannot be reopened for preparation",
-  "A withdrawn application cannot be reopened": "A withdrawn application cannot be reopened"
+  "A withdrawn application cannot be reopened": "A withdrawn application cannot be reopened",
+  "Durée minimale (mois)": "Minimum duration (months)",
+  "Durée maximale (mois)": "Maximum duration (months)",
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Leave blank for no duration limit. These settings belong to this profile only. Set the PFE duration in “PFE & research”."
 }

@@ -1,6 +1,6 @@
 /* Shared headings, section navigation and responsive primary navigation. */
 window.Surfaces=(()=>{
-  const names={jobsView:'JOB DISCOVERY',profileView:'PERSONAL FILE',pipelineView:'APPLICATION QUEUE',guideView:'GET STARTED',accountsDialog:'PROFILES / ACCOUNTS',pendingTasksDialog:'PERSONAL TASKS'};
+  const names={pfeView:'PFE / RESEARCH DISCOVERY',jobsView:'JOB DISCOVERY',profileView:'PERSONAL FILE',pipelineView:'APPLICATION QUEUE',guideView:'GET STARTED',accountsDialog:'PROFILES / ACCOUNTS',pendingTasksDialog:'PERSONAL TASKS'};
   function stamp(root){
     const header=root.querySelector(':scope > header');if(!header)return;
     header.classList.add('surface-heading');

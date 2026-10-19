@@ -45,6 +45,7 @@ def _deep_merge(base: dict, incoming: dict) -> dict:
 def default_profile() -> dict[str, Any]:
     return {
         'schema_version': 8,
+        'pfe': {'enabled': False, 'directions': [], 'locations': ['France'], 'start_month': '', 'duration_months': 6, 'start_flexibility_months': 1, 'phd_goal': False, 'skills': [], 'school_portal_url': '', 'searxng_url': '', 'research_sources': True, 'team_discovery': True},
         'identity': {
             'first_name': '',
             'last_name': '',
@@ -78,6 +79,8 @@ def default_profile() -> dict[str, Any]:
             'holiday_work': 'flexible',
             'hours_per_week_min': '',
             'hours_per_week_max': '',
+            'duration_min_months': '',
+            'duration_max_months': '',
         },
         'preferences': {
             'roles': [],
@@ -110,11 +113,7 @@ def default_profile() -> dict[str, Any]:
         },
         'automation': {
             'auto_start_queue': False,
-            'enabled_sources': [
-                'france_travail', 'hellowork', 'indeed', 'wttj', 'cityone', 'plany',
-                'staffme', 'adecco', 'manpower', 'randstad', 'synergie', 'meteojob',
-                'crit', 'samsic', 'actual'
-            ],
+            'enabled_sources': [],
             'search_engines': ['bing', 'duckduckgo'],
             'search_queries_per_run': 18,
             'search_market': '',
@@ -124,8 +123,8 @@ def default_profile() -> dict[str, Any]:
             'scan_delay_seconds': 0.25,
             'browser_mode': 'cdp',
             'chrome_cdp_endpoint': 'http://127.0.0.1:9222',
-            'direct_source_discovery': True,
-            'direct_sources': ['plany', 'cityone'],
+            'direct_source_discovery': False,
+            'direct_sources': [],
             'direct_source_pages': 3,
             'auto_submit': False,
             'chatgpt_web_reviewer': {
@@ -176,7 +175,7 @@ def _legacy_to_v5(data: dict[str, Any]) -> dict[str, Any]:
         'phone': data.get('phone', ''),
         'city': data.get('city', ''),
         'postal_code': data.get('postal_code', ''),
-        'country': data.get('country', 'France'),
+        'country': data.get('country', ''),
         'linkedin': data.get('linkedin', ''),
         'portfolio': data.get('portfolio', ''),
     })
@@ -244,8 +243,28 @@ def save_profile_raw(data: dict[str, Any]) -> dict[str, Any]:
     current = ensure_profile()
     merged = _deep_merge(current, data or {})
     merged['schema_version'] = 8
+    validate_constraints(merged)
     profile_file().write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding='utf-8')
     return merged
+
+
+def validate_constraints(profile):
+    from .pfe_config import PFESettings
+    if 'pfe' in profile:
+        profile['pfe'] = PFESettings.model_validate(profile['pfe']).model_dump()
+    availability = profile.get('availability') or {}
+    bounds = []
+    for key in ('duration_min_months', 'duration_max_months'):
+        value = availability.get(key)
+        if value in (None, ''):
+            bounds.append(None)
+            continue
+        value = float(value)
+        if not 0 < value <= 60:
+            raise ValueError('Contract duration must be between 0 and 60 months, or blank')
+        bounds.append(value)
+    if all(value is not None for value in bounds) and bounds[0] > bounds[1]:
+        raise ValueError('Minimum duration must not exceed maximum duration')
 
 
 def _resume_index() -> list[dict[str, Any]]:
@@ -369,6 +388,7 @@ def replace_profile_raw(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError('Profile must be a JSON object')
     normalized = _legacy_to_v5(data)
     normalized['schema_version'] = 8
+    validate_constraints(normalized)
     profile_file().write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding='utf-8')
     return normalized
 
@@ -484,6 +504,7 @@ def runtime_profile(raw: dict[str, Any] | None = None) -> dict[str, Any]:
         'availability_start_date': avail.get('start_date', ''),
         'max_end_date': avail.get('end_date', ''),
         'availability': avail,
+        'pfe': p.get('pfe', {}),
         'locations': prefs.get('locations', []),
         'contracts': prefs.get('contracts', []),
         'preferred_roles': prefs.get('roles', []),

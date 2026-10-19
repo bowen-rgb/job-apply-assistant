@@ -601,5 +601,8 @@
   "Wait for preparation to finish before reviewing materials.": "请等待准备流程结束，再审核材料。",
   "Material review unavailable. Prepare again.": "材料审核记录不可用，请重新准备。",
   "A closed application cannot be reopened for preparation": "已结束的申请不能重新进入准备流程。",
-  "A withdrawn application cannot be reopened": "已撤回的申请不能重新打开。"
+  "A withdrawn application cannot be reopened": "已撤回的申请不能重新打开。",
+  "Durée minimale (mois)": "最短时长（月）",
+  "Durée maximale (mois)": "最长时长（月）",
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "留空表示不限制时长，仅影响当前档案。毕业实习模式请在“毕业实习与科研机会”中设置时长。"
 }
