@@ -614,5 +614,21 @@
   "Technologie d’équipe": "Team technology",
   "Objectif de formation": "Learning target",
   "Non confirmé": "Unconfirmed",
-  "Aucune compétence importée.": "No imported skills yet."
+  "Aucune compétence importée.": "No imported skills yet.",
+  "Chrome piloté par la plateforme": "Platform automation browser",
+  "Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.": "Open dedicated Chrome here, sign in to ChatGPT if needed, then start the queue. Opening Chrome does not start any applications.",
+  "Vérification de Chrome…": "Checking Chrome…",
+  "Ouvrir Chrome dédié": "Open dedicated Chrome",
+  "Vérifier la connexion Chrome": "Check Chrome connection",
+  "Redémarrez la plateforme pour charger le contrôle Chrome.": "Restart the platform to load Chrome controls.",
+  "Connexion à la plateforme impossible.": "Cannot connect to the platform.",
+  "Ouvrez Chrome depuis la plateforme, puis vérifiez la connexion. Aucun remplacement par Edge.": "Open Chrome from the platform, then check the connection. Edge is never used as a fallback.",
+  "Choisissez Chrome dédié (CDP) dans le profil pour utiliser la file pilotée par la plateforme.": "Choose dedicated Chrome (CDP) in the profile to use the platform queue.",
+  "La connexion configurée ne correspond pas au Chrome dédié. La file reste arrêtée ; aucun remplacement par Edge.": "The configured connection is not dedicated Chrome. The queue stays stopped; Edge is not used.",
+  "La connexion de contrôle Chrome locale est indisponible.": "Local Chrome control connection is unavailable.",
+  "Chrome dédié connecté. Ouvrir Chrome ne lance aucune candidature. Vérifiez votre connexion à ChatGPT.": "Dedicated Chrome connected. Opening Chrome does not start applications. Check your ChatGPT sign-in.",
+  "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "Google Chrome was not found. Install Chrome; the platform does not switch to Edge.",
+  "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "Chrome is not responding yet. Check its window or run start_chrome_debug.bat, then check the connection. The queue stays stopped.",
+  "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "Configure a local Chrome connection, for example http://127.0.0.1:9222.",
+  "La connexion Chrome locale doit préciser son port.": "The local Chrome connection must include a port."
 }

@@ -614,5 +614,21 @@
   "Technologie d’équipe": "团队技术",
   "Objectif de formation": "学习目标",
   "Non confirmé": "未确认",
-  "Aucune compétence importée.": "尚未导入技能。"
+  "Aucune compétence importée.": "尚未导入技能。",
+  "Chrome piloté par la plateforme": "平台自动化浏览器",
+  "Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.": "先在这里打开专用 Chrome，按需登录 ChatGPT，再启动队列。打开浏览器不会开始投递。",
+  "Vérification de Chrome…": "正在检查 Chrome…",
+  "Ouvrir Chrome dédié": "打开专用 Chrome",
+  "Vérifier la connexion Chrome": "检查 Chrome 连接",
+  "Redémarrez la plateforme pour charger le contrôle Chrome.": "请重新启动求职平台，以加载新的 Chrome 控制功能。",
+  "Connexion à la plateforme impossible.": "无法连接求职平台。",
+  "Ouvrez Chrome depuis la plateforme, puis vérifiez la connexion. Aucun remplacement par Edge.": "请从平台打开 Chrome，再检查连接。系统不会切换到 Edge。",
+  "Choisissez Chrome dédié (CDP) dans le profil pour utiliser la file pilotée par la plateforme.": "请在档案中选择专用 Chrome（CDP），再使用平台队列。",
+  "La connexion configurée ne correspond pas au Chrome dédié. La file reste arrêtée ; aucun remplacement par Edge.": "当前连接的不是专用 Chrome。队列保持停止，系统不会切换到 Edge。",
+  "La connexion de contrôle Chrome locale est indisponible.": "无法连接本机 Chrome 控制接口。",
+  "Chrome dédié connecté. Ouvrir Chrome ne lance aucune candidature. Vérifiez votre connexion à ChatGPT.": "专用 Chrome 已连接。打开浏览器不会开始投递。请确认已登录 ChatGPT。",
+  "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "未找到 Google Chrome。请先安装；系统不会切换到 Edge。",
+  "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "Chrome 尚未响应。请查看 Chrome 窗口，或打开 start_chrome_debug.bat，然后重新检查连接。队列保持停止。",
+  "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "请配置本机 Chrome 连接，例如 http://127.0.0.1:9222。",
+  "La connexion Chrome locale doit préciser son port.": "本机 Chrome 连接地址需要包含端口号。"
 }

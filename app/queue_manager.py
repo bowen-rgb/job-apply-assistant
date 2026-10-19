@@ -213,6 +213,17 @@ def _worker(mode: str = 'one'):
 def _start(mode: str = 'one') -> dict[str, Any]:
     if mode not in {'one', 'batch'}:
         raise ValueError('Invalid queue mode')
+    with _lock:
+        running = bool(_state['running'])
+    if running:
+        return status()
+    with connect() as connection:
+        pending = connection.execute("SELECT 1 FROM application_queue WHERE status='queued' LIMIT 1").fetchone()
+    if not pending:
+        return status()
+    # Fail before claiming any job or clearing the user's paused state.
+    from .browser_control import require_connection
+    require_connection()
     already = False
     with _lock:
         already = bool(_state['running'])

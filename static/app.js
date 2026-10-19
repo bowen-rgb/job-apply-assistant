@@ -445,7 +445,7 @@ el('searchBtn').onclick=async()=>{statusEl.textContent=tr('Démarrage du scan…
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
 el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;await requestJson('/api/review/batch?mode=strong',{method:'POST'});statusEl.textContent=tr('Batch review lancé');setTimeout(load,1000);};
 async function refreshAutomationStatus(){
-  try{const h=await requestJson('/api/health');Guide.health(h);el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.')].join(' · ');}
+  try{const h=await requestJson('/api/health');Guide.health(h);ChromeControl.refresh(h.browser_control);el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.')].join(' · ');}
   catch(error){Guide.health(null);el('automationStatus').textContent=error.message;}
 }
 el('healthBtn').onclick=refreshAutomationStatus;
@@ -757,7 +757,7 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{renderSkillInventory();Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
 

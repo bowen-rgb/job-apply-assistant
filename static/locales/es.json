@@ -614,5 +614,21 @@
   "Technologie d’équipe": "Tecnología del equipo",
   "Objectif de formation": "Objetivo de aprendizaje",
   "Non confirmé": "Sin confirmar",
-  "Aucune compétence importée.": "Sin competencias importadas."
+  "Aucune compétence importée.": "Sin competencias importadas.",
+  "Chrome piloté par la plateforme": "Navegador de automatización",
+  "Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.": "Abre Chrome dedicado aquí, inicia sesión en ChatGPT si hace falta y luego inicia la cola. Abrir Chrome no inicia solicitudes.",
+  "Vérification de Chrome…": "Comprobando Chrome…",
+  "Ouvrir Chrome dédié": "Abrir Chrome dedicado",
+  "Vérifier la connexion Chrome": "Comprobar conexión de Chrome",
+  "Redémarrez la plateforme pour charger le contrôle Chrome.": "Reinicia la plataforma para cargar los controles de Chrome.",
+  "Connexion à la plateforme impossible.": "No se puede conectar a la plataforma.",
+  "Ouvrez Chrome depuis la plateforme, puis vérifiez la connexion. Aucun remplacement par Edge.": "Abre Chrome desde la plataforma y comprueba la conexión. No se cambia a Edge.",
+  "Choisissez Chrome dédié (CDP) dans le profil pour utiliser la file pilotée par la plateforme.": "Selecciona Chrome dedicado (CDP) en el perfil para usar la cola.",
+  "La connexion configurée ne correspond pas au Chrome dédié. La file reste arrêtée ; aucun remplacement par Edge.": "La conexión no corresponde a Chrome dedicado. La cola sigue detenida; no se usa Edge.",
+  "La connexion de contrôle Chrome locale est indisponible.": "El control local de Chrome no está disponible.",
+  "Chrome dédié connecté. Ouvrir Chrome ne lance aucune candidature. Vérifiez votre connexion à ChatGPT.": "Chrome dedicado conectado. Abrir Chrome no inicia solicitudes. Comprueba tu sesión de ChatGPT.",
+  "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "No se encuentra Google Chrome. Instálalo; la plataforma no cambia a Edge.",
+  "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "Chrome aún no responde. Revisa su ventana o ejecuta start_chrome_debug.bat y comprueba la conexión. La cola sigue detenida.",
+  "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "Configura una conexión local de Chrome, por ejemplo http://127.0.0.1:9222.",
+  "La connexion Chrome locale doit préciser son port.": "La conexión local de Chrome debe incluir un puerto."
 }

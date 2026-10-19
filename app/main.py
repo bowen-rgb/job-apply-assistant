@@ -266,16 +266,10 @@ def health():
     raw = load_profile_raw()
     p = runtime_profile(raw)
     resume = active_resume_path(raw)
-    cdp = p.get('chrome_cdp_endpoint', 'http://127.0.0.1:9222').rstrip('/')
-    cdp_ok = False
-    cdp_browser = ''
-    try:
-        with urllib.request.urlopen(cdp + '/json/version', timeout=1.5) as r:
-            data = json.loads(r.read().decode('utf-8', errors='ignore'))
-            cdp_ok = True
-            cdp_browser = data.get('Browser', '')
-    except Exception:
-        pass
+    from .browser_control import status as browser_status
+    controlled_browser = browser_status(p)
+    cdp_ok = controlled_browser['ready']
+    cdp_browser = controlled_browser['browser']
     try:
         import scrapling  # noqa: F401
         scrapling_ok = True
@@ -293,6 +287,7 @@ def health():
         'resume_count': len(list_resumes()),
         'cdp_ok': cdp_ok,
         'cdp_browser': cdp_browser,
+        'browser_control': controlled_browser,
         'scrapling_ok': scrapling_ok,
         'playwright_ok': playwright_ok,
         'jobspy_ok': jobspy_available(),
@@ -326,6 +321,27 @@ def sources():
             if key not in known:
                 rows.append({'key': key, 'label': f'JobSpy · {str(site).strip().title()}', 'domain': '', 'enabled': True, 'custom': False, 'filter_only': True})
     return rows
+
+
+@app.get('/api/browser')
+def browser_connection():
+    from .browser_control import status
+    return status()
+
+
+@app.post('/api/browser/start')
+def open_platform_chrome():
+    from .browser_control import start
+    from .workspaces import LOCK, candidate_id, active_id
+    with LOCK:
+        if candidate_id() != active_id():
+            raise HTTPException(409, 'Candidate changed. Reload before continuing.')
+        if queue_status().get('running'):
+            raise HTTPException(409, 'Stop the current preparation before opening another browser session.')
+        try:
+            return start()
+        except (ValueError, OSError) as exc:
+            raise HTTPException(409, str(exc))
 
 
 @app.get('/api/jobs')
@@ -616,13 +632,20 @@ def activate_candidate(identifier: str):
 def add_queue(payload: QueueRequest):
     result = queue_enqueue(payload.job_ids, payload.priority)
     if load_profile_raw().get('automation', {}).get('auto_start_queue') is True and not result.get('paused'):
-        queue_start('batch')
+        try:
+            queue_start('batch')
+        except ValueError as exc:
+            result = queue_status()
+            result['blocked_reason'] = str(exc)
     return result
 
 
 @app.post('/api/queue/start')
 def start_queue(mode: Literal['one', 'batch'] = 'one'):
-    return queue_start(mode)
+    try:
+        return queue_start(mode)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
 
 
 @app.post('/api/queue/{job_id}/retry')

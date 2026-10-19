@@ -614,5 +614,21 @@
   "Technologie d’équipe": "Technologie d’équipe",
   "Objectif de formation": "Objectif de formation",
   "Non confirmé": "Non confirmé",
-  "Aucune compétence importée.": "Aucune compétence importée."
+  "Aucune compétence importée.": "Aucune compétence importée.",
+  "Chrome piloté par la plateforme": "Chrome piloté par la plateforme",
+  "Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.": "Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.",
+  "Vérification de Chrome…": "Vérification de Chrome…",
+  "Ouvrir Chrome dédié": "Ouvrir Chrome dédié",
+  "Vérifier la connexion Chrome": "Vérifier la connexion Chrome",
+  "Redémarrez la plateforme pour charger le contrôle Chrome.": "Redémarrez la plateforme pour charger le contrôle Chrome.",
+  "Connexion à la plateforme impossible.": "Connexion à la plateforme impossible.",
+  "Ouvrez Chrome depuis la plateforme, puis vérifiez la connexion. Aucun remplacement par Edge.": "Ouvrez Chrome depuis la plateforme, puis vérifiez la connexion. Aucun remplacement par Edge.",
+  "Choisissez Chrome dédié (CDP) dans le profil pour utiliser la file pilotée par la plateforme.": "Choisissez Chrome dédié (CDP) dans le profil pour utiliser la file pilotée par la plateforme.",
+  "La connexion configurée ne correspond pas au Chrome dédié. La file reste arrêtée ; aucun remplacement par Edge.": "La connexion configurée ne correspond pas au Chrome dédié. La file reste arrêtée ; aucun remplacement par Edge.",
+  "La connexion de contrôle Chrome locale est indisponible.": "La connexion de contrôle Chrome locale est indisponible.",
+  "Chrome dédié connecté. Ouvrir Chrome ne lance aucune candidature. Vérifiez votre connexion à ChatGPT.": "Chrome dédié connecté. Ouvrir Chrome ne lance aucune candidature. Vérifiez votre connexion à ChatGPT.",
+  "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.",
+  "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.",
+  "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.",
+  "La connexion Chrome locale doit préciser son port.": "La connexion Chrome locale doit préciser son port."
 }

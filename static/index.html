@@ -113,6 +113,12 @@
 
     <section id="pipelineView" class="hidden">
       <header><div><h1>Pipeline & file</h1><p id="pipelineSummary">Suivi local des candidatures et préparation séquentielle.</p></div><div id="pipelineStatus" class="status" role="status" aria-live="polite"></div></header>
+      <section id="managedBrowserPanel" class="settings-card browser-control">
+        <h2>Chrome piloté par la plateforme</h2>
+        <p>Ouvrez le Chrome dédié ici, connectez-vous à ChatGPT si nécessaire, puis lancez la file. Ouvrir Chrome ne démarre aucune candidature.</p>
+        <p data-chrome-status role="status" aria-live="polite">Vérification de Chrome…</p>
+        <div class="queue-actions"><button id="browserOpenChrome" class="primary compact">Ouvrir Chrome dédié</button><button id="browserCheckChrome" class="ghost compact">Vérifier la connexion Chrome</button></div>
+      </section>
       <section id="analyticsCards" class="metric-grid"></section>
       <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Préparez une offre ou toute la file. Le lot s’arrête si une candidature demande votre intervention. Ouvrez ensuite chaque formulaire pour vérifier et envoyer.</p></div><div id="queueControls"><button id="queueAddMatchesBtn" class="ghost compact">Ajouter les postes confirmés</button> <button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueBatchBtn" class="primary compact">Préparer tout le lot</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueFocus" class="queue-focus" aria-live="polite"></div><div class="queue-toolbar"><label>Afficher la file<select id="queueFilter"><option value="all">Tout</option><option value="running">En cours</option><option value="waiting_user">À reprendre par vous</option><option value="error">Préparation échouée</option><option value="queued">En file</option><option value="done">Terminée</option><option value="cancelled">Annulée</option></select></label><p id="queueCounts" class="small"></p></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
@@ -316,6 +322,7 @@
 <script src="/static/surfaces.js"></script>
 <script src="/static/interaction-refinements.js"></script>
 <script src="/static/pfe.js"></script>
+<script src="/static/chrome-control.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
