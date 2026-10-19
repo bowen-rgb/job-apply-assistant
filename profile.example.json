@@ -38,7 +38,9 @@
     "prepared_degree_level": "",
     "prepared_degree": "",
     "field_of_study": "",
-    "graduation_year": ""
+    "graduation_year": "",
+    "skill_inventory": [],
+    "skill_notes": []
   },
   "availability": {
     "start_date": "",

@@ -35,7 +35,7 @@ class AccountManagementUITests(unittest.TestCase):
                         route.fulfill(json=accounts);return
                     data={}
                     if path=='/api/candidates':data={'active_id':'default','items':[dict(id='default',name='Alice',identity={},active=True)]}
-                    elif path=='/api/profile':data={'automation':{}}
+                    elif path=='/api/profile':data={'automation':{},'background':{'skill_inventory':[dict(name='PyTorch',status='learning_target',evidence='Not acquired'),dict(name='CATIA V5',status='self_assessed',evidence='Intermediate')]}}
                     elif path=='/api/resumes':data=resumes
                     elif path=='/api/gmail':data={'configured':False,'connected':False}
                     elif path in {'/api/jobs','/api/sources','/api/pipeline'}:data=[]
@@ -80,6 +80,10 @@ class AccountManagementUITests(unittest.TestCase):
                 expect(page.locator('#accountPassword')).to_have_attribute('required','')
                 page.locator('#accountsClose').click()
                 page.locator('#profileNav').click()
+                expect(page.locator('#skillInventory')).to_contain_text('2 项技能已保存')
+                page.locator('#skillInventory summary').click()
+                expect(page.locator('#skillInventory')).to_contain_text('学习目标')
+                expect(page.locator('#skillInventory')).to_contain_text('本人自评')
                 expect(page.locator('#resumeList')).to_contain_text('使用这份简历')
                 expect(page.locator('#resumeList')).to_contain_text('当前使用')
                 expect(page.locator('#resumeList')).to_contain_text('保存名称和标签')

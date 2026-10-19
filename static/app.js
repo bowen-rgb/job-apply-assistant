@@ -519,13 +519,20 @@ function readSearchProfiles(){
 }
 el('addSearchProfileBtn').onclick=()=>searchProfileRow({});
 
+function renderSkillInventory(){
+  const target=el('skillInventory');if(!target)return;
+  const rows=loadedProfile?.background?.skill_inventory||[];
+  const statuses={self_assessed:'Autoévaluation',practiced_pending_validation:'Pratique à confirmer',basics_to_confirm:'Bases à confirmer',team_only:'Technologie d’équipe',learning_target:'Objectif de formation',unconfirmed:'Non confirmé'};
+  target.innerHTML=rows.length?`<details><summary>${rows.length} ${esc(tr('compétences enregistrées'))}</summary><div role="list">${rows.map(row=>`<article role="listitem" class="skill-record"><h3>${esc(row.name)}</h3><span class="tag">${esc(tr(statuses[row.status]||'Non confirmé'))}</span><p class="small">${esc(row.category||'')} · ${esc(row.priority||'')} · ${esc(row.source_status||'')}</p><p>${esc(row.evidence||'')}</p><p class="small">${esc(Object.entries(row.cv_versions||{}).map(([key,value])=>key+': '+value).join(' · '))}</p></article>`).join('')}</div></details>`:esc(tr('Aucune compétence importée.'));
+}
+
 async function loadProfile(){
   try{
     loadedProfile=await requestJson('/api/profile');
     const i=loadedProfile.identity||{}, b=loadedProfile.background||{}, a=loadedProfile.availability||{}, p=loadedProfile.preferences||{}, au=loadedProfile.automation||{};
     ['first_name','last_name','email','phone','address_line1','city','postal_code','country','linkedin','portfolio'].forEach(k=>setValue(k,i[k]));
     ['current_title','current_company','years_experience','school','degree','education_level','prepared_degree_level','prepared_degree','field_of_study','graduation_year'].forEach(k=>setValue(k,b[k]));
-    setValue('availability_start_date',a.start_date);setValue('availability_end_date',a.end_date);setValue('availability_text',a.text);setValue('weekends',a.weekends||'flexible');setValue('night_shifts',a.night_shifts||'flexible');setValue('holiday_work',a.holiday_work||'flexible');setValue('hours_min',a.hours_per_week_min);setValue('hours_max',a.hours_per_week_max);setValue('duration_min_months',a.duration_min_months);setValue('duration_max_months',a.duration_max_months);
+    renderSkillInventory();el('graduationTimingNote').textContent=b.graduation_timing_note||'';el('graduationTimingNote').hidden=!b.graduation_timing_note;setValue('availability_start_date',a.start_date);setValue('availability_end_date',a.end_date);setValue('availability_text',a.text);setValue('weekends',a.weekends||'flexible');setValue('night_shifts',a.night_shifts||'flexible');setValue('holiday_work',a.holiday_work||'flexible');setValue('hours_min',a.hours_per_week_min);setValue('hours_max',a.hours_per_week_max);setValue('duration_min_months',a.duration_min_months);setValue('duration_max_months',a.duration_max_months);
     setValue('roles',toLines(p.roles));setValue('locations',toLines(p.locations));setValue('contracts',toLines(p.contracts));setValue('industries',toLines(p.industries));setValue('include_terms',toLines(p.include_terms));setValue('exclude_terms',toLines(p.exclude_terms));setValue('max_commute_minutes',p.max_commute_minutes);setValue('min_salary',p.min_salary);setValue('salary_period',p.salary_period||'hour');setValue('languages',toLines(p.languages));
     setValue('search_queries_per_run',au.search_queries_per_run||18);setValue('search_market',au.search_market||'');setValue('custom_sources',(au.custom_sources||[]).map(x=>typeof x==='string'?x:`${x.label||x.domain} | ${x.domain}`).join('\n'));setValue('max_results_per_query',au.max_results_per_query||10);setValue('direct_source_pages',au.direct_source_pages||3);setValue('browser_mode',au.browser_mode||'cdp');setValue('chrome_cdp_endpoint',au.chrome_cdp_endpoint||'http://127.0.0.1:9222');setChecked('dynamic_fetch_fallback',au.dynamic_fetch_fallback!==false);setChecked('reviewer_enabled',au.chatgpt_web_reviewer?.enabled!==false);
     setChecked('jobspy_enabled',au.jobspy_enabled!==false);setValue('jobspy_sites',(au.jobspy_sites||['indeed','google']).join(', '));setValue('jobspy_results_wanted',au.jobspy_results_wanted??20);setValue('jobspy_hours_old',au.jobspy_hours_old??168);setValue('jobspy_country_indeed',au.jobspy_country_indeed||'');setValue('dedupe_scope',au.dedupe_scope||'title_company_location');setValue('auto_scan_interval_minutes',au.auto_scan_interval_minutes??0);setChecked('jobspy_linkedin_fetch_description',au.jobspy_linkedin_fetch_description===true);
@@ -749,7 +756,7 @@ for(const button of document.querySelectorAll('button[id]')){
     catch(error){const target=this.closest('#profileView')?profileStatus:this.closest('#pipelineView')?el('pipelineStatus'):statusEl;target.textContent=error.message;}
   };
 }
-document.addEventListener('localechange',()=>{Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
+document.addEventListener('localechange',()=>{renderSkillInventory();Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
 async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);

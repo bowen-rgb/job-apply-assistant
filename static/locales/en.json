@@ -604,5 +604,15 @@
   "A withdrawn application cannot be reopened": "A withdrawn application cannot be reopened",
   "Durée minimale (mois)": "Minimum duration (months)",
   "Durée maximale (mois)": "Maximum duration (months)",
-  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Leave blank for no duration limit. These settings belong to this profile only. Set the PFE duration in “PFE & research”."
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Leave blank for no duration limit. These settings belong to this profile only. Set the PFE duration in “PFE & research”.",
+  "Compétences et apprentissages": "Skills and learning",
+  "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.": "Learning targets and team technologies do not establish personal mastery.",
+  "compétences enregistrées": "skills recorded",
+  "Autoévaluation": "Self-assessed",
+  "Pratique à confirmer": "Practice pending validation",
+  "Bases à confirmer": "Basics to confirm",
+  "Technologie d’équipe": "Team technology",
+  "Objectif de formation": "Learning target",
+  "Non confirmé": "Unconfirmed",
+  "Aucune compétence importée.": "No imported skills yet."
 }

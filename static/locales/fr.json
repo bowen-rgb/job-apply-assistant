@@ -604,5 +604,15 @@
   "A withdrawn application cannot be reopened": "Une candidature retirée ne peut pas être rouverte.",
   "Durée minimale (mois)": "Durée minimale (mois)",
   "Durée maximale (mois)": "Durée maximale (mois)",
-  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche »."
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».",
+  "Compétences et apprentissages": "Compétences et apprentissages",
+  "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.": "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.",
+  "compétences enregistrées": "compétences enregistrées",
+  "Autoévaluation": "Autoévaluation",
+  "Pratique à confirmer": "Pratique à confirmer",
+  "Bases à confirmer": "Bases à confirmer",
+  "Technologie d’équipe": "Technologie d’équipe",
+  "Objectif de formation": "Objectif de formation",
+  "Non confirmé": "Non confirmé",
+  "Aucune compétence importée.": "Aucune compétence importée."
 }

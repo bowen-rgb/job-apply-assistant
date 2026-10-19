@@ -604,5 +604,15 @@
   "A withdrawn application cannot be reopened": "Eine zurückgezogene Bewerbung kann nicht erneut geöffnet werden.",
   "Durée minimale (mois)": "Mindestdauer (Monate)",
   "Durée maximale (mois)": "Höchstdauer (Monate)",
-  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Leer lassen, um die Dauer nicht einzuschränken. Gilt nur für dieses Profil. Die PFE-Dauer wird unter „PFE & Forschung“ eingestellt."
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Leer lassen, um die Dauer nicht einzuschränken. Gilt nur für dieses Profil. Die PFE-Dauer wird unter „PFE & Forschung“ eingestellt.",
+  "Compétences et apprentissages": "Kenntnisse und Lernziele",
+  "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.": "Lernziele und Teamtechnologien belegen keine eigene Beherrschung.",
+  "compétences enregistrées": "Kenntnisse gespeichert",
+  "Autoévaluation": "Selbsteinschätzung",
+  "Pratique à confirmer": "Praxis zu bestätigen",
+  "Bases à confirmer": "Grundlagen zu bestätigen",
+  "Technologie d’équipe": "Teamtechnologie",
+  "Objectif de formation": "Lernziel",
+  "Non confirmé": "Unbestätigt",
+  "Aucune compétence importée.": "Noch keine Kenntnisse importiert."
 }

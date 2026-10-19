@@ -604,5 +604,15 @@
   "A withdrawn application cannot be reopened": "Uma candidatura retirada não pode ser reaberta.",
   "Durée minimale (mois)": "Duração mínima (meses)",
   "Durée maximale (mois)": "Duração máxima (meses)",
-  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Deixe em branco para não limitar a duração. Aplica-se apenas a este perfil. Configure a duração PFE em «Estágio e investigação»."
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "Deixe em branco para não limitar a duração. Aplica-se apenas a este perfil. Configure a duração PFE em «Estágio e investigação».",
+  "Compétences et apprentissages": "Competências e aprendizagem",
+  "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.": "Objetivos e tecnologias da equipa não comprovam domínio pessoal.",
+  "compétences enregistrées": "competências guardadas",
+  "Autoévaluation": "Autoavaliação",
+  "Pratique à confirmer": "Prática por verificar",
+  "Bases à confirmer": "Bases por confirmar",
+  "Technologie d’équipe": "Tecnologia da equipa",
+  "Objectif de formation": "Objetivo de aprendizagem",
+  "Non confirmé": "Por confirmar",
+  "Aucune compétence importée.": "Sem competências importadas."
 }

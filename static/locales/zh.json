@@ -604,5 +604,15 @@
   "A withdrawn application cannot be reopened": "已撤回的申请不能重新打开。",
   "Durée minimale (mois)": "最短时长（月）",
   "Durée maximale (mois)": "最长时长（月）",
-  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "留空表示不限制时长，仅影响当前档案。毕业实习模式请在“毕业实习与科研机会”中设置时长。"
+  "Laissez vide pour ne pas limiter la durée. Ces critères appartiennent uniquement à ce profil. En mode PFE, la durée se règle dans « PFE & recherche ».": "留空表示不限制时长，仅影响当前档案。毕业实习模式请在“毕业实习与科研机会”中设置时长。",
+  "Compétences et apprentissages": "技能与学习计划",
+  "Les objectifs et technologies d’équipe ne sont pas des compétences maîtrisées.": "学习目标和团队项目用到的技术，不代表你已经掌握。",
+  "compétences enregistrées": "项技能已保存",
+  "Autoévaluation": "本人自评",
+  "Pratique à confirmer": "有实践，待核实能力",
+  "Bases à confirmer": "基础待确认",
+  "Technologie d’équipe": "团队技术",
+  "Objectif de formation": "学习目标",
+  "Non confirmé": "未确认",
+  "Aucune compétence importée.": "尚未导入技能。"
 }
