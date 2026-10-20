@@ -102,7 +102,7 @@ def _required(snapshot: dict) -> tuple[list[dict], list[dict], list[dict]]:
     return unanswered, sensitive, ordinary
 
 
-def main(job_id: int, *, privacy_confirmed: bool = False):
+def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = ''):
     raw_profile = load_profile_raw()
     profile = runtime_profile(raw_profile)
     with connect() as c:
@@ -110,6 +110,14 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
         if not row:
             raise ValueError('job not found')
         job = dict(row)
+    if qr_request_id:
+        from .qr_application import validate_intent
+        try:
+            validate_intent(qr_request_id,job,raw_profile)
+        except ValueError as exc:
+            _update_status(job_id,'error')
+            _record(job_id,'apply_error',str(exc))
+            raise
     if job.get('application_status') in {'submitted','submitted_verified','withdrawn'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn'}:
         return
 
@@ -361,8 +369,11 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
                     pass
             _write_json(snap_path, snapshot)
 
-            if raw_profile.get('automation',{}).get('auto_submit') is True:
+            if qr_request_id or raw_profile.get('automation',{}).get('auto_submit') is True:
                 from .auto_submission import submit_complete_form
+                if qr_request_id:
+                    from .qr_application import authorize_materials
+                    authorize_materials(qr_request_id,safety.get_job(job_id),load_profile_raw(),materials)
                 if not safety.is_approved(safety.get_job(job_id), load_profile_raw(), materials):
                     _update_status(job_id,'needs_human',application_step='materials_review',fill_audit_path=str(audit_path))
                     _record(job_id,'materials_review','Review and approve these material versions before automatic sending.')
@@ -442,4 +453,5 @@ def main(job_id: int, *, privacy_confirmed: bool = False):
 
 
 if __name__ == '__main__':
-    main(int(sys.argv[1]), privacy_confirmed='--privacy-confirmed' in sys.argv[2:])
+    qr_id=sys.argv[sys.argv.index('--qr-request')+1] if '--qr-request' in sys.argv else ''
+    main(int(sys.argv[1]), privacy_confirmed='--privacy-confirmed' in sys.argv[2:],qr_request_id=qr_id)

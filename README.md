@@ -27,6 +27,8 @@ Keep job discovery, CVs, application preparation and follow-up records in one lo
 
 **Platform automation:** open dedicated Chrome from **Pipeline & queue**, check its connection, then start the queue separately. The platform runs its own workers and never falls back to Edge. See [Chrome controls and verification limits](docs/CHROME_AUTOMATION_CONTROL.md).
 
+**QR applications:** upload a recruiter QR image, check the recipient and suggested CV, then start that single application. The old queue stays paused. See [workflow and support limits](docs/QR_APPLICATIONS.md).
+
 | Find the right opportunities | Prepare with context |
 | --- | --- |
 | Search supported job sites, public ATS boards and custom sources. Combine campaigns and deduplicate repeated vacancies. | Keep multiple CVs, review job fit and optionally generate a tailored French cover letter through your signed-in ChatGPT browser session. |

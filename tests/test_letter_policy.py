@@ -21,6 +21,15 @@ class LetterQualityTests(unittest.TestCase):
         self.assertEqual(letter_policy.local_issues(LETTER_BODY),[])
         self.assertTrue(letter_policy.local_issues('Je me permets de postuler pour [poste].'))
 
+    def test_actual_chat_calls_both_contain_all_notes_rules(self):
+        with tempfile.TemporaryDirectory() as folder,patch.object(cover_letter,'LETTER_DIR',Path(folder)),patch.object(cover_letter,'resume_text',return_value='Experience accueil hôtel'):
+            with patch.object(cover_letter,'ask_chatgpt_json',side_effect=[{'letter':LETTER_BODY},letter_review()]) as chat:
+                cover_letter.generate_letter(None,{'id':1,'title':'Réceptionniste','company':'Example Hôtel'}, {'identity':{'first_name':'Test'}},None,{})
+            self.assertEqual([call.kwargs['purpose'] for call in chat.call_args_list],['cover-letter','cover-letter-review'])
+            for call in chat.call_args_list:
+                self.assertIn(letter_policy.RULES,call.args[1])
+                for number in range(1,12):self.assertIn(f'LM{number:02d}.',call.args[1])
+
     def test_review_requires_every_boolean_and_source_quotes(self):
         payload={'cv':'Experience accueil hôtel','candidate':{}}
         good=letter_review()

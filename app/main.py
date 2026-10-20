@@ -82,6 +82,8 @@ async def local_security(request: Request, call_next):
     return response
 
 app.mount('/static', StaticFiles(directory=STATIC), name='static')
+from .qr_routes import router as qr_router
+app.include_router(qr_router)
 
 
 job_repository = JobRepository()

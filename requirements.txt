@@ -11,3 +11,5 @@ reportlab==5.0.1
 XlsxWriter==3.2.9
 # IANA timezone data for French correspondence dates on Windows.
 tzdata==2026.4
+Pillow==12.3.0
+zxing-cpp==3.1.1

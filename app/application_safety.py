@@ -38,7 +38,7 @@ def context_token(job, raw):
     # require another review. Runtime/browser timestamps are not part of raw.
     return digest({'review': review_token(job), 'profile': raw,
                    'job': {k: job.get(k) for k in ('id', 'url', 'title', 'company', 'body', 'snippet',
-                                                   'location', 'employment_type', 'search_profile_id')}})
+                                                   'location', 'employment_type', 'search_profile_id', 'application_resume_id')}})
 
 
 def freeze_materials(job, raw, resume, letter=None, packet=None, inline_text=''):

@@ -426,6 +426,14 @@ def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None
     active_id = p.get('application', {}).get('active_resume_id', '')
     active = next((x for x in rows if x.get('id') == active_id), None)
 
+    override = str(job.get('application_resume_id') or '')
+    if override:
+        chosen = next((row for row in rows if row.get('id') == override), None)
+        if not chosen:
+            return None, None
+        path = resume_directory() / chosen['filename']
+        return (path if path.is_file() else None), chosen
+
     # A search campaign can explicitly bind one CV. This takes precedence over
     # automatic tag routing and makes multi-market workflows deterministic.
     search_profile_id = str(job.get('search_profile_id') or '').strip()
