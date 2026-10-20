@@ -75,6 +75,8 @@ For later launches, double-click **`start.bat`**. In the sidebar, choose **Start
 | Review job fit or generate a cover letter | Sign in to ChatGPT in the dedicated browser opened by the launcher. No OpenAI API key is required. |
 | Prepare supported application forms | An active CV, complete profile and the dedicated browser connection. Some sites require manual intervention. |
 
+**Windows startup:** The server runs in the background without a console window. Reopening `start.bat` reuses a healthy server. Logs and process details are saved in `data/server-logs/`. Dedicated Chrome remains visible for login and application handoff. Startup errors are shown in the launcher.
+
 **Need help?** Run `doctor.bat`, then check the [user guide](USER_GUIDE.md), [accounts guide](ACCOUNT_SETUP.md) or [installation notes](FIX_V8_2.md).
 
 <details>

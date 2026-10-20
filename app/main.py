@@ -82,6 +82,11 @@ async def local_security(request: Request, call_next):
     return response
 
 app.mount('/static', StaticFiles(directory=STATIC), name='static')
+
+
+@app.get('/favicon.ico', include_in_schema=False)
+def favicon():
+    return FileResponse(STATIC / 'favicon.svg', media_type='image/svg+xml')
 from .qr_routes import router as qr_router
 app.include_router(qr_router)
 
