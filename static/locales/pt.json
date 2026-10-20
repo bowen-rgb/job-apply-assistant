@@ -630,5 +630,6 @@
   "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "Google Chrome não encontrado. Instale-o; a plataforma não troca para o Edge.",
   "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "O Chrome ainda não responde. Verifique a janela ou execute start_chrome_debug.bat e verifique a conexão. A fila continua parada.",
   "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "Configure uma conexão local do Chrome, por exemplo http://127.0.0.1:9222.",
-  "La connexion Chrome locale doit préciser son port.": "A conexão local do Chrome deve incluir uma porta."
+  "La connexion Chrome locale doit préciser son port.": "A conexão local do Chrome deve incluir uma porta.",
+  "Le CV, le poste ou les règles ont changé. Régénérez la lettre avant utilisation.": "O currículo, a vaga ou as regras de escrita mudaram. Gere uma nova carta antes de usá-la."
 }

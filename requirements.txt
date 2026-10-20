@@ -9,3 +9,5 @@ click==8.3.0
 pypdf==6.19.0
 reportlab==5.0.1
 XlsxWriter==3.2.9
+# IANA timezone data for French correspondence dates on Windows.
+tzdata==2026.4

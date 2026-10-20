@@ -150,6 +150,11 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
         return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
     if purpose == 'cover-letter':
         return isinstance(obj.get('letter'), str) and bool(obj['letter'].strip())
+    if purpose == 'cover-letter-review':
+        from .letter_policy import CHECKS
+        return (isinstance(obj.get('checks'), dict)
+                and all(isinstance(obj['checks'].get(key), bool) for key in CHECKS)
+                and isinstance(obj.get('issues'), list) and isinstance(obj.get('evidence'), list))
     if purpose == 'review-export-translation':
         return isinstance(obj.get('translations'),dict) and bool(obj['translations'])
     return True

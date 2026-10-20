@@ -630,5 +630,6 @@
   "Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.": "Google Chrome was not found. Install Chrome; the platform does not switch to Edge.",
   "Chrome ne répond pas encore. Vérifiez la fenêtre Chrome ou lancez start_chrome_debug.bat, puis vérifiez la connexion. La file reste arrêtée.": "Chrome is not responding yet. Check its window or run start_chrome_debug.bat, then check the connection. The queue stays stopped.",
   "Configurez une connexion Chrome locale, par exemple http://127.0.0.1:9222.": "Configure a local Chrome connection, for example http://127.0.0.1:9222.",
-  "La connexion Chrome locale doit préciser son port.": "The local Chrome connection must include a port."
+  "La connexion Chrome locale doit préciser son port.": "The local Chrome connection must include a port.",
+  "Le CV, le poste ou les règles ont changé. Régénérez la lettre avant utilisation.": "The CV, job or writing rules changed. Generate a new letter before using it."
 }

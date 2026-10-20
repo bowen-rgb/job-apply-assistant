@@ -1,0 +1,11 @@
+# UI 设计参考约定
+
+用户指定参考：[edisonmbli/refactoring-ui-skill](https://github.com/edisonmbli/refactoring-ui-skill)，2026-10-20 阅读其 README 和 [SKILL.md](https://github.com/edisonmbli/refactoring-ui-skill/blob/main/skills/refactoring-ui/SKILL.md)。这是独立、非官方的设计规则项目，不代表原书作者背书。这里只记录参考入口，没有执行其脚本或安装依赖。
+
+后续修改界面前，先识别现有技术栈、设计变量、组件和主题；本项目为原生 HTML / JavaScript / CSS。沿用已有设计语言，不照搬示例颜色，不为参考资料引入 Tailwind。
+
+设计与检查顺序：信息层级 → 布局和间距 → 字体排版 → 色彩与对比 → 深度 → 图像 → 空状态和收尾。先确定用户的下一步及一个主操作，再安排辅助信息和次要操作。组间距大于组内间距；状态需有文字，不只靠颜色。错误、空状态、等待状态要说明用户下一步。
+
+需要具体数值或规则编号时，读取该仓库相应 reference 文件，不能凭摘要编造规则编号。涉及界面修改时，在桌面和手机宽度截图核对；只看源码的发现明确记为未验证。其设计规则与用户要求的视觉方向共同使用，避免只增加装饰、却不减少操作负担。
+
+本轮主要修改动机信逻辑和材料，未开展全站 UI 改版或声称已完成视觉走查。

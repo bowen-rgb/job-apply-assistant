@@ -466,6 +466,15 @@ def letter_status(job_id: int):
         raise HTTPException(404, 'job not found')
     metadata, _ = letter_paths(job_id)
     state = json.loads(metadata.read_text(encoding='utf-8')) if metadata.exists() else {'status': 'missing'}
+    if state.get('status') == 'ready':
+        from .cover_letter import current_letter
+        from .profile_store import select_resume_for_job
+        from .application_safety import get_job
+        job = get_job(job_id)
+        raw = load_profile_raw()
+        resume, _ = select_resume_for_job(job, raw)
+        if not current_letter(state, job, raw, resume):
+            return {'status': 'stale', 'error': 'Le CV, le poste ou les règles ont changé. Régénérez la lettre avant utilisation.'}
     if state.get('status') == 'generating':
         try:
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(state['updated_at'])).total_seconds()

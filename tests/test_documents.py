@@ -8,6 +8,24 @@ from app import cover_letter, profile_store
 from app.chatgpt_bridge import _matches_purpose
 from app.form_engine import upload_resume, upload_cover_letter
 from unittest.mock import MagicMock
+from app.letter_policy import CHECKS
+
+LETTER_BODY = '\n\n'.join([
+    'Actuellement étudiante en hôtellerie, je souhaite rejoindre Example Hôtel pour le poste de réceptionniste. '
+    'Les missions d’accueil et de réservation correspondent à mon expérience de l’accueil hôtelier. '
+    'Je souhaite contribuer à un service attentif aux demandes des clients et approfondir la coordination avec les autres équipes de votre établissement.',
+    'Lors de mon expérience en accueil hôtelier, j’ai participé à la réception des clients et au suivi de leurs demandes. '
+    'Cette première pratique me donne un point de départ concret pour comprendre les procédures de réservation et les transmissions entre services. '
+    'Je souhaite m’appuyer sur ces situations pour prendre progressivement en charge les tâches décrites dans votre annonce, dans le respect des procédures de l’hôtel.',
+    'Cette mission m’intéresse pour son articulation entre contact avec les clients et organisation quotidienne de l’accueil. '
+    'Je souhaite y consolider ma pratique des réservations et contribuer à la continuité du service. '
+    'Mon expérience reste celle présentée dans mon CV et je serais heureuse de préciser lors d’un échange les responsabilités que je pourrais exercer au sein de votre équipe.'
+])
+
+
+def letter_review():
+    return {'checks':dict.fromkeys(CHECKS,True),'issues':[],
+            'evidence':[{'claim':'Pratique de l’accueil hôtelier','source':'cv','quote':'Experience accueil hôtel'}]}
 
 
 class DocumentTests(unittest.TestCase):
@@ -26,18 +44,18 @@ class DocumentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, patch.object(cover_letter, 'LETTER_DIR', Path(folder)), patch.object(cover_letter, 'resume_text', return_value='Experience accueil hôtel'):
             job = {'id': 1, 'title': 'Réceptionniste', 'company': 'Example Hôtel', 'body': 'Accueil et réservation'}
             raw = {'identity': {'first_name': 'Ada'}, 'availability': {'text': 'Week-ends'}}
-            answer = {'letter': 'Madame, Monsieur,\n' + 'Je souhaite rejoindre votre hôtel pour contribuer à un accueil attentif. ' * 5}
-            with patch.object(cover_letter, 'ask_chatgpt_json', return_value=answer) as chat:
+            answer = {'letter': LETTER_BODY}
+            with patch.object(cover_letter, 'ask_chatgpt_json', side_effect=lambda *args,**kwargs: letter_review() if kwargs.get('purpose')=='cover-letter-review' else answer) as chat:
                 cover_letter.generate_letter(None, job, raw, None, {})
-                payload = json.loads(chat.call_args.args[1].split('\n', 1)[1])
+                payload = json.loads(chat.call_args_list[0].args[1].rsplit('\n', 1)[1])
                 self.assertEqual(payload['cv'], 'Experience accueil hôtel')
                 self.assertEqual(payload['job']['company'], 'Example Hôtel')
                 self.assertTrue(cover_letter.letter_paths(1)[1].read_bytes().startswith(b'%PDF'))
                 cover_letter.generate_letter(None, job, raw, None, {})
-                self.assertEqual(chat.call_count, 1)
+                self.assertEqual(chat.call_count, 2)
                 job['company'] = 'Different Hôtel'
                 cover_letter.generate_letter(None, job, raw, None, {})
-                self.assertEqual(chat.call_count, 2)
+                self.assertEqual(chat.call_count, 4)
 
     def test_generation_error_is_visible_and_not_ready(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(cover_letter, 'LETTER_DIR', Path(folder)):
