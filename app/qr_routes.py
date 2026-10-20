@@ -22,10 +22,26 @@ def inspect(payload:Selection):
     except ValueError as exc:raise HTTPException(400,str(exc))
     except (OSError,TimeoutError):raise HTTPException(422,'qr_page_unavailable')
 
+@router.get('')
+def listing():
+    return qr.list_requests()
+
+@router.delete('/{identifier}')
+def remove(identifier:str):
+    try:return qr.remove_request(identifier)
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
 @router.get('/{identifier}')
 def status(identifier:str):
     try:return qr.request_status(identifier)
     except KeyError:raise HTTPException(404,'qr_not_found')
+
+@router.post('/{identifier}/analyze')
+def analyze(identifier:str):
+    try:return qr.analyze_request(identifier)
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(409,str(exc))
 
 @router.post('/{identifier}/start')
 def start(identifier:str,payload:Dispatch):
@@ -40,3 +56,10 @@ def resume(identifier:str):
     except KeyError:raise HTTPException(404,'qr_not_found')
     except ValueError as exc:raise HTTPException(409,str(exc))
     except (OSError,TimeoutError):raise HTTPException(422,'qr_page_unavailable')
+
+
+@router.post('/{identifier}/selection')
+def selection(identifier:str,payload:Dispatch):
+    try:return qr.save_selection(identifier,payload.resume_id,payload.company)
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(409,str(exc))

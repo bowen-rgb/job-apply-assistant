@@ -25,7 +25,13 @@ class QRTests(unittest.TestCase):
         raw['application'].update(generate_cover_letter=False,auto_resume_routing=True)
         store.save_profile_raw(raw)
         for name,tags in [('A_Simulation',['simulation']),('D_Robotique',['robotique','commande']),('Forum',[])]:
-            path=self.root/(name+'.pdf');path.write_bytes(b'%PDF-test '+name.encode())
+            from reportlab.pdfgen.canvas import Canvas
+            path=self.root/(name+'.pdf');canvas=Canvas(str(path))
+            canvas.drawString(40,780,name)
+            canvas.drawString(40,750,{'A_Simulation':'Simulation numerique et validation de modeles Python',
+                                    'D_Robotique':'Robotique commande PID et simulation du quadrirotor',
+                                    'Forum':'Profil generaliste et accueil de projets industriels'}[name])
+            canvas.save()
             row=store.add_resume(path,path.name,name);store.update_resume_metadata(row['id'],tags=tags)
         self.page=b'''<html><head><script type="application/ld+json">{"@type":"JobPosting","title":"Stage robotique commande","hiringOrganization":{"name":"Test Robotics"},"description":"Simulation et commande robotique pour un projet industriel."}</script></head><body><input type=file></body></html>'''
     def tearDown(self):
@@ -33,6 +39,62 @@ class QRTests(unittest.TestCase):
     def preview(self):
         with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(self.page,'text/html','https://employer.test/apply')):
             return qr.create_request('https://short.test/qr')
+
+
+    def test_draft_collection_remove_and_candidate_isolation(self):
+        first=self.preview();second=self.preview()
+        self.assertEqual(len(qr.list_requests()),2)
+        client=TestClient(app)
+        self.assertEqual(client.delete('/api/qr/'+first['id']).status_code,200)
+        self.assertEqual(len(client.get('/api/qr').json()),1)
+        with self.assertRaises(KeyError):qr.get_request(first['id'])
+        other=workspaces.create('Other');workspaces.CURRENT.set(other);db.init_db()
+        self.assertEqual(qr.list_requests(),[])
+        with patch.object(workspaces,'active_id',return_value=other):
+            self.assertEqual(client.delete('/api/qr/'+second['id']).status_code,404)
+        workspaces.CURRENT.set('default')
+        with db.connect() as c:c.execute("UPDATE qr_requests SET state='authorized' WHERE id=?",(second['id'],))
+        self.assertEqual(client.delete('/api/qr/'+second['id']).status_code,409)
+        self.assertEqual(len(qr.list_requests()),1)
+
+    def test_removing_running_inspection_cancels_reader_and_deletes_only_draft(self):
+        item=self.preview()
+        with patch('app.worker_runtime.is_running',return_value=True),patch('app.worker_runtime.cancel') as cancel:
+            qr.remove_request(item['id'])
+            cancel.assert_called_once_with('app.qr_inspect_worker',item['id'])
+        with self.assertRaises(KeyError):qr.get_request(item['id'])
+
+    def test_portal_never_authorizes_or_generates_letter(self):
+        from app.cover_letter import generation_payload
+        from app.application_target import requires_letter
+        with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(b'<html><title>Careers opportunities in CMA CGM Group</title><body>Find a job<input type=file></body></html>','text/html','https://employer.test/')):
+            item=qr.create_request('https://employer.test/')
+        self.assertEqual(item['preview']['company'],'CMA CGM Group')
+        self.assertFalse(item['preview']['readiness']['ready'])
+        with patch('app.browser_control.require_connection'),patch('app.worker_runtime.any_running',return_value=False),patch('app.browser.launch_apply') as launch:
+            with self.assertRaisesRegex(ValueError,'qr_context_incomplete'):qr.start_request(item['id'],store.list_resumes()[0]['id'],'CMA CGM Group')
+            launch.assert_not_called()
+        with self.assertRaises(ValueError):generation_payload({'provider_key':'qr','application_context_json':json.dumps(item['preview'])},{},None)
+        self.assertFalse(requires_letter({'application_context_json':json.dumps({'kind':'general'})},{'application':{'generate_cover_letter':True}}))
+
+    def test_edited_company_stays_consistent_in_material_context(self):
+        item=self.preview()
+        with patch('app.browser_control.require_connection'),patch('app.worker_runtime.any_running',return_value=False),patch.object(qr,'validate_destination'),patch('app.browser.launch_apply'):
+            result=qr.start_request(item['id'],item['preview']['resume_id'],'Confirmed Robotics')
+        job=safety.get_job(result['job_id'])
+        self.assertEqual(job['company'],'Confirmed Robotics')
+        self.assertEqual(json.loads(job['application_context_json'])['company'],job['company'])
+
+
+    def test_draft_resume_and_company_selection_persist_without_application(self):
+        item=self.preview();rid=store.list_resumes()[0]['id']
+        updated=qr.save_selection(item['id'],rid,'Confirmed Employer')
+        reread=qr.request_status(item['id'])
+        self.assertEqual(reread['preview']['resume_id'],rid)
+        self.assertEqual(reread['preview']['user_resume_id'],rid)
+        self.assertEqual(reread['preview']['company'],'Confirmed Employer')
+        self.assertEqual(reread['state'],'draft');self.assertIsNone(reread['job_id'])
+        with db.connect() as c:self.assertEqual(c.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],0)
 
     def test_real_qr_decoder_and_multiple_codes_blank_and_bad_inputs(self):
         def code(text):return Image.fromarray(zxingcpp.create_barcode(text,zxingcpp.BarcodeFormat.QRCode).to_image(scale=5)).convert('RGB')
@@ -54,7 +116,7 @@ class QRTests(unittest.TestCase):
         self.assertEqual(next(r['label'] for r in result['resumes'] if r['id']==p['resume_id']),'D_Robotique')
         with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(b'<html><head><title>Careers</title></head><body><input type=file>Mechanical company</body></html>','text/html','https://employer.test/general')):
             p=qr.create_request('https://employer.test/general')['preview']
-            self.assertEqual(p['kind'],'general')
+            self.assertEqual(p['kind'],'entry')
             self.assertEqual(next(r['label'] for r in store.list_resumes() if r['id']==p['resume_id']),'Forum')
             self.assertEqual(p['company'],'')
         with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(b'<html><head><title>Robotics careers</title></head><body><input type=file>robotics control systems</body></html>','text/html','https://employer.test/general')):

@@ -42,7 +42,7 @@ class DocumentTests(unittest.TestCase):
 
     def test_letter_generation_has_job_cv_and_invalidates_changed_job(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(cover_letter, 'LETTER_DIR', Path(folder)), patch.object(cover_letter, 'resume_text', return_value='Experience accueil hôtel'):
-            job = {'id': 1, 'title': 'Réceptionniste', 'company': 'Example Hôtel', 'body': 'Accueil et réservation'}
+            job = {'id': 1, 'title': 'Réceptionniste', 'company': 'Example Hôtel', 'body': 'Accueil et réservation des clients à la réception de l’hôtel.'}
             raw = {'identity': {'first_name': 'Ada'}, 'availability': {'text': 'Week-ends'}}
             answer = {'letter': LETTER_BODY}
             with patch.object(cover_letter, 'ask_chatgpt_json', side_effect=lambda *args,**kwargs: letter_review() if kwargs.get('purpose')=='cover-letter-review' else answer) as chat:

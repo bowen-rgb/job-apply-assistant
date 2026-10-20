@@ -17,6 +17,7 @@ from . import application_safety as safety
 from .db import connect
 from .profile_store import load_profile_raw, list_resumes, resume_directory, select_resume_for_job
 from .pfe_discovery import read_public, validate_destination
+from .qr_context import page_context, readiness, discover_roles
 
 MAX_IMAGE = 8 * 1024 * 1024
 MAX_PIXELS = 20_000_000
@@ -47,7 +48,7 @@ def decode_image(content):
                 codes = zxingcpp.read_barcodes(image, formats=zxingcpp.BarcodeFormat.QRCode)
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning):
         raise ValueError('qr_image_format')
-    values = list(dict.fromkeys(code.text.strip() for code in codes if code.text.strip()))[:10]
+    values = list(dict.fromkeys(code.text.strip() for code in codes if code.text.strip()))
     if not values:
         raise ValueError('qr_no_code')
     return values
@@ -72,7 +73,14 @@ def inspect_url(url):
     if parsed.hostname in {'weixin.qq.com','u.wechat.com','open.weixin.qq.com','qm.qq.com'}:
         raise ValueError('qr_mobile_only')
     validate_destination(url)
-    content, ctype, final = read_public(url)
+    try:
+        content, ctype, final = read_public(url)
+    except OSError as exc:
+        return complete_context({'url':url,'final_url':url,'company':'','company_evidence':'',
+               'sector':'unknown','sector_inferred':False,'sector_evidence':'','kind':'entry',
+               'title':'','body':'','role_title':'','tasks':[],'opportunities':[],
+               'location':'','employment_type':'','structured_json':'','start_date':'','end_date':'','valid_through':'',
+               'inspection_error':str(exc)[:300]})
     if 'html' not in ctype.lower() and not content.lstrip().lower().startswith((b'<!doctype',b'<html')):
         raise ValueError('qr_not_web_form')
     soup = BeautifulSoup(content, 'lxml')
@@ -85,10 +93,7 @@ def inspect_url(url):
             raise ValueError('qr_expired')
     except ValueError as exc:
         if str(exc)=='qr_expired':raise
-    structured = 'JobPosting' in (document.get('structured_json') or '')
-    site = soup.select_one('meta[property="og:site_name"]')
-    company = document.get('company') or (site.get('content','').strip() if site else '')
-    evidence = 'JobPosting.hiringOrganization' if document.get('company') else 'og:site_name' if company else ''
+    context=page_context(str(soup),final)
     sectors = [('research','research|recherche|laboratoire|laboratory'),
                ('mechanical','mécanique|mechanical|aéronautique|aerospace|manufactur'),
                ('control','automatique|control systems|robotique|robotics'),
@@ -97,25 +102,36 @@ def inspect_url(url):
     for key, pattern in sectors:
         match = re.search(pattern,text,re.I)
         if match:sector,quote=key,match.group();break
-    form = bool(soup.select('input[type=file]'))
-    return {'url':url,'final_url':final,'company':company,'company_evidence':evidence,
+    return complete_context({'url':url,'final_url':final,'company':context['company'],'company_evidence':context['company_evidence'],
+            'company_quote':context['company_quote'],'company_source_url':final,'page_title':context['page_title'],
             'sector':sector,'sector_evidence':quote,'sector_inferred':bool(quote),
-            'kind':'vacancy' if structured else 'general' if form else 'entry',
-            'title':document['title'][:500], 'body':(document['description'] or document['text'])[:45000],
+            'kind':context['kind'],'role_title':context['role_title'],'tasks':context['tasks'],
+            'opportunities':discover_roles(context,read_public) if context['kind']=='entry' else [],
+            'search_url':context['search_url'],
+            'title':context['title'][:500], 'body':context['body'][:45000],
             'location':document['location'], 'employment_type':document['employment_type'],
             'structured_json':document['structured_json'], 'start_date':document['start_date'],
-            'end_date':document['end_date'], 'valid_through':document['valid_through']}
+            'end_date':document['end_date'], 'valid_through':document['valid_through'],'read_mode':'public_html'})
+
+
+def complete_context(payload):
+    from .resume_matcher import rank_resumes
+    from .cover_letter import resume_text
+    payload['readiness']=readiness(payload)
+    rows=list_resumes()
+    payload['resume_ranking']=payload.get('semantic_ranking') or rank_resumes(payload,rows,lambda row:resume_text(resume_directory()/row['filename']))
+    payload['needs_enrichment']=not payload['readiness']['ready'] or not payload['resume_ranking'] or payload['resume_ranking'][0].get('source')=='tags_only'
+    return payload
 
 
 def recommend(payload):
     rows = list_resumes()
     if not rows:return None,'qr_no_resume'
     if payload['kind']=='vacancy':
-        job = dict(payload)
-        raw=load_profile_raw()
-        raw={**raw,'application':{**raw.get('application',{}),'auto_resume_routing':True}}
-        _, selected = select_resume_for_job(job,raw)
-        return selected, 'qr_resume_job'
+        ranking=payload.get('resume_ranking') or []
+        if ranking and ranking[0].get('source')!='tags_only' and (ranking[0].get('score',0)>0 or ranking[0].get('source')=='grounded_semantic'):
+            return next((row for row in rows if row['id']==ranking[0]['resume_id']),None),'qr_resume_job'
+        return None,'qr_resume_choose'
     # A company-only entrance can suggest a direction, but never claim a matched vacancy.
     themes={'control':'robotique commande robotics',
             'mechanical':'conception mécanique mechanical design',
@@ -150,7 +166,10 @@ def request_status(identifier):
     payload=json.loads(row['payload'])
     result={'id':identifier,'state':row['state'],'preview':payload,
             'resumes':[{'id':r['id'],'label':r['label']} for r in list_resumes()], 'job_id':row['job_id'],
-            'generate_letter':load_profile_raw().get('application',{}).get('generate_cover_letter',True)}
+            'generate_letter':bool(payload.get('readiness',{}).get('letter_allowed')) and load_profile_raw().get('application',{}).get('generate_cover_letter',True)}
+    if row['state']=='analyzing':
+        from .worker_runtime import is_running
+        result['inspection_running']=is_running('app.qr_inspect_worker',identifier)
     if row['job_id']:
         job=safety.get_job(row['job_id'])
         from .preparation_summary import preparation_summary
@@ -181,8 +200,15 @@ def start_request(identifier,resume_id,company):
         browser_control.require_connection()
         if any_running():raise ValueError('qr_busy')
         payload=json.loads(row['payload'])
+        # Do not authorize a portal or a guessed role merely because a company was typed in.
+        payload=complete_context(payload)
+        if not payload['readiness']['ready'] and not (payload['kind']=='general' and payload.get('company_quote')):
+            raise ValueError('qr_context_incomplete')
         company=str(company or payload['company']).strip()[:200]
         if not company:raise ValueError('qr_company_required')
+        if payload['company']!=company:
+            payload.update(company=company,company_evidence='candidate input',company_quote=company)
+        payload['resume_id']=resume_id
         selected=next((r for r in list_resumes() if r['id']==resume_id),None)
         if not selected:raise ValueError('qr_no_resume')
         raw=load_profile_raw()
@@ -196,7 +222,8 @@ def start_request(identifier,resume_id,company):
                 if (safety.has_dispatch(job['id']) or not can_prepare(job) or job.get('application_status') in {'submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn'}
                         or job.get('availability_status')=='expired' or job.get('decision')=='expired' or job.get('user_action')=='skipped'):
                     raise ValueError('qr_existing_application')
-                c.execute('UPDATE jobs SET application_resume_id=? WHERE id=?',(resume_id,job['id']))
+                c.execute('UPDATE jobs SET application_resume_id=?,application_context_json=?,company=?,title=?,body=? WHERE id=?',
+                          (resume_id,json.dumps(payload,ensure_ascii=False),company,payload['title'],payload['body'],job['id']))
                 job_id=job['id']
             else:
                 title=payload['title'] if payload['kind']=='vacancy' else 'Candidature spontanée — '+company
@@ -204,6 +231,7 @@ def start_request(identifier,resume_id,company):
                             location=payload['location'],employment_type=payload['employment_type'],
                             start_date=payload['start_date'],end_date=payload['end_date'],valid_through=payload['valid_through'],
                             source='QR',provider_key='qr',application_resume_id=resume_id,tracker_stage='saved')
+                fields['application_context_json']=json.dumps(payload,ensure_ascii=False)
                 keys=','.join(fields)
                 job_id=c.execute(f'INSERT INTO jobs({keys}) VALUES({",".join("?" for _ in fields)})',list(fields.values())).lastrowid
             job=dict(c.execute('SELECT * FROM jobs WHERE id=?',(job_id,)).fetchone())
@@ -251,7 +279,8 @@ def resume_request(identifier):
 def authorize_materials(identifier,job,raw,snapshot):
     validate_intent(identifier,job,raw)
     safety.validate_materials(job,raw,snapshot)
-    if raw.get('application',{}).get('generate_cover_letter',True):
+    from .application_target import requires_letter
+    if requires_letter(job,raw):
         from .cover_letter import letter_paths,current_letter
         resume,_=select_resume_for_job(job,raw)
         state=json.loads(letter_paths(job['id'])[0].read_text(encoding='utf-8'))
@@ -259,3 +288,55 @@ def authorize_materials(identifier,job,raw,snapshot):
     with connect() as c:
         c.execute('INSERT OR IGNORE INTO material_approvals(job_id,token) VALUES(?,?)',(job['id'],snapshot['token']))
         c.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'qr_material_authorized',?)",(job['id'],'Single-application click authorization; generated letter checked by current LM policy, not represented as human proofreading.'))
+
+
+def analyze_request(identifier):
+    from .worker_runtime import any_running,is_running,launch
+    from .browser_control import require_connection
+    from .workspaces import LOCK
+    with LOCK:
+        row=get_request(identifier)
+        if row['state']=='analyzing' and is_running('app.qr_inspect_worker',identifier):return request_status(identifier)
+        if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
+        require_connection()
+        if any_running():raise ValueError('qr_busy')
+        with connect() as c:c.execute("UPDATE qr_requests SET state='analyzing' WHERE id=?",(identifier,))
+        try:launch('app.qr_inspect_worker',identifier)
+        except Exception:
+            with connect() as c:c.execute("UPDATE qr_requests SET state='draft' WHERE id=?",(identifier,))
+            raise
+        return request_status(identifier)
+
+
+def list_requests():
+    init_tables()
+    with connect() as c:
+        rows=c.execute('SELECT id,state,payload,created_at FROM qr_requests ORDER BY created_at DESC,rowid DESC').fetchall()
+    return [{'id':r['id'],'state':r['state'],'preview':json.loads(r['payload']),'created_at':r['created_at']} for r in rows]
+
+
+def remove_request(identifier):
+    # Draft deletion removes discovery only. Application history is never deleted here.
+    from .workspaces import LOCK
+    from .worker_runtime import is_running,cancel
+    with LOCK:
+        row=get_request(identifier)
+        if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
+        if is_running('app.qr_inspect_worker',identifier):cancel('app.qr_inspect_worker',identifier)
+        with connect() as c:c.execute('DELETE FROM qr_requests WHERE id=?',(identifier,))
+    return {'removed':True}
+
+
+def save_selection(identifier,resume_id,company):
+    from .workspaces import LOCK
+    with LOCK:
+        row=get_request(identifier)
+        if row['state']!='draft':raise ValueError('qr_already_started')
+        if not any(r['id']==resume_id for r in list_resumes()):raise ValueError('qr_no_resume')
+        payload=json.loads(row['payload'])
+        if company.strip()!=payload.get('company',''):
+            payload.update(company=company.strip()[:200],company_quote=company.strip()[:200],company_evidence='candidate input')
+        payload.update(resume_id=resume_id,user_resume_id=resume_id,resume_reason='qr_resume_manual')
+        payload=complete_context(payload)
+        with connect() as c:c.execute('UPDATE qr_requests SET payload=? WHERE id=?',(json.dumps(payload,ensure_ascii=False),identifier))
+    return request_status(identifier)

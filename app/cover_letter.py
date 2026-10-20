@@ -69,7 +69,10 @@ def save_letter_state(job_id: int, state: dict) -> None:
 
 
 def generation_payload(job, raw, resume_path):
+    from .application_target import letter_target
+    target=letter_target(job)
     payload = {
+        'target_context':target,
         'policy_version': letter_policy.VERSION,
         'job': {key: job.get(key, '') for key in ('title', 'company', 'location', 'url', 'body', 'snippet', 'employment_type', 'start_date', 'end_date', 'search_profile_id')},
         'candidate': {key: raw.get(key, {}) for key in ('identity', 'background', 'availability', 'pfe')},

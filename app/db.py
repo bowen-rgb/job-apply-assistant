@@ -152,6 +152,7 @@ def _ensure_columns(conn):
     had_application_status = 'application_status' in cols
     wanted = {
         'application_resume_id': "TEXT DEFAULT ''",
+        'application_context_json': "TEXT DEFAULT ''",
         'canonical_url': "TEXT DEFAULT ''",
         'fingerprint': "TEXT DEFAULT ''",
         'dedupe_key': "TEXT DEFAULT ''",

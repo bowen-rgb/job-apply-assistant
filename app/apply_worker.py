@@ -157,7 +157,8 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
             if not resume_path or not resume_path.is_file():
                 raise ValueError('Aucun CV sélectionné. Activez un CV avant le pré-remplissage.')
             browser, context, mode = _open_browser(p, profile, job)
-            if raw_profile.get('application', {}).get('generate_cover_letter', True):
+            from .application_target import requires_letter
+            if requires_letter(job,raw_profile):
                 _update_status(job_id, 'preparing_letter', application_step='letter')
                 letter_context=browser.contexts[0] if mode=='cdp' and browser and browser.contexts else context
                 letter = generate_letter(letter_context, job, raw_profile, resume_path, profile.get('chatgpt_web_reviewer', {}))

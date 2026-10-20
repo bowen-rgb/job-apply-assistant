@@ -149,7 +149,10 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
     if purpose == 'job-agent':
         return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
     if purpose == 'cover-letter':
-        return isinstance(obj.get('letter'), str) and bool(obj['letter'].strip())
+        return isinstance(obj.get('letter'), str) and (bool(obj['letter'].strip()) or bool(obj.get('concerns')))
+    if purpose == 'qr-understanding':
+        return (obj.get('kind') in {'entry','vacancy','general'} and isinstance(obj.get('tasks'),list)
+                and isinstance(obj.get('resume_ranking'),list) and isinstance(obj.get('company'),str))
     if purpose == 'cover-letter-review':
         from .letter_policy import CHECKS
         return (isinstance(obj.get('checks'), dict)
