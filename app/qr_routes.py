@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from pydantic import BaseModel, Field
+from typing import Literal
 from . import qr_application as qr
 
 router=APIRouter(prefix='/api/qr')
@@ -7,6 +8,9 @@ router=APIRouter(prefix='/api/qr')
 class Selection(BaseModel):
     url:str=Field(max_length=4000)
     source_name:str=Field(default="",max_length=180)
+
+class Analysis(BaseModel):
+    language:Literal["zh","fr","en","de","es","pt"]="zh"
 
 class Dispatch(BaseModel):
     resume_id:str=Field(max_length=80)
@@ -40,8 +44,8 @@ def status(identifier:str):
     except KeyError:raise HTTPException(404,'qr_not_found')
 
 @router.post('/{identifier}/analyze')
-def analyze(identifier:str):
-    try:return qr.analyze_request(identifier)
+def analyze(identifier:str,payload:Analysis|None=None):
+    try:return qr.analyze_request(identifier,payload.language if payload else "zh")
     except KeyError:raise HTTPException(404,'qr_not_found')
     except ValueError as exc:raise HTTPException(409,str(exc))
 
@@ -73,3 +77,16 @@ def target(identifier:str,payload:Selection):
     except KeyError:raise HTTPException(404,'qr_not_found')
     except ValueError as exc:raise HTTPException(409,str(exc))
     except (OSError,TimeoutError):raise HTTPException(422,'qr_page_unavailable')
+
+
+@router.post('/{identifier}/crawl')
+def crawl(identifier:str,payload:Analysis|None=None):
+    try:return qr.crawl_request(identifier,payload.language if payload else "zh")
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+
+@router.post('/{identifier}/crawl-stop')
+def crawl_stop(identifier:str):
+    try:return qr.stop_crawl(identifier)
+    except KeyError:raise HTTPException(404,'qr_not_found')

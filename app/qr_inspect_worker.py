@@ -4,13 +4,14 @@ import sys
 from . import qr_application as qr
 from .qr_context import page_context,discover_roles,readiness
 from .qr_browser_reader import read_rendered
-from .worker_runtime import check_cancelled
+from .worker_runtime import check_cancelled,Cancelled
 
 
 def run(identifier):
     row=qr.get_request(identifier)
     if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
     payload=json.loads(row['payload'])
+    semantic_attempted=False
     try:
         raw,_,final=read_rendered(payload['final_url'])
         context=page_context(raw,final)
@@ -19,19 +20,28 @@ def run(identifier):
         if context['company'] or not payload.get('company'):
             for key in ('company','company_evidence','company_quote','company_source_url'):payload[key]=context[key]
         payload.update(kind=context['kind'],title=context['title'],role_title=context['role_title'],
-                       tasks=context['tasks'],body=context['body'],final_url=final,read_mode='chrome_rendered',search_url=context['search_url'])
+                       tasks=context['tasks'],body=context['body'],final_url=final,read_mode='chrome_rendered',search_url=context['search_url'],observed_links=context['observed_links'])
         payload['opportunities']=discover_roles(context,read_rendered) if context['kind']=='entry' else []
         check_cancelled()
         payload=qr.complete_context(payload)
         # A grounded semantic pass can resolve nonstandard prose and compare actual CVs.
         from .qr_semantics import enrich
-        if payload['kind']!='entry':payload=enrich(payload)
+        semantic_attempted=True
+        payload=enrich(payload)
         payload=qr.complete_context(payload)
         chosen,reason=qr.recommend(payload)
         payload.update(resume_id=chosen['id'] if chosen else '',resume_reason=reason)
         payload['inspection_error']=''
+    except Cancelled as exc:
+        payload['inspection_error']=str(exc)[:600]
     except Exception as exc:
         payload['inspection_error']=str(exc)[:600]
+        if not semantic_attempted:
+            try:
+                from .qr_semantics import enrich
+                payload=enrich(payload)
+            except Exception as ai_exc:payload['ai_error']=str(ai_exc)[:400]
+        else:payload['ai_error']=str(exc)[:400]
     finally:
         payload=qr.complete_context(payload)
         chosen,reason=qr.recommend(payload)

@@ -237,3 +237,18 @@ class QRTests(unittest.TestCase):
                     self.assertEqual(c.execute('SELECT status FROM application_queue WHERE job_id=?',(old,)).fetchone()[0],'queued')
                 self.assertFalse(store.load_profile_raw()['automation']['auto_submit'])
             finally:browser.close()
+
+
+    def test_crawl_is_idempotent_discovery_only_and_cancelable(self):
+        preview=self.preview();identifier=preview['id']
+        with patch('app.worker_runtime.any_running',return_value=False),patch('app.worker_runtime.launch') as launch:
+            state=qr.crawl_request(identifier)
+        self.assertEqual(state['state'],'crawling');launch.assert_called_once_with('app.qr_crawl_worker',identifier)
+        with patch('app.worker_runtime.is_running',return_value=True),patch('app.worker_runtime.launch') as launch:
+            self.assertEqual(qr.crawl_request(identifier)['state'],'crawling');launch.assert_not_called()
+        with patch('app.worker_runtime.cancel') as cancel:qr.stop_crawl(identifier)
+        cancel.assert_called_once_with('app.qr_crawl_worker',identifier)
+        with db.connect() as c:
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM application_queue').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM submission_attempts').fetchone()[0],0)

@@ -16,7 +16,8 @@ from bs4 import BeautifulSoup
 from . import application_safety as safety
 from .db import connect
 from .profile_store import load_profile_raw, list_resumes, resume_directory, select_resume_for_job
-from .pfe_discovery import read_public, validate_destination
+from .pfe_discovery import validate_destination
+from .qr_fetching import read_public
 from .qr_context import page_context, readiness, discover_roles
 
 MAX_IMAGE = 8 * 1024 * 1024
@@ -107,7 +108,7 @@ def inspect_url(url):
             'sector':sector,'sector_evidence':quote,'sector_inferred':bool(quote),
             'kind':context['kind'],'role_title':context['role_title'],'tasks':context['tasks'],
             'opportunities':discover_roles(context,read_public) if context['kind']=='entry' else [],
-            'search_url':context['search_url'],
+            'search_url':context['search_url'],'observed_links':context['observed_links'],
             'title':context['title'][:500], 'body':context['body'][:45000],
             'location':document['location'], 'employment_type':document['employment_type'],
             'structured_json':document['structured_json'], 'start_date':document['start_date'],
@@ -167,9 +168,9 @@ def request_status(identifier):
     result={'id':identifier,'state':row['state'],'preview':payload,
             'resumes':[{'id':r['id'],'label':r['label']} for r in list_resumes()], 'job_id':row['job_id'],
             'generate_letter':bool(payload.get('readiness',{}).get('letter_allowed')) and load_profile_raw().get('application',{}).get('generate_cover_letter',True)}
-    if row['state']=='analyzing':
+    if row['state'] in {'analyzing','crawling'}:
         from .worker_runtime import is_running
-        result['inspection_running']=is_running('app.qr_inspect_worker',identifier)
+        result['inspection_running']=is_running('app.qr_crawl_worker' if row['state']=='crawling' else 'app.qr_inspect_worker',identifier)
     if row['job_id']:
         job=safety.get_job(row['job_id'])
         from .preparation_summary import preparation_summary
@@ -290,7 +291,7 @@ def authorize_materials(identifier,job,raw,snapshot):
         c.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'qr_material_authorized',?)",(job['id'],'Single-application click authorization; generated letter checked by current LM policy, not represented as human proofreading.'))
 
 
-def analyze_request(identifier):
+def analyze_request(identifier,language="zh"):
     from .worker_runtime import any_running,is_running,launch
     from .browser_control import require_connection
     from .workspaces import LOCK
@@ -300,7 +301,7 @@ def analyze_request(identifier):
         if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
         require_connection()
         if any_running():raise ValueError('qr_busy')
-        with connect() as c:c.execute("UPDATE qr_requests SET state='analyzing' WHERE id=?",(identifier,))
+        with connect() as c:c.execute("UPDATE qr_requests SET state='analyzing',payload=? WHERE id=?",(json.dumps({**json.loads(row["payload"]),"analysis_language":language},ensure_ascii=False),identifier))
         try:launch('app.qr_inspect_worker',identifier)
         except Exception:
             with connect() as c:c.execute("UPDATE qr_requests SET state='draft' WHERE id=?",(identifier,))
@@ -329,8 +330,9 @@ def remove_request(identifier):
     from .worker_runtime import is_running,cancel
     with LOCK:
         row=get_request(identifier)
-        if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
-        if is_running('app.qr_inspect_worker',identifier):cancel('app.qr_inspect_worker',identifier)
+        if row['state'] not in {'draft','analyzing','crawling'}:raise ValueError('qr_already_started')
+        module='app.qr_crawl_worker' if row['state']=='crawling' else 'app.qr_inspect_worker'
+        if is_running(module,identifier):cancel(module,identifier)
         with connect() as c:c.execute('DELETE FROM qr_requests WHERE id=?',(identifier,))
     return {'removed':True}
 
@@ -360,9 +362,34 @@ def set_target(identifier,url):
         payload=inspect_url(url)
         chosen,reason=recommend(payload)
         manual=next((r for r in list_resumes() if r['id']==old.get('user_resume_id')),None)
-        payload.update(source_name=old.get('source_name',''),original_qr_url=old.get('original_qr_url') or old['url'],
+        payload.update(analysis_language=old.get('analysis_language','zh'),source_name=old.get('source_name',''),original_qr_url=old.get('original_qr_url') or old['url'],
                        resume_id=manual['id'] if manual else chosen['id'] if chosen else '',
                        resume_reason='qr_resume_manual' if manual else reason)
         if manual:payload['user_resume_id']=manual['id']
+        if old.get('kind')=='entry' or old.get('portal_url'):
+            payload.update(portal_url=old.get('portal_url') or old['final_url'],opportunities=old.get('opportunities',[]),crawl=old.get('crawl') or {'status':'not_started'})
         with connect() as c:c.execute("UPDATE qr_requests SET payload=? WHERE id=? AND state='draft'",(json.dumps(payload,ensure_ascii=False),identifier))
+    return request_status(identifier)
+
+
+def crawl_request(identifier,language="zh"):
+    from .worker_runtime import any_running,is_running,launch
+    from .workspaces import LOCK
+    with LOCK:
+        row=get_request(identifier)
+        if row['state']=='crawling' and is_running('app.qr_crawl_worker',identifier):return request_status(identifier)
+        if row['state'] not in {'draft','crawling'}:raise ValueError('qr_already_started')
+        if any_running():raise ValueError('qr_busy')
+        with connect() as c:c.execute("UPDATE qr_requests SET state='crawling',payload=? WHERE id=?",(json.dumps({**json.loads(row["payload"]),"analysis_language":language},ensure_ascii=False),identifier))
+        try:launch('app.qr_crawl_worker',identifier)
+        except Exception:
+            with connect() as c:c.execute("UPDATE qr_requests SET state='draft' WHERE id=?",(identifier,))
+            raise
+        return request_status(identifier)
+
+
+def stop_crawl(identifier):
+    from .worker_runtime import cancel
+    row=get_request(identifier)
+    if row['state']=='crawling':cancel('app.qr_crawl_worker',identifier)
     return request_status(identifier)

@@ -6,7 +6,7 @@ import re
 from dataclasses import asdict
 from urllib.parse import urljoin, urlparse, urlencode
 from bs4 import BeautifulSoup
-from .extractor import extract_job_document
+from .extractor import extract_job_document, _flatten_jsonld, _is_jobposting
 from .pfe import norm, public_url
 
 PROVIDERS={'workday','successfactors','sap successfactors','greenhouse','lever','smartrecruiters','jobteaser','recruitee','jobs','careers','career opportunities'}
@@ -54,7 +54,11 @@ def page_context(html,url):
         name=meta.get('content','').strip() if meta else ''
         if usable_company(name):company=name;source='og:site_name';quote=name
     headings=[h.get_text(' ',strip=True) for h in soup.select('h1,h2')]
-    structured=bool(document.get('structured_json') and 'JobPosting' in document['structured_json'])
+    job_count=0
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:job_count+=sum(_is_jobposting(item) for item in _flatten_jsonld(json.loads(script.get_text())))
+        except (ValueError,TypeError):pass
+    structured=job_count==1
     heading=next((h for h in headings if re.search(r'\bstage\b|\binternship\b|ing[eé]nieur|engineer',h,re.I)), '')
     # A non-JSON-LD vacancy must still expose an actual role and duties.
     duties=[]
@@ -74,6 +78,7 @@ def page_context(html,url):
             if len(' '.join(chunks))>35:duties.append(' '.join(chunks)[:5000])
     form=bool(soup.select('input[type=file]'))
     kind='vacancy' if (structured or (heading and duties)) else 'general' if form and re.search(r'spontan|talent pool|talent community|cv bank|déposez.*cv|submit your (?:cv|resume)',document['text'],re.I) else 'entry'
+    if job_count>1:kind='entry'
     role_title=document['title'] if structured else heading if kind=='vacancy' else ''
     links=[];seen=set()
     for a in soup.select('a[href]'):
@@ -86,6 +91,7 @@ def page_context(html,url):
     return {'company':company,'company_evidence':source,'company_quote':quote,'company_source_url':url,
             'title':role_title or document['title'],'kind':kind,'tasks':list(dict.fromkeys(duties))[:4],
             'role_title':role_title,'body':description or document['text'], 'opportunities':links[:40],
+            'observed_links':[{'url':urljoin(url,a['href']),'title':a.get_text(' ',strip=True)[:300]} for a in soup.select('a[href]') if public_url(urljoin(url,a['href']))][:2000],
             'search_url':search,'document':document,'page_title':title,'page_text':document['text'][:45000]}
 
 

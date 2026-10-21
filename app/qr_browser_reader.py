@@ -10,7 +10,7 @@ from .pfe_discovery import validate_destination
 from .worker_runtime import check_cancelled
 
 
-def read_rendered(url):
+def read_rendered(url, *, search_filters=True):
     require_connection()
     validate_destination(url)
     from .apply_worker import _open_browser
@@ -35,7 +35,7 @@ def read_rendered(url):
             # Let a SPA expose its first content, without clicking or accepting popups.
             try:page.wait_for_load_state('networkidle',timeout=6000)
             except Exception:pass
-            if '/search' in urlparse(page.url).path and runtime_profile().get('pfe',{}).get('enabled'):
+            if search_filters and '/search' in urlparse(page.url).path and runtime_profile().get('pfe',{}).get('enabled'):
                 # Search is navigation, not an application form. Only an unambiguous
                 # keyword field and search button, with no identity/upload fields.
                 inputs=page.locator('input[name=q],input[name=keywords],input[placeholder*="keyword" i],input[placeholder*="mot-cl" i]')
