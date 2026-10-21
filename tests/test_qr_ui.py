@@ -144,7 +144,7 @@ class QRUITests(unittest.TestCase):
                     if path.startswith('/static/'):
                         route.fulfill(path=str(STATIC/path.removeprefix('/static/')));return
                     if path=='/':
-                        route.fulfill(content_type='text/html',body='''<html><meta charset="utf-8"><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/workbench.css"><link rel="stylesheet" href="/static/reference-system.css"><link rel="stylesheet" href="/static/angelina-ui.css"><link rel="stylesheet" href="/static/qr-application.css"><button id="qrNav">QR</button><script>window.Locale={t:s=>s};window.Accounts={key:s=>'desk:'+s}</script><script src="/static/qr-application.js"></script><script>QRApplication.init()</script></html>''');return
+                        route.fulfill(content_type='text/html',body='''<html><meta charset="utf-8"><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/workbench.css"><link rel="stylesheet" href="/static/reference-system.css"><link rel="stylesheet" href="/static/qr-application.css"><link rel="stylesheet" href="/static/angelina-ui.css"><button id="qrNav">QR</button><script>window.Locale={t:s=>s};window.Accounts={key:s=>'desk:'+s}</script><script src="/static/qr-application.js"></script><script>QRApplication.init()</script></html>''');return
                     if req.method!='GET':writes.append(path)
                     if path=='/api/qr':route.fulfill(json=list(records.values()));return
                     if path=='/api/qr/decode':
