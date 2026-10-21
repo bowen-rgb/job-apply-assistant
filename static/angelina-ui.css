@@ -16,7 +16,7 @@ main{padding:32px clamp(16px,3vw,48px)}
 :is(main,dialog) button:disabled{opacity:.5;cursor:not-allowed}
 :is(main,dialog) :is(input,textarea,select):focus{border-color:var(--aa-copper);outline:2px solid var(--aa-orange);box-shadow:none}
 aside{background:#e7f5f4;border-right:1px solid #d3e6e7;color:var(--text)}
-aside .brand-mark{background:var(--aa-orange)!important;color:var(--aa-ink)!important}
+
 aside :is(.navmain,.filter).active,aside :is(.navmain,.filter):hover{background:var(--aa-orange);color:var(--aa-ink)}
 aside .primary{background:var(--aa-orange);color:var(--aa-ink)}
 .angelina-preferences{padding:16px 8px;border-top:1px solid var(--line);margin-top:16px}
@@ -95,7 +95,7 @@ main{padding-top:24px}
 aside .brand,aside .brand>span:nth-child(2){color:var(--text)}
 aside .brand{border-bottom:1px dashed #bcd7da;padding-bottom:20px;align-items:center}
 aside .brand small{color:var(--muted);font-size:10px;letter-spacing:.08em}
-aside .brand-mark{clip-path:none;border-radius:14px 14px 5px 14px!important;background:#ffcf83!important;transform:rotate(-4deg);color:#4d514f!important;box-shadow:3px 3px 0 #fff}
+aside .brand-mark{display:block;width:44px;height:44px;flex:0 0 44px;object-fit:contain;clip-path:none;border-radius:14px!important;background:transparent!important;transform:none;box-shadow:none;padding:0;border:0!important}
 aside :is(.small,.hint,.language-control label,.profile-switcher label,.queue-help,.navtitle){color:var(--muted)}
 aside :is(.navmain,.filter,.ghost),aside #simpleModeToggle{color:var(--text)}
 aside :is(.navmain,.filter){border-radius:12px!important;border-left:2px solid transparent!important;margin:3px 0;min-height:44px}
