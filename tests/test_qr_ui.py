@@ -25,7 +25,8 @@ class QRUITests(unittest.TestCase):
                     path=urlparse(route.request.url).path
                     if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html');return
                     if path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')));return
-                    if route.request.method=='POST':writes.append((path,None if path=='/api/qr/decode' else route.request.post_data))
+                    if route.request.method=='POST':writes.append((path,None if path=='/api/qr/decode' or path.endswith('/image') else route.request.post_data))
+                    if path.endswith('/image'):route.fulfill(json={'saved':True});return
                     if path=='/api/qr/decode':route.fulfill(json={'codes':['https://employer.test/apply']});return
                     if path=='/api/qr/inspect':route.fulfill(json=PREVIEW);return
                     if path.endswith('/selection'):

@@ -21,6 +21,9 @@ def run(identifier):
             for key in ('company','company_evidence','company_quote','company_source_url'):payload[key]=context[key]
         payload.update(kind=context['kind'],title=context['title'],role_title=context['role_title'],
                        tasks=context['tasks'],body=context['body'],final_url=final,read_mode='chrome_rendered',search_url=context['search_url'],observed_links=context['observed_links'])
+        payload['company_website']=context.get('company_website') or payload.get('company_website','')
+        from .qr_company_research import research
+        payload=research(payload)
         payload['opportunities']=discover_roles(context,read_rendered) if context['kind']=='entry' else []
         check_cancelled()
         payload=qr.complete_context(payload)

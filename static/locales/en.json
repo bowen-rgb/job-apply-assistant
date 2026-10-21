@@ -835,5 +835,18 @@
   "Afficher plus": "Show more jobs",
   "Lire le site dans Chrome et demander à ChatGPT": "Read in Chrome and ask ChatGPT if needed",
   "Aucune offre identifiable trouvée": "No identifiable jobs found",
-  "Lien proposé par ChatGPT — non vérifié": "Link suggested by ChatGPT — unverified"
+  "Lien proposé par ChatGPT — non vérifié": "Link suggested by ChatGPT — unverified",
+  "Agrandir la photo": "Enlarge photo",
+  "Sélectionner les brouillons affichés": "Select shown drafts",
+  "Retirer la sélection": "Remove selected drafts",
+  "Sélectionner": "Select",
+  "Zoom": "Zoom",
+  "Photo non enregistrée. Importez-la de nouveau pour la conserver.": "Photo could not be saved. Import it again to keep it.",
+  "Dépôt de CV — sans lettre": "CV collection — no cover letter",
+  "Envoyer uniquement le CV": "Send CV only",
+  "Comparaison des activités avec le CV": "Business activities compared with CV content",
+  "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "General CV pool: match business activities, no assumed vacancy or cover letter.",
+  "Activités proposées par ChatGPT — à vérifier": "Business research from ChatGPT — check source",
+  "Source entreprise": "Company source",
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "On click, the system researches business activities and selects a CV. Your manual choice takes priority."
 }

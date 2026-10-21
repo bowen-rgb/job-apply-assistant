@@ -9,11 +9,20 @@ from bs4 import BeautifulSoup
 from .extractor import extract_job_document, _flatten_jsonld, _is_jobposting
 from .pfe import norm, public_url
 
-PROVIDERS={'workday','successfactors','sap successfactors','greenhouse','lever','smartrecruiters','jobteaser','recruitee','jobs','careers','career opportunities'}
+PROVIDERS={'workday','successfactors','sap successfactors','greenhouse','lever','smartrecruiters','jobteaser','recruitee','inmind','djigg','jobs','careers','career opportunities','recruitment','recrutement','emploi','emplois'}
+
+
+def company_name(value):
+    """Remove recruiting-page wrappers, never infer an employer from an ATS host."""
+    name=re.sub(r'\s+',' ',str(value or '')).strip(' |:–—-')
+    name=re.sub(r'^(?:(?:emploi[s]?|recrutement)\s+(?:du\s+)?(?:groupe\s+)?|careers?(?: opportunities)?\s+(?:at|in|with)\s+|join\s+|rejoignez\s+)', '', name, flags=re.I)
+    name=re.sub(r'\s*(?:[|:–—-]\s*)?(?:recruitment|recrutement|careers?(?: opportunities)?|job opportunities|offres d[’\x27]emploi)\s*$', '', name, flags=re.I).strip(' |:–—-')
+    if not name or norm(name) in PROVIDERS or re.search(r'\b(?:https?://|www\.)|\b[\w-]+\.(?:com|fr|eu|net|org)\b',name,re.I):return ''
+    return name if 2<=len(name)<=100 else ''
 
 
 def usable_company(name):
-    return bool(name and len(name.strip())>=2 and norm(name.strip()) not in PROVIDERS)
+    return bool(company_name(name))
 
 
 def page_context(html,url):
@@ -21,6 +30,27 @@ def page_context(html,url):
     document=asdict(extract_job_document(html,url))
     title=soup.title.get_text(' ',strip=True) if soup.title else ''
     company=document.get('company','');source='JobPosting.hiringOrganization';quote=company
+    pool=False;company_website=''
+    # Inmind is the processor; its explicit tenant field names the recipient.
+    # Parse JSON string literals only. Never evaluate page JavaScript or use a URL slug as proof.
+    if urlparse(url).hostname=='cv.inmind.fr':
+        scripts='\n'.join(e.get_text() for e in soup.select('script:not([src])'))
+        match=re.search(r'inmind\.companyName\s*=\s*("(?:[^"\\]|\\.)*")',scripts)
+        if match:
+            try:tenant=json.loads(match[1])
+            except ValueError:tenant=''
+            if usable_company(tenant):
+                company=company_name(tenant);company=company.title() if company.islower() else company
+                source='inmind.companyName';quote=match[0]
+                pool=bool(re.search(r'inmind\.cvInmind\s*=\s*true',scripts))
+                consent=re.search(r'inmind\.consent\s*=\s*(\{.*?\});',scripts,re.S)
+                if consent:
+                    try:notice=json.loads(consent[1]).get('company_cgu','')
+                    except ValueError:notice=''
+                    for candidate in re.findall(r'https?://[^\s<>"\x27]+',notice):
+                        host=urlparse(candidate).hostname or ''
+                        if re.sub(r'[^a-z0-9]','',norm(tenant)) in re.sub(r'[^a-z0-9]','',host) and public_url(candidate):
+                            p=urlparse(candidate);company_website=p.scheme+'://'+p.netloc+'/';break
     if not usable_company(company):
         company='';source='';quote=''
         # Organization (not the recruiting software's WebSite) can identify an employer.
@@ -53,6 +83,9 @@ def page_context(html,url):
         meta=soup.select_one('meta[property="og:site_name"]')
         name=meta.get('content','').strip() if meta else ''
         if usable_company(name):company=name;source='og:site_name';quote=name
+    if not company and company_name(title) and company_name(title)!=title:
+        company=company_name(title);source='page_title';quote=title
+    company=company_name(company)
     headings=[h.get_text(' ',strip=True) for h in soup.select('h1,h2')]
     job_count=0
     for script in soup.select('script[type="application/ld+json"]'):
@@ -79,6 +112,7 @@ def page_context(html,url):
     form=bool(soup.select('input[type=file]'))
     kind='vacancy' if (structured or (heading and duties)) else 'general' if form and re.search(r'spontan|talent pool|talent community|cv bank|déposez.*cv|submit your (?:cv|resume)',document['text'],re.I) else 'entry'
     if job_count>1:kind='entry'
+    if pool and kind=='entry':kind='general'
     role_title=document['title'] if structured else heading if kind=='vacancy' else ''
     links=[];seen=set()
     for a in soup.select('a[href]'):
@@ -88,7 +122,7 @@ def page_context(html,url):
         if re.search(r'/jobs?/[^/]+',urlparse(target).path,re.I) and len(label)>6:
             links.append({'url':target,'title':label[:300]})
     search=next((urljoin(url,a['href']) for a in soup.select('a[href]') if urlparse(urljoin(url,a['href'])).hostname==urlparse(url).hostname and re.search(r'/(?:search|offres|jobs)/?$',urlparse(urljoin(url,a['href'])).path,re.I)), '')
-    return {'company':company,'company_evidence':source,'company_quote':quote,'company_source_url':url,
+    return {'company':company,'company_evidence':source,'company_quote':quote,'company_source_url':url,'company_website':company_website,
             'title':role_title or document['title'],'kind':kind,'tasks':list(dict.fromkeys(duties))[:4],
             'role_title':role_title,'body':description or document['text'], 'opportunities':links[:40],
             'observed_links':[{'url':urljoin(url,a['href']),'title':a.get_text(' ',strip=True)[:300]} for a in soup.select('a[href]') if public_url(urljoin(url,a['href']))][:2000],

@@ -14,6 +14,36 @@ from playwright.sync_api import sync_playwright
 from unittest.mock import MagicMock
 
 class QRTests(unittest.TestCase):
+    def test_cv_pool_click_routes_business_cv_and_skips_letter(self):
+        item=self.preview();payload=item['preview']
+        payload.update(kind='general',role_title='',tasks=[],company_website='https://employer.test/')
+        with db.connect() as c:c.execute('UPDATE qr_requests SET payload=? WHERE id=?',(json.dumps(payload),item['id']))
+        chosen=next(r for r in store.list_resumes() if r['label']=='A_Simulation')
+        def analyze(value):
+            return {**value,'semantic_ranking':[{'resume_id':chosen['id'],'source':'company_business_advisory','confidence':'medium','evidence':['Actual CV project evidence'],'label':chosen['label']}]}
+        with patch('app.browser_control.require_connection'),patch('app.worker_runtime.any_running',return_value=False),patch.object(qr,'validate_destination'),patch('app.qr_semantics.enrich',side_effect=analyze) as research,patch('app.browser.launch_apply'):
+            result=qr.start_request(item['id'],payload['resume_id'],payload['company'])
+        research.assert_called_once()
+        job=safety.get_job(result['job_id'])
+        self.assertEqual(job['application_resume_id'],chosen['id'])
+        from app.application_target import requires_letter
+        self.assertFalse(requires_letter(job,{'application':{'generate_cover_letter':True}}))
+        self.assertFalse(result['generate_letter'])
+
+    def test_saved_photo_is_candidate_owned_and_removed_with_draft(self):
+        row=self.preview();identifier=row['id']
+        picture=Image.fromarray(zxingcpp.create_barcode('https://employer.test/apply',zxingcpp.BarcodeFormat.QRCode).to_image(scale=3))
+        buffer=io.BytesIO();picture.save(buffer,format='PNG')
+        qr.save_image(identifier,buffer.getvalue())
+        self.assertTrue(qr.request_status(identifier)['preview']['image_url'])
+        path=qr.image_path(identifier);self.assertTrue(path.is_file())
+        other=workspaces.create('Other photo owner');token=workspaces.CURRENT.set(other)
+        try:
+            db.init_db()
+            with self.assertRaises(KeyError):qr.get_request(identifier)
+        finally:workspaces.CURRENT.reset(token)
+        qr.remove_request(identifier);self.assertFalse(path.exists())
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.root=Path(self.temp.name)

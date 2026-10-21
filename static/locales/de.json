@@ -835,5 +835,18 @@
   "Afficher plus": "Mehr Stellen anzeigen",
   "Lire le site dans Chrome et demander à ChatGPT": "In Chrome lesen und bei Bedarf ChatGPT fragen",
   "Aucune offre identifiable trouvée": "Keine erkennbaren Stellen gefunden",
-  "Lien proposé par ChatGPT — non vérifié": "Von ChatGPT vorgeschlagener Link — ungeprüft"
+  "Lien proposé par ChatGPT — non vérifié": "Von ChatGPT vorgeschlagener Link — ungeprüft",
+  "Agrandir la photo": "Foto vergrößern",
+  "Sélectionner les brouillons affichés": "Angezeigte Entwürfe auswählen",
+  "Retirer la sélection": "Ausgewählte Entwürfe entfernen",
+  "Sélectionner": "Auswählen",
+  "Zoom": "Zoom",
+  "Photo non enregistrée. Importez-la de nouveau pour la conserver.": "Foto nicht gespeichert. Zum Speichern erneut importieren.",
+  "Dépôt de CV — sans lettre": "Lebenslauf abgeben — ohne Anschreiben",
+  "Envoyer uniquement le CV": "Nur Lebenslauf senden",
+  "Comparaison des activités avec le CV": "Geschäftsfelder mit Lebenslauf abgeglichen",
+  "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "Allgemeiner Talentpool: nach Geschäftsfeld wählen, ohne erfundene Stelle oder Anschreiben.",
+  "Activités proposées par ChatGPT — à vérifier": "Unternehmensrecherche von ChatGPT — prüfen",
+  "Source entreprise": "Unternehmensquelle",
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Beim Klick recherchiert das System die Geschäftsfelder und wählt den Lebenslauf. Ihre manuelle Auswahl hat Vorrang."
 }

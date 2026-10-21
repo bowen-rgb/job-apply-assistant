@@ -835,5 +835,18 @@
   "Afficher plus": "显示更多岗位",
   "Lire le site dans Chrome et demander à ChatGPT": "用 Chrome 读取，必要时询问 ChatGPT",
   "Aucune offre identifiable trouvée": "未发现可识别的岗位，可请 ChatGPT 协助判断",
-  "Lien proposé par ChatGPT — non vérifié": "ChatGPT 建议链接，尚未核验"
+  "Lien proposé par ChatGPT — non vérifié": "ChatGPT 建议链接，尚未核验",
+  "Agrandir la photo": "放大查看照片",
+  "Sélectionner les brouillons affichés": "全选当前显示的草稿",
+  "Retirer la sélection": "移除所选草稿",
+  "Sélectionner": "选择",
+  "Zoom": "缩放",
+  "Photo non enregistrée. Importez-la de nouveau pour la conserver.": "照片未能保存，请重新导入以保留照片。",
+  "Dépôt de CV — sans lettre": "通用简历收集 · 不需要动机信",
+  "Envoyer uniquement le CV": "仅投递简历",
+  "Comparaison des activités avec le CV": "根据企业业务与简历内容匹配",
+  "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "这是企业通用简历库：按业务方向推荐简历，不代表具体岗位，只投简历。",
+  "Activités proposées par ChatGPT — à vérifier": "ChatGPT 查询的企业业务 · 待核验",
+  "Source entreprise": "企业资料来源",
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "点击后，系统会查询企业业务并选择简历；你手动选定的简历优先。"
 }

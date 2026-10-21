@@ -18,7 +18,7 @@ from .db import connect
 from .profile_store import load_profile_raw, list_resumes, resume_directory, select_resume_for_job
 from .pfe_discovery import validate_destination
 from .qr_fetching import read_public
-from .qr_context import page_context, readiness, discover_roles
+from .qr_context import page_context, readiness, discover_roles, company_name
 
 MAX_IMAGE = 8 * 1024 * 1024
 MAX_PIXELS = 20_000_000
@@ -64,6 +64,31 @@ def get_request(identifier):
     return dict(row)
 
 
+def image_path(identifier):
+    from .profile_store import data_directory
+    if not re.fullmatch(r'[a-f0-9]{32}',identifier):raise KeyError(identifier)
+    return data_directory()/'qr-images'/(identifier+'.png')
+
+
+def save_image(identifier,content):
+    from PIL import Image, ImageOps
+    from .workspaces import LOCK
+    # Re-encode a validated QR image: no arbitrary upload formats or paths.
+    decode_image(content)
+    with LOCK:
+        if get_request(identifier)['state']!='draft':raise ValueError('qr_already_started')
+        target=image_path(identifier);target.parent.mkdir(parents=True,exist_ok=True)
+        with Image.open(io.BytesIO(content)) as source:
+            ImageOps.exif_transpose(source).convert('RGB').save(target,format='PNG')
+    return {'saved':True}
+
+
+def display_fields(identifier,payload):
+    payload['company_display']=company_name(payload.get('company'))
+    payload['image_url']=f'/api/qr/{identifier}/image' if image_path(identifier).is_file() else ''
+    return payload
+
+
 def inspect_url(url):
     from .extractor import extract_job_document
     parsed = urlparse(url)
@@ -103,8 +128,8 @@ def inspect_url(url):
     for key, pattern in sectors:
         match = re.search(pattern,text,re.I)
         if match:sector,quote=key,match.group();break
-    return complete_context({'url':url,'final_url':final,'company':context['company'],'company_evidence':context['company_evidence'],
-            'company_quote':context['company_quote'],'company_source_url':final,'page_title':context['page_title'],
+    payload={'url':url,'final_url':final,'company':context['company'],'company_evidence':context['company_evidence'],
+            'company_quote':context['company_quote'],'company_source_url':final,'page_title':context['page_title'],'company_website':context.get('company_website',''),
             'sector':sector,'sector_evidence':quote,'sector_inferred':bool(quote),
             'kind':context['kind'],'role_title':context['role_title'],'tasks':context['tasks'],
             'opportunities':discover_roles(context,read_public) if context['kind']=='entry' else [],
@@ -112,15 +137,24 @@ def inspect_url(url):
             'title':context['title'][:500], 'body':context['body'][:45000],
             'location':document['location'], 'employment_type':document['employment_type'],
             'structured_json':document['structured_json'], 'start_date':document['start_date'],
-            'end_date':document['end_date'], 'valid_through':document['valid_through'],'read_mode':'public_html'})
+            'end_date':document['end_date'], 'valid_through':document['valid_through'],'read_mode':'public_html'}
+    from .qr_company_research import research
+    return complete_context(research(payload))
 
 
 def complete_context(payload):
     from .resume_matcher import rank_resumes
     from .cover_letter import resume_text
+    payload['company']=company_name(payload.get('company'))
     payload['readiness']=readiness(payload)
     rows=list_resumes()
     payload['resume_ranking']=payload.get('semantic_ranking') or rank_resumes(payload,rows,lambda row:resume_text(resume_directory()/row['filename']))
+    if payload.get('kind')=='general' and payload.get('company_business'):
+        # A company CV pool has no vacancy duties: keep business matching separate.
+        probe={'role_title':payload.get('company_business_title') or payload['company'],'tasks':[payload['company_business']]}
+        ranking=rank_resumes(probe,rows,lambda row:resume_text(resume_directory()/row['filename']))
+        for item in ranking:item.update(source='company_business_cv',reason='company_business_vs_cv')
+        payload['resume_ranking']=ranking
     payload['needs_enrichment']=not payload['readiness']['ready'] or not payload['resume_ranking'] or payload['resume_ranking'][0].get('source')=='tags_only'
     return payload
 
@@ -128,6 +162,10 @@ def complete_context(payload):
 def recommend(payload):
     rows = list_resumes()
     if not rows:return None,'qr_no_resume'
+    if payload.get('kind')=='general':
+        ranking=payload.get('resume_ranking') or []
+        if ranking and ranking[0].get('source') in {'company_business_cv','company_business_advisory'} and ranking[0].get('confidence') in {'high','medium'} and ranking[0].get('evidence'):
+            return next((row for row in rows if row['id']==ranking[0]['resume_id']),None),'qr_resume_business'
     if payload['kind']=='vacancy':
         ranking=payload.get('resume_ranking') or []
         if ranking and ranking[0].get('source')!='tags_only' and (ranking[0].get('score',0)>0 or ranking[0].get('source')=='grounded_semantic'):
@@ -164,7 +202,7 @@ def create_request(url,source_name=""):
 
 def request_status(identifier):
     row=get_request(identifier)
-    payload=json.loads(row['payload'])
+    payload=display_fields(identifier,json.loads(row['payload']))
     result={'id':identifier,'state':row['state'],'preview':payload,
             'resumes':[{'id':r['id'],'label':r['label']} for r in list_resumes()], 'job_id':row['job_id'],
             'generate_letter':bool(payload.get('readiness',{}).get('letter_allowed')) and load_profile_raw().get('application',{}).get('generate_cover_letter',True)}
@@ -205,6 +243,16 @@ def start_request(identifier,resume_id,company):
         payload=complete_context(payload)
         if not payload['readiness']['ready'] and not (payload['kind']=='general' and payload.get('company_quote')):
             raise ValueError('qr_context_incomplete')
+        if payload['kind']=='general' and not payload.get('user_resume_id'):
+            # The CV-only click also authorizes automatic company-business routing.
+            # Never override an explicitly selected CV or generate vacancy duties.
+            if payload.get('company_website') and not payload.get('company_business') and not payload.get('company_business_advice'):
+                try:
+                    from .qr_semantics import enrich
+                    payload=complete_context(enrich(payload))
+                except Exception as exc:payload['ai_error']=str(exc)[:400]
+            chosen,reason=recommend(payload)
+            if chosen:resume_id=chosen['id'];payload.update(resume_id=resume_id,resume_reason=reason)
         company=str(company or payload['company']).strip()[:200]
         if not company:raise ValueError('qr_company_required')
         if payload['company']!=company:
@@ -315,7 +363,7 @@ def list_requests():
         rows=c.execute('SELECT id,state,payload,created_at FROM qr_requests ORDER BY created_at DESC,rowid DESC').fetchall()
     result=[]
     for row in rows:
-        item={'id':row['id'],'state':row['state'],'preview':json.loads(row['payload']),'created_at':row['created_at']}
+        item={'id':row['id'],'state':row['state'],'preview':display_fields(row['id'],json.loads(row['payload'])),'created_at':row['created_at']}
         if row['state']!='draft':
             live=request_status(row['id'])
             for key in ('progress','inspection_running','job_id'):
@@ -334,6 +382,7 @@ def remove_request(identifier):
         module='app.qr_crawl_worker' if row['state']=='crawling' else 'app.qr_inspect_worker'
         if is_running(module,identifier):cancel(module,identifier)
         with connect() as c:c.execute('DELETE FROM qr_requests WHERE id=?',(identifier,))
+        image_path(identifier).unlink(missing_ok=True)
     return {'removed':True}
 
 

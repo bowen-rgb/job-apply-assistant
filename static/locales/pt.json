@@ -835,5 +835,18 @@
   "Afficher plus": "Mostrar mais ofertas",
   "Lire le site dans Chrome et demander à ChatGPT": "Ler no Chrome e perguntar ao ChatGPT se necessário",
   "Aucune offre identifiable trouvée": "Nenhuma oferta identificável encontrada",
-  "Lien proposé par ChatGPT — non vérifié": "Ligação sugerida pelo ChatGPT — não verificada"
+  "Lien proposé par ChatGPT — non vérifié": "Ligação sugerida pelo ChatGPT — não verificada",
+  "Agrandir la photo": "Ampliar foto",
+  "Sélectionner les brouillons affichés": "Selecionar rascunhos visíveis",
+  "Retirer la sélection": "Remover rascunhos selecionados",
+  "Sélectionner": "Selecionar",
+  "Zoom": "Zoom",
+  "Photo non enregistrée. Importez-la de nouveau pour la conserver.": "A foto não foi salva. Importe-a novamente para mantê-la.",
+  "Dépôt de CV — sans lettre": "Entrega de currículo — sem carta",
+  "Envoyer uniquement le CV": "Enviar apenas currículo",
+  "Comparaison des activités avec le CV": "Atividades comparadas ao currículo",
+  "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "Banco geral: escolher por atividade, sem inventar vaga nem carta.",
+  "Activités proposées par ChatGPT — à vérifier": "Atividades pesquisadas pelo ChatGPT — verificar",
+  "Source entreprise": "Fonte da empresa",
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Ao clicar, o sistema pesquisa as atividades e escolhe o currículo. Sua escolha manual tem prioridade."
 }

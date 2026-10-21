@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal
+from fastapi.responses import FileResponse
 from . import qr_application as qr
 
 router=APIRouter(prefix='/api/qr')
@@ -16,6 +17,21 @@ class Dispatch(BaseModel):
     resume_id:str=Field(max_length=80)
     company:str=Field(default='',max_length=200)
     resume_explicit:bool=True
+
+@router.post('/{identifier}/image')
+def save_image(identifier:str,image:UploadFile=File(...)):
+    try:return qr.save_image(identifier,image.file.read(qr.MAX_IMAGE+1))
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+@router.get('/{identifier}/image')
+def get_image(identifier:str):
+    try:
+        qr.get_request(identifier)
+        path=qr.image_path(identifier)
+        if not path.is_file():raise KeyError(identifier)
+        return FileResponse(path,media_type='image/png',headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+    except KeyError:raise HTTPException(404,'qr_not_found')
 
 @router.post('/decode')
 def decode(image:UploadFile=File(...)):

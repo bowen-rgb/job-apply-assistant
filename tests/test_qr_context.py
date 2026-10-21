@@ -7,6 +7,38 @@ from app.resume_matcher import rank_resumes
 from app.application_target import letter_target
 
 class QRContextTests(unittest.TestCase):
+    def test_inmind_tenant_is_employer_and_event_is_not_a_vacancy(self):
+        html='''<title>InMind</title><img alt="Logo Inmind"><h1>Arts &amp; Métiers</h1>
+        <script>inmind.cvInmind = true; inmind.companyName = "saint-gobain";
+        inmind.consent = {"company_cgu":"Saint-Gobain : https://www.saint-gobain.com/fr/privacy"};</script>'''
+        ctx=page_context(html,'https://cv.inmind.fr/saint-gobain/27257')
+        self.assertEqual(ctx['company'],'Saint-Gobain');self.assertEqual(ctx['kind'],'general')
+        self.assertEqual(ctx['company_website'],'https://www.saint-gobain.com/')
+        self.assertEqual(ctx['company_evidence'],'inmind.companyName');self.assertEqual(ctx['tasks'],[])
+        self.assertFalse(readiness(ctx)['letter_allowed'])
+        self.assertNotEqual(page_context(html,'https://unrelated.test/')['company'],'Saint-Gobain')
+
+    def test_general_pool_business_advice_requires_cv_quote_and_official_source(self):
+        payload={'kind':'general','company':'Example','company_website':'https://example.test/','tasks':[]}
+        summary='Example develops mechanical systems and numerical simulation for industrial products.'
+        cv='I developed mechanical numerical simulation and validated finite element models.'
+        result={'business_summary':summary,'business_source_url':'https://example.test/about',
+                'resume_ranking':[{'resume_id':'a','cv_quote':cv,'task_quote':summary,'confidence':'medium','reason':'Company simulation activities match the documented project.'}]}
+        analysis=apply_analysis(dict(payload),result,{'a':{'text':cv,'label':'Simulation'}})
+        self.assertEqual(analysis['semantic_ranking'][0]['source'],'company_business_advisory')
+        self.assertFalse(analysis['company_business_verified']);self.assertEqual(analysis['tasks'],[])
+        bad={**result,'business_source_url':'https://unrelated.test/'}
+        self.assertNotIn('semantic_ranking',apply_analysis(dict(payload),bad,{'a':{'text':cv,'label':'Simulation'}}))
+
+    def test_company_names_are_not_career_titles_or_ats_domains(self):
+        from app.qr_context import company_name
+        self.assertEqual(company_name('Emploi groupe SNCF : Recrutement'),'SNCF')
+        self.assertEqual(company_name('Michelin | Careers'),'Michelin')
+        for name in ['career5.successfactors.eu','cv.inmind.fr','Recruitment','Workday']:
+            self.assertEqual(company_name(name),'')
+        ctx=page_context('<title>Emploi groupe SNCF : Recrutement</title>','https://employer.test/')
+        self.assertEqual(ctx['company'],'SNCF');self.assertIn('Recrutement',ctx['company_quote'])
+
     def test_employer_fallbacks_and_provider_rejection(self):
         cases=[('<title>Careers opportunities in CMA CGM Group</title>','CMA CGM Group','page_title'),
                ('<footer>© 2026 Example Aerospace | All rights reserved</footer>','Example Aerospace','footer'),
