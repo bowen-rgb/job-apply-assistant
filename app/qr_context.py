@@ -8,6 +8,7 @@ from urllib.parse import urljoin, urlparse, urlencode
 from bs4 import BeautifulSoup
 from .extractor import extract_job_document, _flatten_jsonld, _is_jobposting
 from .pfe import norm, public_url
+from .qr_hosted_forms import form_identity,is_google_form,is_hosted_ats,is_host_name
 
 PROVIDERS={'workday','successfactors','sap successfactors','greenhouse','lever','smartrecruiters','jobteaser','recruitee','inmind','djigg','jobs','careers','career opportunities','recruitment','recrutement','emploi','emplois'}
 
@@ -15,8 +16,8 @@ PROVIDERS={'workday','successfactors','sap successfactors','greenhouse','lever',
 def company_name(value):
     """Remove recruiting-page wrappers, never infer an employer from an ATS host."""
     name=re.sub(r'\s+',' ',str(value or '')).strip(' |:–—-')
-    name=re.sub(r'^(?:(?:emploi[s]?|recrutement)\s+(?:du\s+)?(?:groupe\s+)?|careers?(?: opportunities)?\s+(?:at|in|with)\s+|join\s+|rejoignez\s+)', '', name, flags=re.I)
-    name=re.sub(r'\s*(?:[|:–—-]\s*)?(?:recruitment|recrutement|careers?(?: opportunities)?|job opportunities|offres d[’\x27]emploi)\s*$', '', name, flags=re.I).strip(' |:–—-')
+    name=re.sub(r'^(?:(?:emploi[s]?|recrutement)\s+(?:du\s+)?(?:groupe\s+)?|(?:careers?(?: opportunities)?|jobs)\s+(?:at|in|with)\s+|join\s+|rejoignez\s+)', '', name, flags=re.I)
+    name=re.sub(r'\s*(?:[|:–—-]\s*)?(?:recruitment|recrutement|careers?(?: opportunities| home| site| portal)?|job opportunities|offres d[’\x27]emploi)\s*$', '', name, flags=re.I).strip(' |:–—-')
     if not name or norm(name) in PROVIDERS or re.search(r'\b(?:https?://|www\.)|\b[\w-]+\.(?:com|fr|eu|net|org)\b',name,re.I):return ''
     return name if 2<=len(name)<=100 else ''
 
@@ -25,12 +26,18 @@ def usable_company(name):
     return bool(company_name(name))
 
 
-def page_context(html,url):
+def page_context(html,url,*,origin_url=''):
     soup=BeautifulSoup(html,'lxml')
     document=asdict(extract_job_document(html,url))
     title=soup.title.get_text(' ',strip=True) if soup.title else ''
     company=document.get('company','');source='JobPosting.hiringOrganization';quote=company
     pool=False;company_website=''
+    hosting_url=url if is_google_form(url) or is_hosted_ats(url) else origin_url or url
+    if is_google_form(hosting_url):
+        form_title=soup.select_one('h1,[role=heading][aria-level="1"]')
+        identity=form_identity(form_title.get_text(' ',strip=True) if form_title else title,document.get('text',''),hosting_url)
+        if identity:
+            company=identity['company'];source=identity['company_evidence'];quote=identity['company_quote'];pool=True
     # Inmind is the processor; its explicit tenant field names the recipient.
     # Parse JSON string literals only. Never evaluate page JavaScript or use a URL slug as proof.
     if urlparse(url).hostname=='cv.inmind.fr':
@@ -64,28 +71,36 @@ def page_context(html,url):
                 elif isinstance(value,list):
                     for child in value:yield from walk(child)
             for item in walk(data):
-                if item.get('@type') in ('Organization','Corporation') and usable_company(str(item.get('name') or '')):
+                if item.get('@type') in ('Organization','Corporation') and usable_company(str(item.get('name') or '')) and not is_host_name(item.get('name'),hosting_url):
                     company=str(item['name']);source='Organization.name';quote=company;break
             if company:break
     if not company:
-        match=re.search(r'(?:careers?(?: opportunities)?\s+(?:at|in|with)|emplois? chez|recrutement chez|rejoignez|join)\s+(.{2,90}?)(?:\s*[|–—]|$)',title,re.I)
+        match=re.search(r'(?:(?:careers?(?: opportunities)?|jobs)\s+(?:at|in|with)|emplois? chez|recrutement chez|rejoignez|join)\s+(.{2,90}?)(?:\s*[|–—]|$)',title,re.I)
         if match and usable_company(match[1]):company=match[1].strip();source='page_title';quote=title
     if not company:
         for element in soup.select('footer, [class*=copyright], [id*=copyright]'):
             text=element.get_text(' ',strip=True)
             match=re.search(r'(?:©|copyright)\s*(?:\d{4}(?:\s*[-–]\s*\d{4})?\s*)?([\wÀ-ÿ][\wÀ-ÿ &.,-]{1,65}?)(?:\s*[-|·]|all rights|tous droits|$)',text,re.I)
-            if match and usable_company(match[1]):company=match[1].strip();source='footer';quote=match[0].strip();break
+            if match and usable_company(match[1]) and not is_host_name(match[1],hosting_url):company=match[1].strip();source='footer';quote=match[0].strip();break
     if not company:
         for element in soup.select('header img[alt], [class*=logo] img[alt], img[class*=logo][alt]'):
             name=re.sub(r'\blogo\b','',element.get('alt',''),flags=re.I).strip(' -|')
-            if usable_company(name) and len(name)<90:company=name;source='logo_alt';quote=element.get('alt');break
+            if usable_company(name) and len(name)<90 and not is_host_name(name,hosting_url):company=name;source='logo_alt';quote=element.get('alt');break
     if not company:
         meta=soup.select_one('meta[property="og:site_name"]')
         name=meta.get('content','').strip() if meta else ''
-        if usable_company(name):company=name;source='og:site_name';quote=name
+        if usable_company(name) and not is_host_name(name,hosting_url):company=name;source='og:site_name';quote=name
     if not company and company_name(title) and company_name(title)!=title:
         company=company_name(title);source='page_title';quote=title
     company=company_name(company)
+    if is_host_name(company,hosting_url) and source not in {'form.recipient','JobPosting.hiringOrganization'}:
+        company='';source='';quote=''
+    if is_google_form(hosting_url) and source not in {'form.recipient','JobPosting.hiringOrganization'}:
+        # Generic Google footer, logo and OpenGraph metadata describe the host.
+        company='';source='';quote=''
+    hosting_error=''
+    if is_hosted_ats(url) and re.search(r'an error occurred while processing your request|check the URL',document.get('text',''),re.I):
+        company='';source='';quote='';hosting_error='qr_hosted_link_invalid'
     headings=[h.get_text(' ',strip=True) for h in soup.select('h1,h2')]
     job_count=0
     for script in soup.select('script[type="application/ld+json"]'):
@@ -122,7 +137,7 @@ def page_context(html,url):
         if re.search(r'/jobs?/[^/]+',urlparse(target).path,re.I) and len(label)>6:
             links.append({'url':target,'title':label[:300]})
     search=next((urljoin(url,a['href']) for a in soup.select('a[href]') if urlparse(urljoin(url,a['href'])).hostname==urlparse(url).hostname and re.search(r'/(?:search|offres|jobs)/?$',urlparse(urljoin(url,a['href'])).path,re.I)), '')
-    return {'company':company,'company_evidence':source,'company_quote':quote,'company_source_url':url,'company_website':company_website,
+    return {'company':company,'company_evidence':source,'company_quote':quote,'company_source_url':url,'company_website':company_website,'hosting_error':hosting_error,
             'title':role_title or document['title'],'kind':kind,'tasks':list(dict.fromkeys(duties))[:4],
             'role_title':role_title,'body':description or document['text'], 'opportunities':links[:40],
             'observed_links':[{'url':urljoin(url,a['href']),'title':a.get_text(' ',strip=True)[:300]} for a in soup.select('a[href]') if public_url(urljoin(url,a['href']))][:2000],

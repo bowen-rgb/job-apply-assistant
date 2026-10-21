@@ -17,12 +17,16 @@ def apply_analysis(payload,result,cvs):
     text='\n'.join(str(payload.get(k) or '') for k in ('title','body','company_quote','page_title'))
     company=str(result.get('company') or '')
     quote=result.get('company_quote')
+    from .qr_hosted_forms import is_host_name
+    page_url=payload.get('final_url') or payload.get('company_source_url') or payload.get('url','')
+    host_claim=any(is_host_name(company,u) for u in (page_url,payload.get('url',''),payload.get('original_qr_url','')))
+    if host_claim and not (payload.get('company_evidence') in {'form.recipient','JobPosting.hiringOrganization'} and norm(payload.get('company',''))==norm(company)):company=''
     if usable_company(company) and contains(quote,text) and norm(company) in norm(quote):
         payload.update(company=company_name(company),company_quote=quote,company_evidence='rendered_page_semantic_quote')
     role=result.get('role_title')
     role_quote=result.get('role_quote')
     tasks=[task for task in result.get('tasks',[]) if contains(task,text)]
-    if result.get('kind')=='vacancy' and isinstance(role,str) and contains(role_quote,text) and norm(role) in norm(role_quote) and tasks:
+    if payload.get('kind')!='general' and result.get('kind')=='vacancy' and isinstance(role,str) and contains(role_quote,text) and norm(role) in norm(role_quote) and tasks:
         payload.update(kind='vacancy',role_title=role,title=role,tasks=tasks,role_quote=role_quote)
     allowed={row['url']:row for row in payload.get('observed_links',[]) if isinstance(row,dict) and row.get('url')}
     suggestions=[]

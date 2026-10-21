@@ -84,6 +84,9 @@ def save_image(identifier,content):
 
 
 def display_fields(identifier,payload):
+    from .qr_hosted_forms import repair_identity
+    payload=repair_identity(payload)
+    payload['readiness']=readiness(payload)
     payload['company_display']=company_name(payload.get('company'))
     payload['image_url']=f'/api/qr/{identifier}/image' if image_path(identifier).is_file() else ''
     return payload
@@ -119,7 +122,7 @@ def inspect_url(url):
             raise ValueError('qr_expired')
     except ValueError as exc:
         if str(exc)=='qr_expired':raise
-    context=page_context(str(soup),final)
+    context=page_context(str(soup),final,origin_url=url)
     sectors = [('research','research|recherche|laboratoire|laboratory'),
                ('mechanical','mécanique|mechanical|aéronautique|aerospace|manufactur'),
                ('control','automatique|control systems|robotique|robotics'),
@@ -137,7 +140,7 @@ def inspect_url(url):
             'title':context['title'][:500], 'body':context['body'][:45000],
             'location':document['location'], 'employment_type':document['employment_type'],
             'structured_json':document['structured_json'], 'start_date':document['start_date'],
-            'end_date':document['end_date'], 'valid_through':document['valid_through'],'read_mode':'public_html'}
+            'end_date':document['end_date'], 'valid_through':document['valid_through'],'read_mode':'public_html','inspection_error':context.get('hosting_error','')}
     from .qr_company_research import research
     return complete_context(research(payload))
 
@@ -145,6 +148,8 @@ def inspect_url(url):
 def complete_context(payload):
     from .resume_matcher import rank_resumes
     from .cover_letter import resume_text
+    from .qr_hosted_forms import repair_identity
+    payload=repair_identity(payload)
     payload['company']=company_name(payload.get('company'))
     payload['readiness']=readiness(payload)
     rows=list_resumes()

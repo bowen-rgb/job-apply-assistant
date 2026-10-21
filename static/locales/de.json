@@ -848,5 +848,6 @@
   "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "Allgemeiner Talentpool: nach Geschäftsfeld wählen, ohne erfundene Stelle oder Anschreiben.",
   "Activités proposées par ChatGPT — à vérifier": "Unternehmensrecherche von ChatGPT — prüfen",
   "Source entreprise": "Unternehmensquelle",
-  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Beim Klick recherchiert das System die Geschäftsfelder und wählt den Lebenslauf. Ihre manuelle Auswahl hat Vorrang."
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Beim Klick recherchiert das System die Geschäftsfelder und wählt den Lebenslauf. Ihre manuelle Auswahl hat Vorrang.",
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "Dieser Link ist unvollständig oder benötigt eine abgelaufene Sitzung. Öffnen Sie ihn über die Karriereseite des Unternehmens."
 }

@@ -848,5 +848,6 @@
   "Dépôt général : choix selon les activités, sans poste inventé et sans lettre.": "这是企业通用简历库：按业务方向推荐简历，不代表具体岗位，只投简历。",
   "Activités proposées par ChatGPT — à vérifier": "ChatGPT 查询的企业业务 · 待核验",
   "Source entreprise": "企业资料来源",
-  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "点击后，系统会查询企业业务并选择简历；你手动选定的简历优先。"
+  "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "点击后，系统会查询企业业务并选择简历；你手动选定的简历优先。",
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "此招聘链接不完整或依赖已失效的会话，请从企业招聘官网重新打开。"
 }

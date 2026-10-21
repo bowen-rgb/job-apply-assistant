@@ -12,9 +12,11 @@ def run(identifier):
     if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
     payload=json.loads(row['payload'])
     semantic_attempted=False
+    hosting_error=''
     try:
         raw,_,final=read_rendered(payload['final_url'])
-        context=page_context(raw,final)
+        context=page_context(raw,final,origin_url=payload.get('url',''))
+        hosting_error=context.get('hosting_error','')
         payload.pop('semantic_ranking',None)
         # Preserve an explicitly provided employer only if the page still lacks a name.
         if context['company'] or not payload.get('company'):
@@ -34,11 +36,11 @@ def run(identifier):
         payload=qr.complete_context(payload)
         chosen,reason=qr.recommend(payload)
         payload.update(resume_id=chosen['id'] if chosen else '',resume_reason=reason)
-        payload['inspection_error']=''
+        payload['inspection_error']=context.get('hosting_error','')
     except Cancelled as exc:
         payload['inspection_error']=str(exc)[:600]
     except Exception as exc:
-        payload['inspection_error']=str(exc)[:600]
+        payload['inspection_error']=hosting_error or str(exc)[:600]
         if not semantic_attempted:
             try:
                 from .qr_semantics import enrich

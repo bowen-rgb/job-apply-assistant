@@ -7,6 +7,44 @@ from app.resume_matcher import rank_resumes
 from app.application_target import letter_target
 
 class QRContextTests(unittest.TestCase):
+    def test_google_form_recipient_overrides_google_footer_and_metadata(self):
+        html='''<title>Récupération de CV au CEA - Google Forms</title>
+        <meta property="og:site_name" content="Google"><footer>© 2026 Google</footer>
+        <div role="heading" aria-level="1">Récupération de CV au CEA</div>
+        <p>Ce formulaire vous permet de déposer votre CV pour qu’il soit examiné par le CEA.</p>
+        <p>stage, alternance ou emploi pour les jeunes diplômés</p>'''
+        ctx=page_context(html,'https://docs.google.com/forms/d/e/example/viewform')
+        self.assertEqual(ctx['company'],'CEA');self.assertEqual(ctx['company_evidence'],'form.recipient')
+        self.assertEqual(ctx['kind'],'general');self.assertFalse(readiness(ctx)['letter_allowed'])
+        answer=apply_analysis(ctx,{'company':'Google','company_quote':'Récupération de CV au CEA - Google Forms'}, {})
+        self.assertEqual(answer['company'],'CEA')
+
+    def test_hosting_brand_alone_stays_unknown_and_real_google_job_is_allowed(self):
+        ctx=page_context('<title>Google Forms</title><footer>© 2026 Google</footer><meta property="og:site_name" content="Google">','https://docs.google.com/forms/d/e/x/viewform')
+        self.assertEqual(ctx['company'],'')
+        privacy=page_context('<title>Google Forms</title><p>Votre CV sera traité par Google.</p>','https://docs.google.com/forms/d/e/x/viewform')
+        self.assertEqual(privacy['company'],'')
+        login=page_context('<title>Google</title><footer>© 2026 Google</footer>','https://accounts.google.com/ServiceLogin',origin_url='https://forms.gle/example')
+        self.assertEqual(login['company'],'')
+        real=page_context('<script type="application/ld+json">{"@type":"JobPosting","title":"Engineer","hiringOrganization":{"name":"Google"},"description":"Develop software systems and verify reliable distributed processing."}</script>','https://careers.google.com/jobs/x')
+        self.assertEqual(real['company'],'Google')
+
+    def test_saved_google_preview_is_repaired_from_its_original_form_title(self):
+        from app.qr_hosted_forms import repair_identity
+        saved={'company':'Google','final_url':'https://docs.google.com/forms/d/e/x/viewform','page_title':'Récupération de CV au CEA','body':'Déposez votre CV pour qu’il soit examiné par le CEA.'}
+        result=repair_identity(saved)
+        self.assertEqual(result['company'],'CEA');self.assertEqual(result['kind'],'general')
+        redirected=repair_identity({'company':'Google','company_evidence':'footer','final_url':'https://accounts.google.com/ServiceLogin','url':'https://forms.gle/example'})
+        self.assertEqual(redirected['company'],'')
+
+    def test_successfactors_brand_and_session_errors_are_not_an_employer(self):
+        ctx=page_context('<title>SuccessFactors</title><footer>© 2026 SAP</footer><p>An error occurred while processing your request. Please check the URL.</p>','https://career5.successfactors.eu/career?_s.crb=opaque')
+        self.assertEqual(ctx['company'],'');self.assertTrue(ctx['hosting_error'])
+        branded=page_context('<title>Jobs at Alstom</title><header><img alt="Alstom Careers Home"></header><footer>© 2026 SAP</footer>','https://career5.successfactors.eu/career?company=Example')
+        self.assertEqual(branded['company'],'Alstom')
+        logo_only=page_context('<title>Careers</title><header><img alt="Alstom Careers Home"></header><footer>© 2026 SAP</footer>','https://career5.successfactors.eu/career?company=Example')
+        self.assertEqual(logo_only['company'],'Alstom')
+
     def test_inmind_tenant_is_employer_and_event_is_not_a_vacancy(self):
         html='''<title>InMind</title><img alt="Logo Inmind"><h1>Arts &amp; Métiers</h1>
         <script>inmind.cvInmind = true; inmind.companyName = "saint-gobain";

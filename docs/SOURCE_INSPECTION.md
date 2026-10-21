@@ -23,3 +23,9 @@ Inmind 页面的 `inmind.companyName` 明确标识接收企业；`inmind.cvInmin
 官网可读时，将业务文本与实际 CV 内容比较，单独标明“企业业务匹配”，不创建虚构职位或任务。官网无法读取时，专用 Chrome 中的 ChatGPT 可查询该企业官网；其业务结论作为未独立核验建议展示来源，CV 原文引用仍检查确实存在。匹配不明确时保留综合 CV 建议，用户可手动指定；手动选定的 CV 不被自动路由覆盖。
 
 通用 CV 收集入口只发 CV，沿用现有 `requires_letter` 的 general 规则。点击“仅投递简历”时，如尚未查询企业业务且未手选 CV，先执行企业查询和自动选择，再通过原有平台投递引擎执行；若网站要求额外问题、登录或隐私决定，原有接管机制继续生效。是否成功仍以网站回执为准。
+
+## Google Forms 与 SuccessFactors（2026-10-21）
+
+Google Forms 优先从表单主标题和介绍中“CV 提交给谁/由谁审核”的明确句子提取接收单位。Google Logo、页脚、OpenGraph 站点名只表示托管方。例如“Récupération de CV au CEA”识别为 CEA 的通用 CV 库，不生成虚构岗位或动机信；泛化到其他明确命名的收件单位，没有硬编码 CEA。旧预览在读取或确认材料时也会用已保存的原文修正。与托管无关的真正 Google 岗位不会被全局排除。
+
+SuccessFactors 托管页同样排除 SAP/SuccessFactors 服务商页脚，读取雇主招聘标题、雇主 Logo 文本或招聘结构化数据；“Alstom Careers Home”显示为 Alstom。会话参数本身不是企业依据。用户给出的仅含 `_s.crb` 的链接在普通读取和专用 Chrome 中均显示处理失败/检查网址的错误页，故保留链接异常状态，不声称已解析出 Alstom 或可以直接投递。独立验证 [Alstom 官方招聘入口](https://jobsearch.alstom.com/)可读，其雇主品牌可以识别。不会擅自将一个失效申请链接换成招聘首页并声称目标岗位相同。
