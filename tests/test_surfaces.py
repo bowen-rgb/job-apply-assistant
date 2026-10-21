@@ -101,7 +101,7 @@ class SurfaceTests(unittest.TestCase):
                 expect(page.locator('#first_name')).to_have_value('Example')
                 page.emulate_media(reduced_motion='reduce')
                 page.locator('#profileView > .surface-jumps button').first.click()
-                self.assertEqual(page.locator('#profileView > .surface-jumps button').first.evaluate('(node)=>node.getAnimations().length'),0)
+                expect(page.locator('#profileForm > .settings-card h2').first).to_be_focused()
                 page.emulate_media(reduced_motion='no-preference')
                 page.locator('#jobsNav').click()
                 filters=page.locator('.filter')

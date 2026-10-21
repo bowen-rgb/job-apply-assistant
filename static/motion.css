@@ -1,0 +1,34 @@
+/* Ref: open-claude-ui ThinkingAccordion, SegmentedControl, StatusIndicators,
+   ClaudeMotionPresets (MIT). Native progressive enhancement, no React runtime.
+   Keep content readable and clickable during transitions; no fake progress. */
+:root{--motion-snap:180ms;--motion-panel:220ms;--motion-ease:cubic-bezier(.16,1,.3,1)}
+aside .primary-nav{position:relative;isolation:isolate}
+aside .primary-nav[data-motion-selected=true]::before{content:'';position:absolute;z-index:-1;top:0;left:0;transform:translate(var(--nav-x),var(--nav-y));width:var(--nav-w);height:var(--nav-h);background:white;border-radius:12px;box-shadow:0 3px 10px #40717d0c;pointer-events:none}
+aside .primary-nav[data-motion-selected=true] .navmain.active{background:transparent;box-shadow:none}
+:is(main,dialog) details>summary{border-radius:8px}
+:is(main,dialog) details>summary:hover{background:#28688908}
+:is(main,dialog) details>summary:focus-visible{outline:3px solid var(--aa-copper);outline-offset:3px}
+@supports (interpolate-size:allow-keywords){
+ :is(main,dialog) details:not(.wb-data):not(#qrImportHistory){interpolate-size:allow-keywords}
+ :is(main,dialog) details:not(.wb-data):not(#qrImportHistory)::details-content{block-size:0;overflow:clip}
+ :is(main,dialog) details:not(.wb-data):not(#qrImportHistory)[open]::details-content{block-size:auto}
+}
+#cards{position:relative}
+#cards[aria-busy=true]::before{content:'';position:absolute;top:-6px;left:8px;width:5px;height:5px;border-radius:50%;background:var(--aa-copper);box-shadow:9px 0 var(--aa-copper),18px 0 var(--aa-copper);opacity:0;pointer-events:none}
+.scanpanel[data-running=true] .scanrow::before{content:'';width:7px;height:7px;flex-shrink:0;align-self:center;border-radius:50%;background:var(--aa-copper)}
+/* User-requested product policy: essential UI motion remains active regardless
+   of the OS reduced-motion setting. The app's own quiet mode is an opt-out. */
+html:not([data-angelina-mode=quiet]) aside .primary-nav[data-motion-selected=true]::before{transition:transform var(--motion-snap) var(--motion-ease),width var(--motion-snap) var(--motion-ease),height var(--motion-snap) var(--motion-ease)!important}
+html:not([data-angelina-mode=quiet]) dialog[open]{animation:motion-dialog-in var(--motion-panel) var(--motion-ease)!important}
+html:not([data-angelina-mode=quiet]) #cards[aria-busy=true]::before{animation:motion-reading 1.2s ease-in-out .35s infinite!important}
+html:not([data-angelina-mode=quiet]) .scanpanel[data-running=true] .scanrow::before{animation:motion-reading 1.2s ease-in-out infinite!important}
+html:not([data-angelina-mode=quiet]) :is(main,dialog) :is(button,input,select,textarea){transition:background-color 120ms,color 120ms,border-color 120ms,box-shadow 160ms!important}
+html:not([data-angelina-mode=quiet]) #jobMetrics[data-selection=true]::before{transition:transform 180ms var(--motion-ease),width 180ms var(--motion-ease),height 180ms var(--motion-ease)!important}
+html:not([data-angelina-mode=quiet]) .card{transition:box-shadow 160ms,border-color 160ms!important}
+@supports(interpolate-size:allow-keywords){html:not([data-angelina-mode=quiet]) :is(main,dialog) details:not(.wb-data):not(#qrImportHistory)::details-content{transition:block-size 200ms var(--motion-ease),content-visibility 200ms allow-discrete!important}}
+@keyframes motion-dialog-in{from{opacity:.65;scale:.985}to{opacity:1;scale:1}}
+@keyframes motion-reading{0%,100%{opacity:.35}50%{opacity:1}}
+html[data-angelina-mode=quiet] :is(dialog[open],#cards[aria-busy=true]::before,.scanrow::before){animation:none!important}
+html[data-angelina-mode=quiet] #cards[aria-busy=true]::before{opacity:1}
+html[data-angelina-mode=quiet] :is(main,dialog) details::details-content,html[data-angelina-mode=quiet] aside .primary-nav::before{transition:none!important}
+@media print{.primary-nav::before,#cards::before{display:none}}

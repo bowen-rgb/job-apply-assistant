@@ -137,6 +137,7 @@ function showView(which){
     el(id).toggleAttribute('aria-current',active);
     if(active) el(id).setAttribute('aria-current','page');
   });
+  window.InteractionMotion?.enterView(el(which+'View'));
   if(profile) return loadProfile();
   if(pipeline) loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
 }

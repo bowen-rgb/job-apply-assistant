@@ -16,7 +16,7 @@ window.Surfaces=(()=>{
       if(!section.id)section.id=id+'Section'+index;
       title.tabIndex=-1;
       let button=nav.querySelector(`[data-section="${section.id}"]`);
-      if(!button){button=document.createElement('button');button.type='button';button.dataset.section=section.id;button.onclick=()=>{section.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});title.focus({preventScroll:true});};nav.append(button);}
+      if(!button){button=document.createElement('button');button.type='button';button.dataset.section=section.id;button.onclick=()=>{section.scrollIntoView({block:'start',behavior:document.documentElement.dataset.angelinaMode==='quiet'?'instant':'smooth'});title.focus({preventScroll:true});};nav.append(button);}
       if(button.textContent!==title.textContent)button.textContent=title.textContent;
     });
   }
