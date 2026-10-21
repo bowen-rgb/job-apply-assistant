@@ -10,14 +10,14 @@ from .pfe_discovery import validate_destination
 from .worker_runtime import check_cancelled
 
 
-def read_rendered(url, *, search_filters=True):
+def read_rendered(url, *, search_filters=True, target_id=''):
     require_connection()
     validate_destination(url)
     from .apply_worker import _open_browser
     with sync_playwright() as p:
-        _,context,mode=_open_browser(p,runtime_profile())
+        _,context,mode=_open_browser(p,runtime_profile(),{'application_tab_id':target_id} if target_id else None)
         if mode!='cdp':
-            context.close()
+            if not target_id:context.close()
             raise ValueError('Chrome CDP required for page inspection')
         checked=set()
         def guard(route):
@@ -28,14 +28,23 @@ def read_rendered(url, *, search_filters=True):
                 if host not in checked:validate_destination(target);checked.add(host)
                 route.fallback()
             except Exception:route.abort()
-        context.route('**/*',guard)
+        if not target_id:context.route('**/*',guard)
         try:
-            page=context.new_page()
-            page.goto(url,wait_until='domcontentloaded',timeout=35000)
+            page=None
+            if target_id:
+                for tab in context.pages:
+                    session=context.new_cdp_session(tab)
+                    try:
+                        if session.send('Target.getTargetInfo')['targetInfo']['targetId']==target_id:page=tab;break
+                    finally:session.detach()
+            if page is None:
+                if target_id:raise ValueError('Login tab was closed; reopen it explicitly before continuing')
+                page=context.new_page()
+                page.goto(url,wait_until='domcontentloaded',timeout=35000)
             # Let a SPA expose its first content, without clicking or accepting popups.
             try:page.wait_for_load_state('networkidle',timeout=6000)
             except Exception:pass
-            if search_filters and '/search' in urlparse(page.url).path and runtime_profile().get('pfe',{}).get('enabled'):
+            if not target_id and search_filters and '/search' in urlparse(page.url).path and runtime_profile().get('pfe',{}).get('enabled'):
                 # Search is navigation, not an application form. Only an unambiguous
                 # keyword field and search button, with no identity/upload fields.
                 inputs=page.locator('input[name=q],input[name=keywords],input[placeholder*="keyword" i],input[placeholder*="mot-cl" i]')
@@ -77,4 +86,4 @@ def read_rendered(url, *, search_filters=True):
             if not chunks:raise ValueError('qr_page_unavailable')
             return ('<html><head>'+head+'</head><body>'+ '\n'.join(chunks)+'</body></html>').encode(), 'text/html', page.url
         finally:
-            context.close()
+            if not target_id:context.close()

@@ -64,6 +64,17 @@ def get_request(identifier):
     return dict(row)
 
 
+def open_request_for_login(identifier):
+    """Explicit action only; a managed owner retains the login context."""
+    from .worker_runtime import launch, is_running
+    from .browser_control import require_connection
+    require_connection();row=get_request(identifier)
+    if row['state']!='draft':raise ValueError('qr_already_started')
+    if not is_running('app.qr_login_worker',identifier):
+        launch('app.qr_login_worker',identifier)
+    return {'opened':True, 'message':'Login window retained; no automatic reload or retry.'}
+
+
 def image_path(identifier):
     from .profile_store import data_directory
     if not re.fullmatch(r'[a-f0-9]{32}',identifier):raise KeyError(identifier)
@@ -281,7 +292,7 @@ def start_request(identifier,resume_id,company):
                 job_id=job['id']
             else:
                 title=payload['title'] if payload['kind']=='vacancy' else 'Candidature spontanée — '+company
-                fields=dict(url=payload['final_url'],title=title,company=company,body=payload['body'],
+                fields=dict(url=payload['final_url'],title=title,company=company,body=payload['body'],application_tab_id=payload.get('handoff_tab_id',''),
                             location=payload['location'],employment_type=payload['employment_type'],
                             start_date=payload['start_date'],end_date=payload['end_date'],valid_through=payload['valid_through'],
                             source='QR',provider_key='qr',application_resume_id=resume_id,tracker_stage='saved')

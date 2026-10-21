@@ -62,6 +62,27 @@ def cancel_all() -> None:
                 token.touch()
 
 
+def terminate_all(timeout=3) -> None:
+    """Desktop exit only: request cancellation, then reap owned worker trees."""
+    import time
+    cancel_all()
+    with _lock:
+        processes = [process for process, _ in _workers.values()]
+    deadline = time.monotonic() + timeout
+    for process in processes:
+        if process.poll() is not None:
+            continue
+        try:
+            process.wait(timeout=max(0, deadline-time.monotonic()))
+        except subprocess.TimeoutExpired:
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+            else:
+                process.kill()
+
+
 def is_running(module: str, job_id: int) -> bool:
     with _lock:
         entry = _workers.get((module, job_id))

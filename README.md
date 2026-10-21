@@ -21,6 +21,8 @@ English · [简体中文](README.zh-CN.md)
 
 Keep job discovery, CVs, application preparation and follow-up records in one local workspace. Start with a guided manual application, then enable browser assistance when you need it. Your profile and application history are stored on your computer.
 
+**Windows desktop:** a self-contained Electron/NSIS installer now provides a desktop shortcut, automatic backend startup and owned-process cleanup on exit. Build instructions and existing-data setup: [Desktop guide](docs/DESKTOP_APP.md).
+
 ## A clearer application process
 
 **Graduation internships / research:** open **PFE & research** for direction-based discovery, research-team leads, campus announcements and source evidence. See the [PFE guide](docs/PFE_DISCOVERY.md). Contract duration limits now belong to each candidate profile; blank means unrestricted.

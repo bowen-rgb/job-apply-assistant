@@ -14,7 +14,7 @@ def run(identifier):
     semantic_attempted=False
     hosting_error=''
     try:
-        raw,_,final=read_rendered(payload['final_url'])
+        raw,_,final=read_rendered(payload.get('url') if payload.get('handoff_tab_id') else payload['final_url'],target_id=payload.get('handoff_tab_id',''))
         context=page_context(raw,final,origin_url=payload.get('url',''))
         hosting_error=context.get('hosting_error','')
         payload.pop('semantic_ranking',None)

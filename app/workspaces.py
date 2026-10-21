@@ -8,6 +8,11 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def storage_root():
+    """Desktop installs keep personal files outside replaceable application code."""
+    return Path(os.environ.get('JAA_WORKSPACE_HOME') or ROOT).resolve()
 CURRENT = contextvars.ContextVar('candidate_workspace', default=None)
 LOCK = threading.RLock()
 
@@ -20,7 +25,7 @@ def validate(identifier):
 
 def active_id():
     try:
-        return validate(json.loads((ROOT/'data'/'active_candidate.json').read_text(encoding='utf-8'))['id'])
+        return validate(json.loads((storage_root()/'data'/'active_candidate.json').read_text(encoding='utf-8'))['id'])
     except FileNotFoundError:
         return 'default'
 
@@ -31,16 +36,16 @@ def candidate_id():
 
 def data_dir(identifier=None):
     identifier = validate(identifier or candidate_id())
-    return ROOT/'data' if identifier == 'default' else ROOT/'data'/'candidates'/identifier
+    return storage_root()/'data' if identifier == 'default' else storage_root()/'data'/'candidates'/identifier
 
 
 def profile_path(identifier=None):
     identifier = validate(identifier or candidate_id())
-    return ROOT/'profile.json' if identifier == 'default' else data_dir(identifier)/'profile.json'
+    return storage_root()/'profile.json' if identifier == 'default' else data_dir(identifier)/'profile.json'
 
 
 def candidates():
-    identifiers = ['default'] + sorted(p.name for p in (ROOT/'data'/'candidates').glob('*') if p.is_dir() and re.fullmatch(r'[0-9a-f]{12}',p.name))
+    identifiers = ['default'] + sorted(p.name for p in (storage_root()/'data'/'candidates').glob('*') if p.is_dir() and re.fullmatch(r'[0-9a-f]{12}',p.name))
     rows = []
     for identifier in identifiers:
         path = profile_path(identifier)
@@ -80,7 +85,7 @@ def activate(identifier):
             from .db import init_db
             from .profile_store import ensure_profile
             init_db();ensure_profile()
-            pointer = ROOT/'data'/'active_candidate.json'
+            pointer = storage_root()/'data'/'active_candidate.json'
             pointer.parent.mkdir(parents=True,exist_ok=True)
             tmp=pointer.with_suffix('.tmp')
             tmp.write_text(json.dumps({'id':identifier}),encoding='utf-8')

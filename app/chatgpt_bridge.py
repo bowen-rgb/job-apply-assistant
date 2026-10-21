@@ -12,7 +12,10 @@ from .worker_runtime import check_cancelled, Cancelled
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 ROOT = Path(__file__).resolve().parent.parent
-CHATGPT_LOCK = FileLock(str(ROOT / 'data' / 'chatgpt-web.lock'))
+from .workspaces import storage_root
+_lock_dir = storage_root() / 'data'
+_lock_dir.mkdir(parents=True, exist_ok=True)
+CHATGPT_LOCK = FileLock(str(_lock_dir / 'chatgpt-web.lock'))
 
 
 def _diagnostic(page, purpose: str) -> None:

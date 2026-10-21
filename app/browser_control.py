@@ -81,13 +81,15 @@ def start(profile=None):
         if executable is None:
             raise ValueError('Google Chrome introuvable. Installez Chrome ; la plateforme ne bascule pas vers Edge.')
         endpoint = local_endpoint(profile)
-        directory = ROOT / 'data' / 'chrome-profile'
+        from .workspaces import storage_root
+        directory = storage_root() / 'data' / 'chrome-profile'
         directory.mkdir(parents=True, exist_ok=True)
         arguments = [str(executable), '--remote-debugging-address=127.0.0.1',
                      f'--remote-debugging-port={urlparse(endpoint).port}',
                      f'--user-data-dir={directory}', '--new-window', 'https://chatgpt.com/']
         subprocess.Popen(arguments, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                         # Chrome must survive closing the desktop host's process job.
+                         creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.CREATE_BREAKAWAY_FROM_JOB) if os.name == 'nt' and os.environ.get('JAA_DESKTOP_INSTANCE') else subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         for _ in range(20):
             result = status(profile)
             if result['ready']:

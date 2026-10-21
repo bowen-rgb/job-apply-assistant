@@ -71,14 +71,11 @@ def _open_browser(p, profile: dict, job=None):
     if mode == 'cdp':
         browser = p.chromium.connect_over_cdp(profile.get('chrome_cdp_endpoint', 'http://127.0.0.1:9222'))
         if job and job.get('application_tab_id'):
+            from .browser_tabs import find_target
             for existing in browser.contexts:
-                for tab in existing.pages:
-                    if tab.is_closed(): continue
-                    session=existing.new_cdp_session(tab)
-                    try:
-                        if session.send('Target.getTargetInfo')['targetInfo']['targetId']==job['application_tab_id']:
-                            return browser,existing,mode
-                    finally: session.detach()
+                if find_target(existing, job['application_tab_id']) is not None:
+                    return browser,existing,mode
+            raise ValueError('The application tab was closed. Reopen it explicitly before continuing.')
         from . import secret_store
         from .workspaces import candidate_id
         saved=secret_store.read().get('browser_state')
@@ -145,7 +142,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
 
     resume_path, resume_meta = select_resume_for_job(job, raw_profile)
     profile['resume_path'] = str(resume_path) if resume_path else ''
-    _update_status(job_id, 'opening', application_step='connecting', application_tab_id='', fill_audit_path='')
+    _update_status(job_id, 'opening', application_step='connecting', fill_audit_path='')
     _record(job_id, 'opening', f"URL: {job.get('url','')}")
 
     with sync_playwright() as p:
@@ -166,24 +163,9 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
                 profile['cover_letter_path'] = str(letter_paths(job_id)[1])
             check_cancelled()
             # Resume the same job's open dialog after the user accepts its charter.
-            original_url = job['url'].split('?')[0].rstrip('/')
             _update_status(job_id, 'opening', application_step='opening_form')
-            page = next((tab for tab in reversed(context.pages)
-                         if not tab.is_closed() and tab.url.split('?')[0].rstrip('/') == original_url), None)
-            if page is None:
-                page = context.new_page()
-                try:
-                    session = context.new_cdp_session(page)
-                    target = session.send('Target.getTargetInfo')['targetInfo']['targetId']
-                    session.detach()
-                    _update_status(job_id, 'opening', application_tab_id=target)
-                except Exception:
-                    pass
-                page.goto(job['url'], wait_until='domcontentloaded', timeout=45000)
-            elif any('/oneClick/finalize' in frame.url for frame in page.frames):
-                # A prior attempt imported only the CV. Start a fresh import so
-                # the complete packet is uploaded before the final-submit step.
-                page.reload(wait_until='domcontentloaded')
+            from .browser_tabs import application_page
+            page = application_page(context, job)
             try:
                 session = context.new_cdp_session(page)
                 target = session.send('Target.getTargetInfo')['targetInfo']['targetId']

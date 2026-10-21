@@ -25,3 +25,6 @@ data/
 *.zip
 playwright-report/
 test-results/
+desktop/node_modules/
+desktop/payload/
+output/desktop/
