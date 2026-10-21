@@ -96,6 +96,32 @@ class QRTests(unittest.TestCase):
         self.assertEqual(reread['state'],'draft');self.assertIsNone(reread['job_id'])
         with db.connect() as c:self.assertEqual(c.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],0)
 
+
+    def test_role_selection_updates_the_same_card_and_preserves_import_name(self):
+        with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(self.page,'text/html','https://employer.test/apply')):
+            item=qr.create_request('https://short.test/qr','C:/photos/stand.png')
+        rid=item['preview']['resume_id'];qr.save_selection(item['id'],rid,'Test Robotics')
+        with patch.object(qr,'validate_destination'),patch.object(qr,'read_public',return_value=(self.page.replace(b'Stage robotique commande',b'Stage commande simulation'),'text/html','https://employer.test/job/second')):
+            result=qr.set_target(item['id'],'https://employer.test/job/second')
+        self.assertEqual(result['id'],item['id'])
+        self.assertEqual(len(qr.list_requests()),1)
+        self.assertEqual(result['preview']['source_name'],'stand.png')
+        self.assertEqual(result['preview']['original_qr_url'],'https://short.test/qr')
+        self.assertEqual(result['preview']['resume_id'],rid)
+        self.assertEqual(result['state'],'draft');self.assertIsNone(result['job_id'])
+        with db.connect() as c:
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],0)
+            c.execute("UPDATE qr_requests SET state='authorized' WHERE id=?",(item['id'],))
+        with self.assertRaisesRegex(ValueError,'qr_already_started'):qr.set_target(item['id'],'https://employer.test/job/no')
+
+
+    def test_company_edit_does_not_freeze_automatically_chosen_resume(self):
+        item=self.preview();rid=item['preview']['resume_id']
+        qr.save_selection(item['id'],rid,'Confirmed Robotics',False)
+        self.assertNotIn('user_resume_id',qr.request_status(item['id'])['preview'])
+        qr.save_selection(item['id'],rid,'Confirmed Robotics',True)
+        self.assertEqual(qr.request_status(item['id'])['preview']['user_resume_id'],rid)
+
     def test_real_qr_decoder_and_multiple_codes_blank_and_bad_inputs(self):
         def code(text):return Image.fromarray(zxingcpp.create_barcode(text,zxingcpp.BarcodeFormat.QRCode).to_image(scale=5)).convert('RGB')
         first=code('https://example.org/first');second=code('https://example.org/second')

@@ -410,6 +410,7 @@ window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; wind
 async function pollScan(){
   try{
     const s=await requestJson('/api/search/status');Coach.scan(s);
+    scanPanel.dataset.running=String(Boolean(s.running));document.dispatchEvent(new Event('jaa:scan-state'));
     if(s.running || s.scan_id){
       scanPanel.classList.remove('hidden'); scanText.textContent=tr(s.running?'Scan en cours':'Dernier scan terminé');
       scanCounts.textContent=`${s.found} ${tr('vus')} · ${s.fetched} ${tr('lus')} · ${s.inserted} ${tr('nouveaux')} · ${s.updated} ${tr('mis à jour')} · ${s.errors} ${tr('erreurs')}`;
@@ -757,7 +758,7 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{renderSkillInventory();Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();QRApplication.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();QRApplication.init();AngelinaUI.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
 

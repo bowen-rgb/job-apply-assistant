@@ -10,7 +10,7 @@
 }
 #jobsView,#profileView,#pipelineView{container-type:inline-size;container-name:workspace-page}
 main :is(input:not([type=checkbox]),textarea,select),dialog :is(input:not([type=checkbox]),textarea,select){border-radius:var(--ref-radius-control);border-color:var(--ref-line-strong);background:var(--ref-surface-2);box-shadow:inset 0 1px 2px rgb(25 28 34 / .025);transition:border-color 120ms,box-shadow 120ms}
-main :is(input,textarea,select):focus,dialog :is(input,textarea,select):focus{box-shadow:0 0 0 3px rgb(25 56 192 / .1);border-color:#1938c0}
+main :is(input,textarea,select):focus,dialog :is(input,textarea,select):focus{box-shadow:0 0 0 3px rgb(25 56 192 / .1);border-color:var(--aa-copper,#1938c0)}
 :is(#jobsView,#profileView,#pipelineView,#accountsDialog,#pendingTasksDialog,#accountEditor,#materialReviewDialog) :is(input:not([type=checkbox]),textarea,select){border-radius:8px;border-color:var(--ref-line-strong);background:var(--ref-surface-2)}
 main button,dialog button{border-radius:var(--ref-radius-control);font-weight:600;transition:background-color 120ms,color 120ms,box-shadow 120ms}
 .card,.settings-card,.pipeline-card{border-radius:var(--ref-radius-panel);background:var(--ref-surface-2);box-shadow:var(--ref-shadow);border-color:var(--ref-line);border-top-color:#27364f}
@@ -18,7 +18,7 @@ main button,dialog button{border-radius:var(--ref-radius-control);font-weight:60
 .card .review-summary,.human-review-panel,.application-error,.queue-item{border-radius:8px}
 .card .actions.five button,.settings-card button.secondary,.queue-actions button.ghost{border-color:transparent;background:var(--ref-soft);color:#334564}
 .card .actions.five button:hover:not(:disabled),.settings-card button.secondary:hover:not(:disabled),.queue-actions button.ghost:hover:not(:disabled){background:#e2e7ef}
-.card .actions.five button.primary,main button.primary,dialog button.primary{background:#1938c0;color:#fff;box-shadow:0 1px 2px rgb(25 56 192 / .16)}
+.card .actions.five button.primary,main button.primary,dialog button.primary{background:var(--aa-copper,#1938c0);color:#fff;box-shadow:0 1px 2px rgb(25 56 192 / .16)}
 main button.ghost:not(.danger),dialog button.ghost:not(.danger){border-color:transparent}
 .card .tag{border-radius:999px;border-color:transparent}
 #jobsView .toolbar{border-color:var(--ref-line);border-radius:12px;background:var(--ref-surface-1);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .6)}
@@ -27,9 +27,9 @@ main button.ghost:not(.danger),dialog button.ghost:not(.danger){border-color:tra
 #jobMetrics{position:relative;isolation:isolate;padding:4px;gap:4px;border:1px solid var(--ref-line);border-radius:12px;background:var(--ref-soft)}
 #jobMetrics .metric-button{position:relative;z-index:1;border:0;border-radius:8px;background:transparent}
 #jobMetrics .metric-button.selected{background:transparent;color:#fff}#jobMetrics .metric-button.selected b{color:#fff}
-#jobMetrics[data-selection=true]::before{content:'';position:absolute;z-index:0;left:0;top:0;transform:translate(var(--selection-x),var(--selection-y));width:var(--selection-width);height:var(--selection-height);border-radius:8px;background:#1938c0;box-shadow:0 1px 2px rgb(25 56 192 / .16);pointer-events:none}
+#jobMetrics[data-selection=true]::before{content:'';position:absolute;z-index:0;left:0;top:0;transform:translate(var(--selection-x),var(--selection-y));width:var(--selection-width);height:var(--selection-height);border-radius:8px;background:var(--aa-copper,#1938c0);box-shadow:0 1px 2px rgb(25 56 192 / .16);pointer-events:none}
 #resumeList .resume-item,#resumeList>div,.candidate-card,#accountsDialog .website-account{border-radius:12px;background:var(--ref-surface-2);border-color:var(--ref-line);box-shadow:var(--ref-shadow)}
-.resume-actions button,.resume-actions a{border-radius:8px}.candidate-card.selected{box-shadow:inset 0 0 0 1px #1938c0,var(--ref-shadow)}
+.resume-actions button,.resume-actions a{border-radius:8px}.candidate-card.selected{box-shadow:inset 0 0 0 1px var(--aa-copper,#1938c0),var(--ref-shadow)}
 dialog:not(.image-viewer){border-radius:16px;box-shadow:var(--ref-shadow-popover);border:1px solid var(--ref-line);max-height:calc(100dvh - 32px);background:var(--ref-surface-1)}
 #accountsDialog,#pendingTasksDialog,#accountEditor,#materialReviewDialog{border-radius:16px;box-shadow:var(--ref-shadow-popover);border-color:var(--ref-line)}
 #accountsDialog,#pendingTasksDialog{overflow:auto;max-height:calc(100dvh - 32px)}

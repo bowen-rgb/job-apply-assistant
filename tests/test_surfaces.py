@@ -1,4 +1,5 @@
 import unittest
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright,expect
@@ -29,6 +30,7 @@ class SurfaceTests(unittest.TestCase):
                     if path=='/api/candidates':data={'active_id':'default','items':[dict(id='default',name='Example Candidate',active=True,identity={})]}
                     elif path=='/api/jobs/translate-titles':data={'translations':{'1':{'original':job['title'],'title':job['title'],'status':'unavailable'}}}
                     elif path=='/api/profile':data=profile
+                    elif path=='/api/pfe':data={'settings':{},'jobs':[],'sources':[],'leads':[],'plan':[]}
                     elif path in {'/api/jobs','/api/pipeline'}:data=[job]
                     elif path=='/api/accounts':data=[dict(site_name='Example portal',origin='https://example.test',login_url='https://example.test/login',username='example@example.test',enabled=True,has_password=True)]
                     elif path=='/api/pending-tasks':data={'items':[dict(id='a',title='Example to-do',url='https://example.test/research',kind='vacancy',note='Check the deadline before applying',source='Personal list',status='pending')]}
@@ -41,10 +43,12 @@ class SurfaceTests(unittest.TestCase):
                 output=Path('data/surface-previews');output.mkdir(parents=True,exist_ok=True)
                 for nav,view in [('jobsNav','jobsView'),('profileNav','profileView'),('pipelineNav','pipelineView'),('guideNav','guideView')]:
                     page.locator('#'+nav).click()
-                    expect(page.locator('#'+view+' > header')).to_have_class('surface-heading')
-                    for width in [320,768,1440]:
+                    expect(page.locator('#'+view+' > header')).to_have_class(re.compile(r'\bsurface-heading\b'))
+                    for width in [320,375,768,1280,1440]:
                         page.set_viewport_size({'width':width,'height':1000})
                         self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
+                        if width in [375,1280]:
+                            page.screenshot(path=str(output/(view+f'-angelina-{width}.png')))
                         if width==320:
                             menu=page.locator('#mobileNavToggle')
                             expect(menu).to_be_visible()
@@ -60,6 +64,36 @@ class SurfaceTests(unittest.TestCase):
                                 page.screenshot(path=str(output/'jobsView-mobile.png'))
                     page.evaluate('window.scrollTo(0,0)')
                     page.screenshot(path=str(output/(view+'.png')))
+                expect(page.locator('#angelinaMode')).to_have_value('static')
+                expect(page.locator('#guideView .aa-scene')).to_be_visible()
+                page.locator('#angelinaMode').select_option('quiet')
+                expect(page.locator('#guideView .aa-scene')).not_to_be_visible()
+                page.locator('#angelinaMode').select_option('animated')
+                page.emulate_media(reduced_motion='reduce')
+                page.locator('#pipelineNav').click()
+                expect(page.locator('#pipelineView .aa-scene')).to_have_attribute('src',re.compile(r'\.png$'))
+                job['application_status']='preparing'
+                page.locator('#pipelineNav').click()
+                expect(page.locator('#queueFocus button[onclick^="stopApplication"]')).to_be_visible()
+                expect(page.locator('#pipelineView .aa-scene')).to_have_attribute('src',re.compile(r'\.png$'))
+                page.emulate_media(reduced_motion='no-preference')
+                expect(page.locator('#pipelineView .aa-scene')).to_have_attribute('src',re.compile(r'\.gif$'))
+                page.locator('#angelinaMode').select_option('quiet')
+                expect(page.locator('#pipelineView .aa-scene')).not_to_be_visible()
+                expect(page.locator('#pipelineView .aa-scene')).to_have_attribute('src',re.compile(r'\.png$'))
+                job['application_status']='error'
+                page.locator('#pipelineView [data-aa-view=profile]').click()
+                expect(page.locator('#profileView')).to_be_visible()
+                expect(page.locator('#profileView [data-aa-view=profile]')).to_have_attribute('aria-current','step')
+                page.locator('#angelinaMode').select_option('static')
+                page.emulate_media(reduced_motion='no-preference')
+                for nav,view in [('overviewNav','overviewView'),('pfeNav','pfeView')]:
+                    page.locator('#'+nav).click()
+                    expect(page.locator('#'+view+' .aa-scene')).to_be_visible()
+                    for width in [375,1280]:
+                        page.set_viewport_size({'width':width,'height':1000})
+                        self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
+                        page.screenshot(path=str(output/(view+f'-angelina-{width}.png')))
                 page.locator('#profileNav').click()
                 expect(page.locator('#profileView > .surface-jumps button').first).to_be_visible()
                 page.locator('#profileView > .surface-jumps button').first.focus();page.keyboard.press('Enter')
@@ -102,14 +136,14 @@ class SurfaceTests(unittest.TestCase):
                 page.locator('[data-edit-account]').click()
                 expect(page.locator('#accountEditor')).to_have_attribute('open','')
                 expect(page.locator('#accountPassword')).to_have_value('')
-                for width in [320,768,1440]:
+                for width in [320,375,768,1280,1440]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertTrue(page.locator('#accountsDialog').evaluate('node=>node.scrollWidth<=node.clientWidth+1'))
                 page.locator('#accountsDialog').evaluate('(node)=>node.scrollTop=0')
                 page.screenshot(path=str(output/'accountsDialog.png'))
                 page.locator('#accountsClose').click();page.locator('#pendingTasksNav').click()
                 expect(page.locator('#pendingTasksDialog')).to_have_attribute('aria-labelledby','pendingTasksDialogTitle')
-                for width in [320,768,1440]:
+                for width in [320,375,768,1280,1440]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertTrue(page.locator('#pendingTasksDialog').evaluate('node=>node.scrollWidth<=node.clientWidth+1'))
                 page.screenshot(path=str(output/'pendingTasksDialog.png'))
@@ -129,7 +163,7 @@ class SurfaceTests(unittest.TestCase):
                     expect(page.locator('#pipelineView h1')).not_to_have_text('undefined')
                 page.goto('http://surfaces.test/api/gmail/guide')
                 expect(page.locator('main h1')).to_contain_text('连接 Gmail')
-                for width in [320,768,1440]:
+                for width in [320,375,768,1280,1440]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
                 page.screenshot(path=str(output/'gmailGuide.png'))

@@ -150,10 +150,10 @@ def recommend(payload):
     return selected,'qr_resume_choose'
 
 
-def create_request(url):
+def create_request(url,source_name=""):
     payload = inspect_url(url)
     chosen, reason = recommend(payload)
-    payload.update(resume_id=chosen['id'] if chosen else '',resume_reason=reason)
+    payload.update(resume_id=chosen['id'] if chosen else '',resume_reason=reason,source_name=str(source_name).replace('\\','/').rsplit('/',1)[-1][:180])
     identifier=uuid.uuid4().hex
     init_tables()
     with connect() as c:
@@ -312,7 +312,15 @@ def list_requests():
     init_tables()
     with connect() as c:
         rows=c.execute('SELECT id,state,payload,created_at FROM qr_requests ORDER BY created_at DESC,rowid DESC').fetchall()
-    return [{'id':r['id'],'state':r['state'],'preview':json.loads(r['payload']),'created_at':r['created_at']} for r in rows]
+    result=[]
+    for row in rows:
+        item={'id':row['id'],'state':row['state'],'preview':json.loads(row['payload']),'created_at':row['created_at']}
+        if row['state']!='draft':
+            live=request_status(row['id'])
+            for key in ('progress','inspection_running','job_id'):
+                if key in live:item[key]=live[key]
+        result.append(item)
+    return result
 
 
 def remove_request(identifier):
@@ -327,7 +335,7 @@ def remove_request(identifier):
     return {'removed':True}
 
 
-def save_selection(identifier,resume_id,company):
+def save_selection(identifier,resume_id,company,resume_explicit=True):
     from .workspaces import LOCK
     with LOCK:
         row=get_request(identifier)
@@ -336,7 +344,25 @@ def save_selection(identifier,resume_id,company):
         payload=json.loads(row['payload'])
         if company.strip()!=payload.get('company',''):
             payload.update(company=company.strip()[:200],company_quote=company.strip()[:200],company_evidence='candidate input')
-        payload.update(resume_id=resume_id,user_resume_id=resume_id,resume_reason='qr_resume_manual')
+        payload['resume_id']=resume_id
+        if resume_explicit:payload.update(user_resume_id=resume_id,resume_reason='qr_resume_manual')
         payload=complete_context(payload)
         with connect() as c:c.execute('UPDATE qr_requests SET payload=? WHERE id=?',(json.dumps(payload,ensure_ascii=False),identifier))
+    return request_status(identifier)
+
+
+def set_target(identifier,url):
+    from .workspaces import LOCK
+    with LOCK:
+        row=get_request(identifier)
+        if row['state']!='draft':raise ValueError('qr_already_started')
+        old=json.loads(row['payload'])
+        payload=inspect_url(url)
+        chosen,reason=recommend(payload)
+        manual=next((r for r in list_resumes() if r['id']==old.get('user_resume_id')),None)
+        payload.update(source_name=old.get('source_name',''),original_qr_url=old.get('original_qr_url') or old['url'],
+                       resume_id=manual['id'] if manual else chosen['id'] if chosen else '',
+                       resume_reason='qr_resume_manual' if manual else reason)
+        if manual:payload['user_resume_id']=manual['id']
+        with connect() as c:c.execute("UPDATE qr_requests SET payload=? WHERE id=? AND state='draft'",(json.dumps(payload,ensure_ascii=False),identifier))
     return request_status(identifier)

@@ -1,0 +1,358 @@
+[
+  {
+    "id": "sit-png",
+    "kind": "character",
+    "scene": "sit",
+    "label": "坐坐",
+    "file": "sit.png",
+    "preview": "sit.png"
+  },
+  {
+    "id": "photo-png",
+    "kind": "character",
+    "scene": "photo",
+    "label": "拍照",
+    "file": "photo.png",
+    "preview": "photo.png"
+  },
+  {
+    "id": "explore-png",
+    "kind": "character",
+    "scene": "explore",
+    "label": "探险",
+    "file": "explore.png",
+    "preview": "explore.png"
+  },
+  {
+    "id": "beach-png",
+    "kind": "character",
+    "scene": "beach",
+    "label": "海边",
+    "file": "beach.png",
+    "preview": "beach.png"
+  },
+  {
+    "id": "dive-png",
+    "kind": "character",
+    "scene": "dive",
+    "label": "潜水",
+    "file": "dive.png",
+    "preview": "dive.png"
+  },
+  {
+    "id": "read-png",
+    "kind": "character",
+    "scene": "read",
+    "label": "看书",
+    "file": "read.png",
+    "preview": "read.png"
+  },
+  {
+    "id": "send-png",
+    "kind": "character",
+    "scene": "send",
+    "label": "纸飞机",
+    "file": "send.png",
+    "preview": "send.png"
+  },
+  {
+    "id": "shop-png",
+    "kind": "character",
+    "scene": "shop",
+    "label": "购物",
+    "file": "shop.png",
+    "preview": "shop.png"
+  },
+  {
+    "id": "deliver-png",
+    "kind": "character",
+    "scene": "deliver",
+    "label": "送货",
+    "file": "deliver.png",
+    "preview": "deliver.png"
+  },
+  {
+    "id": "ride-png",
+    "kind": "character",
+    "scene": "ride",
+    "label": "骑行",
+    "file": "ride.png",
+    "preview": "ride.png"
+  },
+  {
+    "id": "sit-gif",
+    "kind": "animation",
+    "scene": "sit",
+    "label": "坐坐",
+    "file": "sit.gif",
+    "preview": "sit.png"
+  },
+  {
+    "id": "photo-gif",
+    "kind": "animation",
+    "scene": "photo",
+    "label": "拍照",
+    "file": "photo.gif",
+    "preview": "photo.png"
+  },
+  {
+    "id": "explore-gif",
+    "kind": "animation",
+    "scene": "explore",
+    "label": "探险",
+    "file": "explore.gif",
+    "preview": "explore.png"
+  },
+  {
+    "id": "beach-gif",
+    "kind": "animation",
+    "scene": "beach",
+    "label": "海边",
+    "file": "beach.gif",
+    "preview": "beach.png"
+  },
+  {
+    "id": "dive-gif",
+    "kind": "animation",
+    "scene": "dive",
+    "label": "潜水",
+    "file": "dive.gif",
+    "preview": "dive.png"
+  },
+  {
+    "id": "read-gif",
+    "kind": "animation",
+    "scene": "read",
+    "label": "看书",
+    "file": "read.gif",
+    "preview": "read.png"
+  },
+  {
+    "id": "send-gif",
+    "kind": "animation",
+    "scene": "send",
+    "label": "纸飞机",
+    "file": "send.gif",
+    "preview": "send.png"
+  },
+  {
+    "id": "shop-gif",
+    "kind": "animation",
+    "scene": "shop",
+    "label": "购物",
+    "file": "shop.gif",
+    "preview": "shop.png"
+  },
+  {
+    "id": "deliver-gif",
+    "kind": "animation",
+    "scene": "deliver",
+    "label": "送货",
+    "file": "deliver.gif",
+    "preview": "deliver.png"
+  },
+  {
+    "id": "ride-gif",
+    "kind": "animation",
+    "scene": "ride",
+    "label": "骑行",
+    "file": "ride.gif",
+    "preview": "ride.png"
+  },
+  {
+    "id": "ui-1",
+    "kind": "sticker",
+    "label": "UI 1",
+    "file": "ui-1.png",
+    "preview": "ui-1.png"
+  },
+  {
+    "id": "ui-2",
+    "kind": "sticker",
+    "label": "UI 2",
+    "file": "ui-2.png",
+    "preview": "ui-2.png"
+  },
+  {
+    "id": "ui-3",
+    "kind": "sticker",
+    "label": "UI 3",
+    "file": "ui-3.png",
+    "preview": "ui-3.png"
+  },
+  {
+    "id": "ui-4",
+    "kind": "sticker",
+    "label": "UI 4",
+    "file": "ui-4.png",
+    "preview": "ui-4.png"
+  },
+  {
+    "id": "ui-5",
+    "kind": "sticker",
+    "label": "UI 5",
+    "file": "ui-5.png",
+    "preview": "ui-5.png"
+  },
+  {
+    "id": "ui-6",
+    "kind": "sticker",
+    "label": "UI 6",
+    "file": "ui-6.png",
+    "preview": "ui-6.png"
+  },
+  {
+    "id": "ui-7",
+    "kind": "sticker",
+    "label": "UI 7",
+    "file": "ui-7.png",
+    "preview": "ui-7.png"
+  },
+  {
+    "id": "ui-8",
+    "kind": "sticker",
+    "label": "UI 8",
+    "file": "ui-8.png",
+    "preview": "ui-8.png"
+  },
+  {
+    "id": "ui-9",
+    "kind": "sticker",
+    "label": "UI 9",
+    "file": "ui-9.png",
+    "preview": "ui-9.png"
+  },
+  {
+    "id": "ui-9-1",
+    "kind": "sticker",
+    "label": "UI 9-1",
+    "file": "ui-9-1.png",
+    "preview": "ui-9-1.png"
+  },
+  {
+    "id": "ui-10",
+    "kind": "sticker",
+    "label": "UI 10",
+    "file": "ui-10.png",
+    "preview": "ui-10.png"
+  },
+  {
+    "id": "ui-11",
+    "kind": "sticker",
+    "label": "UI 11",
+    "file": "ui-11.png",
+    "preview": "ui-11.png"
+  },
+  {
+    "id": "ui-12",
+    "kind": "sticker",
+    "label": "UI 12",
+    "file": "ui-12.png",
+    "preview": "ui-12.png"
+  },
+  {
+    "id": "ui-13",
+    "kind": "sticker",
+    "label": "UI 13",
+    "file": "ui-13.png",
+    "preview": "ui-13.png"
+  },
+  {
+    "id": "ui-14",
+    "kind": "sticker",
+    "label": "UI 14",
+    "file": "ui-14.png",
+    "preview": "ui-14.png"
+  },
+  {
+    "id": "ui-15",
+    "kind": "sticker",
+    "label": "UI 15",
+    "file": "ui-15.png",
+    "preview": "ui-15.png"
+  },
+  {
+    "id": "ui-16",
+    "kind": "sticker",
+    "label": "UI 16",
+    "file": "rabbits.png",
+    "preview": "rabbits.png"
+  },
+  {
+    "id": "ui-17",
+    "kind": "sticker",
+    "label": "UI 17",
+    "file": "ui-17.png",
+    "preview": "ui-17.png"
+  },
+  {
+    "id": "ui-18",
+    "kind": "sticker",
+    "label": "UI 18",
+    "file": "ui-18.png",
+    "preview": "ui-18.png"
+  },
+  {
+    "id": "ui-19",
+    "kind": "sticker",
+    "label": "UI 19",
+    "file": "ui-19.png",
+    "preview": "ui-19.png"
+  },
+  {
+    "id": "ui-20",
+    "kind": "sticker",
+    "label": "UI 20",
+    "file": "ui-20.png",
+    "preview": "ui-20.png"
+  },
+  {
+    "id": "ui-21",
+    "kind": "sticker",
+    "label": "UI 21",
+    "file": "ui-21.png",
+    "preview": "ui-21.png"
+  },
+  {
+    "id": "ui-22",
+    "kind": "sticker",
+    "label": "UI 22",
+    "file": "stars.png",
+    "preview": "stars.png"
+  },
+  {
+    "id": "ui-23",
+    "kind": "sticker",
+    "label": "UI 23",
+    "file": "ui-23.png",
+    "preview": "ui-23.png"
+  },
+  {
+    "id": "ui-24",
+    "kind": "sticker",
+    "label": "UI 24",
+    "file": "ui-24.png",
+    "preview": "ui-24.png"
+  },
+  {
+    "id": "ui-25",
+    "kind": "sticker",
+    "label": "UI 25",
+    "file": "ui-25.png",
+    "preview": "ui-25.png"
+  },
+  {
+    "id": "ui-26",
+    "kind": "sticker",
+    "label": "UI 26",
+    "file": "ui-26.png",
+    "preview": "ui-26.png"
+  },
+  {
+    "id": "ui-27",
+    "kind": "sticker",
+    "label": "UI 27",
+    "file": "ui-27.png",
+    "preview": "ui-27.png"
+  }
+]

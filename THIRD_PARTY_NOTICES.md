@@ -149,3 +149,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## User-provided Angelina artwork
+
+`static/artwork/angelina/` contains selected, unmodified image files from the user's Angelina.rar material pack supplied on 2026-10-20. Original archive mappings are recorded in manifest.json. No creator attribution or license document was included in the archive; this notice does not grant additional rights or identify the artwork as original project artwork. Images are decorative and are not evidence of an application result.

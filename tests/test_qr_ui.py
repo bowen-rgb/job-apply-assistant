@@ -60,8 +60,10 @@ class QRUITests(unittest.TestCase):
                 for width in [1280,375]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertTrue(page.locator('#qrApplicationDialog').evaluate('node=>node.scrollWidth<=node.clientWidth+1'))
+                    self.assertTrue(page.locator('#qrSend').evaluate('e=>{const b=e.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight}'))
                     page.screenshot(path=str(folder/f'preview-{width}.png'),animations='disabled')
                 page.locator('#qrResume').select_option('general')
+                page.locator('.qr-company-edit summary').click()
                 page.locator('#qrCompany').fill('Test Robotics Confirmed')
                 page.locator('#qrSend').click()
                 expect(page.locator('.qr-progress')).to_contain_text('请在 Chrome 登录')
@@ -108,7 +110,8 @@ class QRUITests(unittest.TestCase):
                 image={'name':'code.png','mimeType':'image/png','buffer':buffer.getvalue()}
                 page.locator('#qrFile').set_input_files([image,{**image,'name':'duplicate.png'},{**image,'name':'unreadable.png'}])
                 expect(page.locator('[data-qr-select]')).to_have_count(2)
-                expect(page.locator('.qr-feedback')).to_contain_text('unreadable.png')
+                expect(page.locator('#qrTickets')).to_contain_text('unreadable.png')
+                expect(page.locator('[data-qr-retry]')).to_have_count(1)
                 self.assertFalse(any(path.endswith('/start') for path in writes))
                 page.locator('[data-qr-remove]').first.click();expect(page.locator('[data-qr-select]')).to_have_count(1)
                 page.evaluate(r"""()=>{const e=new Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(e,'clipboardData',{value:{items:[],getData:()=> 'https://employer.test/c\nhttps://employer.test/d\nhttps://employer.test/d'}});document.querySelector('#qrApplicationDialog').dispatchEvent(e)}""")
@@ -128,4 +131,70 @@ class QRUITests(unittest.TestCase):
                 expect(page.locator('#qrCompany')).to_have_count(0)
                 self.assertEqual(len(records),0);self.assertEqual(errors,[])
                 self.assertFalse(any(path.endswith('/start') for path in writes))
+            finally:browser.close()
+    def test_keep_adding_during_import_retry_drag_drop_and_choose_role_in_same_card(self):
+        with sync_playwright() as p:
+            browser=p.chromium.launch(headless=True)
+            try:
+                page=browser.new_page(viewport={'width':1280,'height':900});records={};held=[];decodes=0;sequence=0;writes=[];errors=[]
+                page.on('pageerror',lambda e:errors.append(str(e)))
+                def respond(route):
+                    nonlocal decodes,sequence
+                    path=urlparse(route.request.url).path;req=route.request
+                    if path.startswith('/static/'):
+                        route.fulfill(path=str(STATIC/path.removeprefix('/static/')));return
+                    if path=='/':
+                        route.fulfill(content_type='text/html',body='''<html><meta charset="utf-8"><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/workbench.css"><link rel="stylesheet" href="/static/reference-system.css"><link rel="stylesheet" href="/static/angelina-ui.css"><link rel="stylesheet" href="/static/qr-application.css"><button id="qrNav">QR</button><script>window.Locale={t:s=>s};window.Accounts={key:s=>'desk:'+s}</script><script src="/static/qr-application.js"></script><script>QRApplication.init()</script></html>''');return
+                    if req.method!='GET':writes.append(path)
+                    if path=='/api/qr':route.fulfill(json=list(records.values()));return
+                    if path=='/api/qr/decode':
+                        decodes+=1
+                        if decodes==1:held.append(route);return
+                        if decodes==3:route.fulfill(status=400,json={'detail':'qr_no_code'});return
+                        route.fulfill(json={'codes':['https://employer.test/'+('b' if decodes==5 else str(decodes))]});return
+                    if path=='/api/qr/inspect':
+                        sequence+=1;data=json.loads(json.dumps(PREVIEW));data['id']=format(sequence,'032x');payload=json.loads(req.post_data);url=payload['url'];data['preview'].update(url=url,final_url=url,source_name=payload.get('source_name',''))
+                        if url.endswith('portal'):data['preview'].update(kind='entry',role_title='',tasks=[],readiness={'ready':False},opportunities=[{'url':'https://employer.test/job/target','title':'Target robotics role'}])
+                        records[data['id']]=data;route.fulfill(json=data);return
+                    key=path.split('/')[3] if path.startswith('/api/qr/') else ''
+                    if key in records:
+                        if path.endswith('/target'):
+                            records[key]['preview'].update(kind='vacancy',role_title='Target robotics role',final_url='https://employer.test/job/target',tasks=['Design and validate the robot control system in simulation.'],readiness={'ready':True},resume_id='robot')
+                        if req.method=='DELETE':del records[key];route.fulfill(json={'removed':True});return
+                        route.fulfill(json=records[key]);return
+                    route.fulfill(status=404,json={'detail':'qr_not_found'})
+                page.route('**/*',respond);page.goto('http://desk.test/');page.locator('#qrNav').click()
+                picture=Image.fromarray(zxingcpp.create_barcode('https://employer.test/a',zxingcpp.BarcodeFormat.QRCode).to_image(scale=4));buffer=io.BytesIO();picture.save(buffer,format='PNG')
+                file={'name':'first.png','mimeType':'image/png','buffer':buffer.getvalue()}
+                picker=page.locator('#qrFile').element_handle()
+                page.locator('#qrFile').set_input_files(file)
+                expect(page.locator('#qrTickets')).to_contain_text('first.png')
+                expect(page.locator('#qrAdd')).to_be_enabled()
+                page.locator('#qrFile').set_input_files({**file,'name':'second.png'})
+                expect(page.locator('#qrTickets')).to_contain_text('second.png')
+                page.locator('#qrLinkToggle').click();page.locator('#qrLink').fill('https://employer.test/manual')
+                held[0].fulfill(json={'codes':['https://employer.test/a']})
+                expect(page.locator('[data-qr-select]')).to_have_count(2)
+                expect(page.locator('#qrLink')).to_have_value('https://employer.test/manual')
+                self.assertTrue(picker.evaluate('e=>e.isConnected'))
+                page.locator('#qrLinkForm button').click();expect(page.locator('[data-qr-select]')).to_have_count(3)
+                page.locator('#qrFile').set_input_files({**file,'name':'bad.png'})
+                expect(page.locator('[data-qr-retry]')).to_have_count(1)
+                page.locator('[data-qr-retry]').click();expect(page.locator('[data-qr-select]')).to_have_count(4)
+                page.evaluate("""()=>{const dt=new DataTransfer();dt.items.add(new File(['test'],'drag.png',{type:'image/png'}));document.querySelector('#qrApplicationDialog').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));}""")
+                expect(page.locator('[data-qr-select]')).to_have_count(5)
+                page.locator('#qrLinkToggle').click();page.locator('#qrLink').fill('https://employer.test/portal');page.locator('#qrLinkForm button').click()
+                expect(page.locator('[data-qr-select]')).to_have_count(6)
+                page.locator('[data-qr-select]').last.click();expect(page.locator('#qrSend')).to_be_disabled()
+                page.locator('#qrRole').select_option('https://employer.test/job/target')
+                expect(page.locator('.qr-job')).to_have_text('Target robotics role')
+                expect(page.locator('[data-qr-select]')).to_have_count(6)
+                expect(page.locator('#qrSend')).to_be_enabled()
+                self.assertEqual(len(records),6)
+                for width in [1280,375]:
+                    page.set_viewport_size({'width':width,'height':900})
+                    self.assertTrue(page.locator('#qrApplicationDialog').evaluate('e=>e.scrollWidth<=e.clientWidth+1'))
+                    self.assertTrue(page.locator('#qrAdd').evaluate('e=>{const b=e.getBoundingClientRect();return b.top>=0&&b.bottom<innerHeight}'))
+                    page.screenshot(path=f'tmp/qr-ui/desk-{width}.png',animations='disabled')
+                self.assertFalse(any(path.endswith('/start') or path=='/api/queue/start' for path in writes));self.assertEqual(errors,[])
             finally:browser.close()

@@ -31,13 +31,11 @@ window.Workbench=(()=>{
     }catch{failed=true;if(!snapshot)paint();clock();}finally{clearTimeout(timeout);busy=false;document.getElementById('wbRefresh')?.removeAttribute('disabled');}
   }
   function paint(){
-    const oldPanels=[...root().querySelectorAll('.wb-panel')];
-    const readingIndex=window.scrollY>0?oldPanels.findIndex(node=>{const r=node.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight;}):-1;
-    const readingTop=readingIndex>=0?oldPanels[readingIndex].getBoundingClientRect().top:0;
+    const readingScroll=window.scrollY;
     const tablePositions=[...root().querySelectorAll('.wb-data')].map(node=>node.scrollTop);
     const focused=root().contains(document.activeElement)?document.activeElement:null;
     const focusId=focused?.id;
-    const focusAction=focused?.getAttributeNames().find(name=>name.startsWith('data-wb-'));
+    const focusAction=focused?.getAttributeNames().find(name=>name.startsWith('data-wb-')||name==='data-aa-view');
     const focusValue=focusAction?focused.getAttribute(focusAction):null;
     const focusTable=focused?.matches('summary')?focused.closest('details')?.dataset.table:null;
     document.getElementById('overviewNav').textContent=t(0);
@@ -60,15 +58,16 @@ window.Workbench=(()=>{
       <section class="wb-panel"><div class="wb-panel-head"><h2>${e(t(33))}</h2><span aria-hidden="true">↗</span></div><p class="wb-focus-title">${e(focus?.title||t(34))}</p>${focus?`<p>${e(statusLabel(focus.status))} · #${Number(focus.job_id)}</p>`:''}<p>${e(t(38))}</p><button type="button" class="primary" data-wb-view="pipeline">${e(t(12))}</button></section>
       <section class="wb-panel"><div class="wb-panel-head"><h2>${e(t(20))}</h2><span aria-hidden="true">02</span></div><p>${e(t(21))}</p><div class="wb-bars">${sources.length?bars(sources,'source'):`<p class="wb-empty">${e(s?t(32):t(5))}</p>`}</div>${sources.length?table(sources,t(20)):''}</section>
       <section class="wb-panel"><div class="wb-panel-head"><h2>${e(t(22))}</h2><span aria-hidden="true">03</span></div><p>${e(t(38))}</p><div class="wb-bars">${s?bars(stateRows,'queue'):`<p class="wb-empty">${e(t(5))}</p>`}</div>${s?table(stateRows,t(22)):''}</section></div>`;
+    window.AngelinaUI?.refresh();
     root().querySelectorAll('details').forEach((d,i)=>{d.dataset.table=String(i);d.open=openTables.includes(String(i));});
     document.getElementById('wbRefresh').onclick=refresh;
-    document.getElementById('wbPeriod').onchange=event=>{period=Number(event.target.value);signature='';paint();document.getElementById('wbPeriod').focus();};
+    document.getElementById('wbPeriod').onchange=event=>{period=Number(event.target.value);signature='';paint();document.getElementById('wbPeriod').focus({preventScroll:true});};
     document.getElementById('wbTasks').onclick=()=>document.getElementById('pendingTasksNav').click();
     root().querySelectorAll('[data-wb-view],[data-wb-queue]').forEach(b=>b.onclick=()=>showView(b.dataset.wbView||'pipeline'));
     root().querySelectorAll('[data-wb-filter]').forEach(b=>b.onclick=()=>openJobs(b.dataset.wbFilter));
     root().querySelectorAll('[data-wb-source]').forEach(b=>b.onclick=()=>openJobs('all',b.dataset.wbSource));clock();
     root().querySelectorAll('.wb-data').forEach((node,index)=>{node.scrollTop=tablePositions[index]||0;});
-    if(readingIndex>=0){const replacement=root().querySelectorAll('.wb-panel')[readingIndex];if(replacement)window.scrollBy(0,replacement.getBoundingClientRect().top-readingTop);}
+    window.scrollTo({top:readingScroll,behavior:'instant'});
     if(focusId)document.getElementById(focusId)?.focus({preventScroll:true});
     else if(focusAction)[...root().querySelectorAll(`[${focusAction}]`)].find(b=>b.getAttribute(focusAction)===focusValue)?.focus({preventScroll:true});
     else if(focusTable!=null)root().querySelector(`details[data-table="${focusTable}"] summary`)?.focus({preventScroll:true});
