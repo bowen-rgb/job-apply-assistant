@@ -19,6 +19,7 @@
     "files": [
       "main.cjs",
       "policy.cjs",
+      "backend-ready.cjs",
       "loading.html",
       "assets/**"
     ],

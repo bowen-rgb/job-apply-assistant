@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {randomUUID} = require('node:crypto');
 const {internalURL, externalURL, backendPaths, sharedBackend} = require('./policy.cjs');
+const {waitForBackend} = require('./backend-ready.cjs');
 let win, child, exiting = false, stopped = false, backendReady = false, origin, workspace;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -84,17 +85,16 @@ async function startBackend() {
   child.on('exit', () => {log.end(); if (!exiting && backendReady) {
     dialog.showErrorBox('后台已停止', '后台意外退出，任务已经停止。请重新打开求职助手；不会自动重投申请。'); app.quit();
   }});
-  for (let count = 0; count < 120; count++) {
-    if (exiting) return;
-    if (spawnError) throw spawnError;
-    if (child.exitCode !== null) throw new Error('后台启动失败，请查看运行日志。');
-    try {
-      const response = await fetch(`${origin}/api/desktop/ready`, {signal: AbortSignal.timeout(800)});
-      if (response.ok && response.headers.get('x-jaa-desktop-instance') === instance) {backendReady = true; return;}
-    } catch {}
-    await delay(250);
-  }
-  throw new Error('后台启动超时，请查看运行日志。');
+  await waitForBackend({delay, exited: () => Boolean(exiting || spawnError || child.exitCode !== null),
+    onSlow: () => {if (win) win.setTitle('首次启动准备中，请稍候 · Job Apply Assistant');},
+    probe: async () => {
+      try {
+        const response = await fetch(`${origin}/api/desktop/ready`, {signal: AbortSignal.timeout(800)});
+        return response.ok && response.headers.get('x-jaa-desktop-instance') === instance;
+      } catch {return false;}
+    }});
+  backendReady = true;
+  if (win) win.setTitle('Job Apply Assistant');
 }
 async function shutdown() {
   if (!child || child.exitCode !== null) return;
