@@ -11,12 +11,22 @@ except ImportError:
 
 def main(mode: str = 'strong'):
     with connect() as c:
-        if mode == 'liked':
+        if mode == 'queued':
+            rows = c.execute("""SELECT j.id FROM application_queue q JOIN jobs j ON j.id=q.job_id
+                WHERE q.status IN ('queued','waiting_user','error')
+                AND COALESCE(j.review_verdict,'') NOT IN ('APPLY','SKIP','HUMAN_REVIEW')
+                AND COALESCE(j.application_status,'') NOT IN ('submitted','submitted_verified')
+                AND COALESCE(j.user_action,'')!='skipped'
+                AND COALESCE(j.human_review_status,'')!='declined'
+                ORDER BY q.priority,q.id""").fetchall()
+        elif mode == 'liked':
             rows = c.execute("SELECT id FROM jobs WHERE user_action='liked' AND COALESCE(review_verdict,'') NOT IN ('APPLY','SKIP','HUMAN_REVIEW') ORDER BY score DESC").fetchall()
         else:
             rows = c.execute("SELECT id FROM jobs WHERE (user_action='liked' OR decision='keep') AND COALESCE(review_verdict,'') NOT IN ('APPLY','SKIP','HUMAN_REVIEW') ORDER BY CASE user_action WHEN 'liked' THEN 0 ELSE 1 END, score DESC").fetchall()
     results = []
     for row in rows:
+        from .worker_runtime import check_cancelled
+        check_cancelled()
         job_id = int(row['id'])
         try:
             r = review_via_chatgpt_web(job_id)

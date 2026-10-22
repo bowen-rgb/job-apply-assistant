@@ -411,6 +411,10 @@ window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; wind
 async function pollScan(){
   try{
     const s=await requestJson('/api/search/status');Coach.scan(s);
+    el('searchBtn').disabled=Boolean(s.running);
+    el('searchBtn').textContent=tr(s.running?'Recherche en cours…':'Lancer la recherche d’offres');
+    if(s.running)el('discoveryActionStatus').textContent=`${tr('Scan en cours')} · ${s.fetched||0} ${tr('lus')} · ${s.inserted||0} ${tr('nouveaux')}`;
+    else if(s.scan_id)el('discoveryActionStatus').textContent=`${tr('Dernier scan terminé')} · ${s.inserted||0} ${tr('nouveaux')} · ${s.errors||0} ${tr('erreurs')}`;
     scanPanel.dataset.running=String(Boolean(s.running));document.dispatchEvent(new Event('jaa:scan-state'));
     if(s.running || s.scan_id){
       scanPanel.classList.remove('hidden'); scanText.textContent=tr(s.running?'Scan en cours':'Dernier scan terminé');
@@ -443,9 +447,22 @@ qInput.addEventListener('compositionstart',()=>{queryComposing=true;});
 qInput.addEventListener('compositionend',()=>{queryComposing=false;render();});
 qInput.oninput=event=>{if(!queryComposing&&!event.isComposing)render();};
 sourceSelect.onchange=render;
-el('searchBtn').onclick=async()=>{statusEl.textContent=tr('Démarrage du scan…');const x=await requestJson('/api/search',{method:'POST'});statusEl.textContent=tr(x.running?'Scan lancé':'Scan déjà actif');await pollScan();};
+el('searchBtn').onclick=async()=>{
+  showView('jobs');el('searchBtn').disabled=true;
+  try{statusEl.textContent=tr('Démarrage du scan…');await requestJson('/api/search',{method:'POST'});await pollScan();}
+  catch(error){statusEl.textContent=error.message;el('discoveryActionStatus').textContent=error.message;el('searchBtn').disabled=false;}
+};
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
-el('batchBtn').onclick=async()=>{if(!confirm(tr('Lancer le reviewer ChatGPT sur les offres aimées + match fort non encore relues ?')))return;await requestJson('/api/review/batch?mode=strong',{method:'POST'});statusEl.textContent=tr('Batch review lancé');setTimeout(load,1000);};
+el('batchBtn').onclick=async()=>{
+  showView('pipeline');el('queueReviewPanel').scrollIntoView({behavior:'smooth',block:'center'});el('queueReviewScope').focus();
+};
+el('queueReviewBtn').onclick=async()=>{
+  if(!confirm(tr('Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.')))return;
+  el('queueReviewBtn').disabled=true;
+  try{await requestJson('/api/review/batch?mode='+encodeURIComponent(el('queueReviewScope').value),{method:'POST'});el('queueReviewStatus').textContent=tr('Batch review lancé');setTimeout(loadPipeline,1000);}
+  catch(error){el('queueReviewStatus').textContent=error.message;}
+  finally{el('queueReviewBtn').disabled=false;}
+};
 async function refreshAutomationStatus(){
   try{const h=await requestJson('/api/health');Guide.health(h);ChromeControl.refresh(h.browser_control);el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.')].join(' · ');}
   catch(error){Guide.health(null);el('automationStatus').textContent=error.message;}
@@ -676,6 +693,10 @@ async function loadPipeline(){
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
   const openErrors=new Set([...document.querySelectorAll('[data-error-job][open]')].map(x=>x.dataset.errorJob));
   latestQueueItems=q.items||[];renderQueueItems();
+  const reviewing=latestQueueItems.find(x=>['RUNNING','QUEUED'].includes(x.review_verdict));
+  const reviewed=latestQueueItems.filter(x=>['APPLY','SKIP','HUMAN_REVIEW'].includes(x.review_verdict)).length;
+  if(reviewing)el('queueReviewStatus').textContent=`ChatGPT · ${reviewing.title||''} · ${tr(reviewing.review_verdict==='RUNNING'?'En cours':'En attente')}`;
+  else if(reviewed)el('queueReviewStatus').textContent=`ChatGPT · ${reviewed} / ${latestQueueItems.length} · ${tr('Revue terminée')}`;
   el('queueCounts').textContent=[['queued','En file'],['running','En cours'],['waiting_user','À reprendre par vous'],['error','Préparation échouée'],['done','Terminée'],['cancelled','Annulée']].map(([key,label])=>`${tr(label)} ${q.counts?.[key]||0}`).join(' · ');
   const active=latestQueueItems.find(x=>!hasSubmitted(x)&&x.job_id===q.current_job_id&&x.status==='running')||latestQueueItems.find(x=>!hasSubmitted(x)&&x.status==='running')||jobs.find(j=>['opening','preparing','preparing_letter'].includes(j.application_status));
   const actionableItems=latestQueueItems.filter(x=>!hasSubmitted(x)&&x.application_status!=='withdrawn');
@@ -762,5 +783,22 @@ document.addEventListener('localechange',()=>{renderSkillInventory();Guide.rende
 async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();QRApplication.init();AngelinaUI.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
+
+// Refresh local records across clients; never reload recruiter tabs or overwrite edited forms.
+let clientSyncBusy=false;
+async function syncClientViews(){
+  if(clientSyncBusy||document.hidden)return;
+  clientSyncBusy=true;
+  try{
+    const registry=await requestJson('/api/candidates');
+    if(registry.active_id&&registry.active_id!==Accounts.owner){location.reload();return;}
+    await pollScan();
+    if(!el('jobsView').classList.contains('hidden'))await load();
+    if(!el('pipelineView').classList.contains('hidden'))await loadPipeline();
+  }catch(error){el('discoveryActionStatus').textContent=error.message;}
+  finally{clientSyncBusy=false;}
+}
+setInterval(syncClientViews,6000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncClientViews();});
 
 Object.assign(stepLabels,{materials_review:'Vérifier les documents'});

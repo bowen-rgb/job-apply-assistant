@@ -849,5 +849,18 @@
   "Activités proposées par ChatGPT — à vérifier": "Business research from ChatGPT — check source",
   "Source entreprise": "Company source",
   "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "On click, the system researches business activities and selects a CV. Your manual choice takes priority.",
-  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "This link is incomplete or depends on an expired session. Reopen it from the employer career site."
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "This link is incomplete or depends on an expired session. Reopen it from the employer career site.",
+  "Lancer la recherche d’offres": "Start job scan",
+  "Faire vérifier les offres par ChatGPT": "Review jobs with ChatGPT",
+  "Recherche et revue": "Discovery and AI review",
+  "Recherche selon votre profil ; revue des favoris et des correspondances fortes.": "Scan using this profile. Open the queue to choose a batch review scope.",
+  "Recherche en cours…": "Scanning jobs…",
+  "Revue des offres par ChatGPT": "ChatGPT job review",
+  "Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.": "Review job requirements before preparing applications. Reviewing does not submit applications.",
+  "Périmètre de la revue": "Review scope",
+  "Offres de la file": "Unreviewed queue jobs",
+  "Favoris et correspondances fortes": "Saved and strong-match jobs",
+  "Favoris uniquement": "Saved jobs only",
+  "Lancer la revue du lot": "Start batch review",
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Review unreviewed jobs in the selected scope with ChatGPT? No applications will be sent."
 }

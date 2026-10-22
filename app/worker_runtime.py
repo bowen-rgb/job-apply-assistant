@@ -42,7 +42,7 @@ def _launch(module: str, job_id: int, *args: str):
         env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8:backslashreplace', 'JOB_WORKER_TOKEN': str(token), 'JAA_CANDIDATE_ID': candidate_id()}
         with (directory / f'{module.rsplit(".", 1)[-1]}_{job_id}.log').open('a', encoding='utf-8') as log:
             process = subprocess.Popen([sys.executable, '-m', module, str(job_id), *args], cwd=str(ROOT), env=env,
-                                       stdout=log, stderr=subprocess.STDOUT,
+                                       stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                                        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform.startswith('win') else 0)
         _workers[key] = (process, token)
         return process
@@ -89,9 +89,10 @@ def is_running(module: str, job_id: int) -> bool:
         return bool(entry and entry[0].poll() is None)
 
 
-def any_running() -> bool:
+def any_running(*, include_handoffs=True) -> bool:
     with _lock:
-        return any(process.poll() is None for process, _ in _workers.values())
+        return any(process.poll() is None for (module, _), (process, _) in _workers.items()
+                   if include_handoffs or module != 'app.qr_login_worker')
 
 
 def launch(*args, **kwargs):

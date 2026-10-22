@@ -28,8 +28,11 @@ class ApplicationService:
         return {'ok': True, 'message': 'ChatGPT web review queued'}
 
     def queue_batch_review(self, mode: str) -> dict[str, Any]:
-        if mode not in {'strong', 'liked'}:
-            raise ValueError('mode must be strong or liked')
+        if mode not in {'strong', 'liked', 'queued'}:
+            raise ValueError('mode must be strong, liked or queued')
+        from ..worker_runtime import any_running
+        if any_running(include_handoffs=False):
+            raise ValueError('Une tâche est déjà en cours. Attendez sa fin avant de lancer la revue.')
         launch_batch_review(mode)
         return {'ok': True, 'message': f'Batch review queued: {mode}'}
 

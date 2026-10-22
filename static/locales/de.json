@@ -849,5 +849,18 @@
   "Activités proposées par ChatGPT — à vérifier": "Unternehmensrecherche von ChatGPT — prüfen",
   "Source entreprise": "Unternehmensquelle",
   "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Beim Klick recherchiert das System die Geschäftsfelder und wählt den Lebenslauf. Ihre manuelle Auswahl hat Vorrang.",
-  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "Dieser Link ist unvollständig oder benötigt eine abgelaufene Sitzung. Öffnen Sie ihn über die Karriereseite des Unternehmens."
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "Dieser Link ist unvollständig oder benötigt eine abgelaufene Sitzung. Öffnen Sie ihn über die Karriereseite des Unternehmens.",
+  "Lancer la recherche d’offres": "Stellensuche starten",
+  "Faire vérifier les offres par ChatGPT": "Stellen mit ChatGPT prüfen",
+  "Recherche et revue": "Suche und KI-Prüfung",
+  "Recherche selon votre profil ; revue des favoris et des correspondances fortes.": "Suche mit diesem Profil; Stapelprüfung in der Warteschlange.",
+  "Recherche en cours…": "Stellensuche läuft…",
+  "Revue des offres par ChatGPT": "ChatGPT-Stellenprüfung",
+  "Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.": "Stellen vor der Bewerbung prüfen. Keine Bewerbung wird gesendet.",
+  "Périmètre de la revue": "Prüfumfang",
+  "Offres de la file": "Stellen in der Warteschlange",
+  "Favoris et correspondances fortes": "Favoriten und passende Stellen",
+  "Favoris uniquement": "Nur Favoriten",
+  "Lancer la revue du lot": "Stapelprüfung starten",
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Ausgewählte Stellen mit ChatGPT prüfen? Keine Bewerbung wird gesendet."
 }

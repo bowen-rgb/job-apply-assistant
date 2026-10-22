@@ -3,6 +3,11 @@
    Existing plain CSS tokens remain the contract, including success/failure. */
 :root{--aa-orange:#ffcf83;--aa-copper:#286889;--aa-hover:#205571;--aa-ink:#33495b;--aa-paper:#fff;--aa-soft:#e7f5fa;--aa-rule:#d3e4e9;--bg:#f1fafb;--panel:#fff;--panel2:#e7f5fa;--text:#33495b;--muted:#576f7e;--line:#d3e4e9;--ref-surface-1:#f5fafb;--ref-soft:#eaf4f7;--aa-space-1:8px;--aa-space-2:12px;--aa-space-3:16px;--aa-space-4:24px;--aa-space-5:32px;--aa-space-6:48px;--accent:var(--aa-orange);--focus:var(--aa-copper);--ref-radius-control:14px;--ref-radius-panel:20px;--ref-radius-dialog:24px}
 body{font-family:'Segoe UI','Microsoft YaHei',system-ui,sans-serif;background-image:none;line-height:1.55}
+#discoveryActions{display:grid;gap:var(--aa-space-1);padding:var(--aa-space-3) 0;border-block:1px solid var(--line);margin-block:var(--aa-space-3)}
+#discoveryActions button{margin:0;min-height:44px;white-space:normal;line-height:1.45;text-align:left}
+#discoveryActions .secondary{background:var(--aa-soft);color:var(--aa-copper);border:1px solid var(--aa-rule)}
+#discoveryActions p{margin:0;line-height:1.55;overflow-wrap:anywhere}
+#discoveryActions button:disabled{opacity:.65;cursor:wait}
 main{padding:32px clamp(16px,3vw,48px)}
 :is(main,dialog) :is(h1,h2,h3){font-family:'Trebuchet MS','Microsoft YaHei','Segoe UI',sans-serif;font-weight:700}
 :is(main,dialog) p{line-height:1.65}

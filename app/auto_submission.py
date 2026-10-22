@@ -1,5 +1,6 @@
 """Bounded final submission, explicitly enabled by the candidate."""
 import re
+from urllib.parse import urlsplit
 from .form_engine import generic_confirmation
 from .worker_runtime import check_cancelled
 
@@ -14,6 +15,11 @@ def submit_complete_form(page,scope,audit,before_click=lambda:None):
     success,_=generic_confirmation(page)
     if success:return {'status':'blocked','reason':'Page already contains a confirmation; verify the existing application.'}
     buttons=scope.get_by_role('button',name=re.compile(r'^(submit application|send application|envoyer ma candidature|envoyer la candidature|soumettre ma candidature|postuler|submit|envoyer|bewerbung absenden|enviar candidatura|enviar solicitud|提交申请)$',re.I))
+    if buttons.count()==0 and urlsplit(page.url).hostname=='cv.inmind.fr':
+        # VALIDER at the initial CV screen is an import, never a final submit.
+        fields=[scope.locator(x) for x in ('#firstname','#lastname','#email','#phone')]
+        if all(x.count()==1 and x.is_visible() and x.input_value().strip() for x in fields) and 'civility' in audit['report'].get('filled',[]):
+            buttons=scope.get_by_role('button',name=re.compile(r'^VALIDER(?:\s+check)?$',re.I))
     if buttons.count()!=1 or not buttons.is_visible() or not buttons.is_enabled():
         return {'status':'blocked','reason':'A unique final application button was not identified.'}
     check_cancelled()

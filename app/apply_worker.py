@@ -99,9 +99,11 @@ def _required(snapshot: dict) -> tuple[list[dict], list[dict], list[dict]]:
     return unanswered, sensitive, ordinary
 
 
-def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = ''):
+def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '', civility: str = ''):
     raw_profile = load_profile_raw()
     profile = runtime_profile(raw_profile)
+    profile['invocation_privacy_confirmed']=privacy_confirmed
+    profile['invocation_civility']=civility
     with connect() as c:
         row = c.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
         if not row:
@@ -437,4 +439,5 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
 
 if __name__ == '__main__':
     qr_id=sys.argv[sys.argv.index('--qr-request')+1] if '--qr-request' in sys.argv else ''
-    main(int(sys.argv[1]), privacy_confirmed='--privacy-confirmed' in sys.argv[2:],qr_request_id=qr_id)
+    civility=sys.argv[sys.argv.index('--civility')+1] if '--civility' in sys.argv else ''
+    main(int(sys.argv[1]), privacy_confirmed='--privacy-confirmed' in sys.argv[2:],qr_request_id=qr_id,civility=civility)

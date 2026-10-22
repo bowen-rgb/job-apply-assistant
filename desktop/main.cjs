@@ -2,9 +2,8 @@ const {app, BrowserWindow, Menu, dialog, shell} = require('electron');
 const {spawn} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const net = require('node:net');
 const {randomUUID} = require('node:crypto');
-const {internalURL, externalURL, backendPaths} = require('./policy.cjs');
+const {internalURL, externalURL, backendPaths, sharedBackend} = require('./policy.cjs');
 let win, child, exiting = false, stopped = false, backendReady = false, origin, workspace;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -29,12 +28,6 @@ function getWorkspace() {
   // Developer mode reuses current data. A distributable never embeds candidate files or machine paths.
   return app.isPackaged ? path.join(app.getPath('userData'), 'workspace') : path.resolve(__dirname, '..');
 }
-async function freePort() {
-  return new Promise((resolve, reject) => {
-    const s = net.createServer(); s.on('error', reject);
-    s.listen(0, '127.0.0.1', () => {const port = s.address().port; s.close(() => resolve(port));});
-  });
-}
 async function boot() {
   workspace = getWorkspace(); fs.mkdirSync(workspace, {recursive: true});
   win = new BrowserWindow({width: 1440, height: 940, minWidth: 860, minHeight: 620,
@@ -51,6 +44,7 @@ async function boot() {
     {label: '求职助手', submenu: [
       {label: '打开资料文件夹', click: () => shell.openPath(workspace)},
       {label: '打开运行日志', click: () => shell.openPath(path.join(app.getPath('userData'), 'logs'))},
+      {label: '在浏览器打开同一工作台', click: () => {if (backendReady) shell.openExternal(origin);}},
       {label: '使用已有项目资料…', click: chooseWorkspace},
       {type: 'separator'}, {label: '退出并停止后台', click: () => app.quit()}]},
     {label: '编辑', submenu: [{role: 'undo'}, {role: 'redo'}, {type: 'separator'}, {role: 'cut'}, {role: 'copy'}, {role: 'paste'}, {role: 'selectAll'}]},
@@ -64,7 +58,21 @@ async function startBackend() {
   const paths = backendPaths(app.isPackaged, process.resourcesPath, __dirname);
   if (!fs.existsSync(paths.python)) throw new Error('随应用安装的 Python 运行环境缺失，请重新安装。');
   const instance = randomUUID();
-  const port = await freePort(); origin = `http://127.0.0.1:${port}`;
+  const port = 8765; origin = `http://127.0.0.1:${port}`;
+  let existing;
+  try {
+    const response = await fetch(`${origin}/api/runtime`, {signal: AbortSignal.timeout(1500)});
+    if (response.ok) existing = await response.json();
+    else throw new Error('本机 8765 端口被旧版或其他服务占用，请先退出旧后台。');
+  } catch (error) {
+    if (error.message.includes('8765')) throw error;
+    // No listener: this desktop owns the new backend and its lifecycle.
+  }
+  if (existing) {
+    if (!sharedBackend(existing, workspace))
+      throw new Error('已有后台使用其他资料目录，请先退出该后台，或选择同一个项目资料目录。');
+    backendReady = true; return;
+  }
   const logs = path.join(app.getPath('userData'), 'logs'); fs.mkdirSync(logs, {recursive: true});
   const log = fs.createWriteStream(path.join(logs, 'desktop.log'), {flags: 'a'});
   child = spawn(paths.python, ['-m', 'app.desktop_host'], {cwd: paths.root, windowsHide: true,

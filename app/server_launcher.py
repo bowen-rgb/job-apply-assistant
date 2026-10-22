@@ -9,13 +9,16 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-URL = 'http://127.0.0.1:8765/api/health'
+URL = 'http://127.0.0.1:8765/api/runtime'
 
 
 def ready():
     try:
         with urllib.request.urlopen(URL, timeout=3) as response:
-            return json.load(response).get('profile_ok') is True
+            data = json.load(response)
+            from .workspaces import storage_root
+            return (data.get('application') == 'job-apply-assistant'
+                    and Path(data.get('workspace', '')).resolve() == storage_root())
     except Exception:
         return False
 

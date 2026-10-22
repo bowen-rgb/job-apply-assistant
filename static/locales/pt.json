@@ -849,5 +849,18 @@
   "Activités proposées par ChatGPT — à vérifier": "Atividades pesquisadas pelo ChatGPT — verificar",
   "Source entreprise": "Fonte da empresa",
   "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "Ao clicar, o sistema pesquisa as atividades e escolhe o currículo. Sua escolha manual tem prioridade.",
-  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "O link está incompleto ou depende de uma sessão expirada. Abra-o pelo site de carreiras da empresa."
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "O link está incompleto ou depende de uma sessão expirada. Abra-o pelo site de carreiras da empresa.",
+  "Lancer la recherche d’offres": "Procurar vagas",
+  "Faire vérifier les offres par ChatGPT": "Rever vagas com ChatGPT",
+  "Recherche et revue": "Pesquisa e revisão",
+  "Recherche selon votre profil ; revue des favoris et des correspondances fortes.": "Pesquisar com este perfil; revisão em lote na fila.",
+  "Recherche en cours…": "A procurar vagas…",
+  "Revue des offres par ChatGPT": "Revisão com ChatGPT",
+  "Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.": "Rever antes de preparar candidaturas. Não envia candidaturas.",
+  "Périmètre de la revue": "Vagas a rever",
+  "Offres de la file": "Vagas na fila",
+  "Favoris et correspondances fortes": "Favoritos e compatíveis",
+  "Favoris uniquement": "Apenas favoritos",
+  "Lancer la revue du lot": "Iniciar revisão",
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Rever com ChatGPT? Não serão enviadas candidaturas."
 }

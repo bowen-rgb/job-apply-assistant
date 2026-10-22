@@ -162,7 +162,17 @@ class SuccessFactorsAdapter(BaseAdapter):
     info = AdapterInfo('successfactors', 'SAP SuccessFactors', 'agent-assisted', 'Multi-step flows vary by tenant; keep final navigation under human/agent control.')
 
 
+class InmindAdapter(BaseAdapter):
+    info = AdapterInfo('inmind', 'Inmind CV registration', 'deterministic+fallback')
+
+    def fill(self, page, profile, resume_path, job):
+        report=super().fill(page,profile,resume_path,job)
+        from .inmind_flow import prepare_registration
+        return prepare_registration(page,profile,report,job,resume_path)
+
+
 _REGISTRY: dict[str, BaseAdapter] = {
+    'inmind': InmindAdapter(),
     'greenhouse': GreenhouseAdapter(),
     'lever': LeverAdapter(),
     'ashby': AshbyAdapter(),

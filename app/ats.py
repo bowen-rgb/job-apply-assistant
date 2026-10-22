@@ -4,6 +4,7 @@ import re
 import urllib.parse
 
 ATS_PATTERNS = (
+    ('inmind', (r'cv\.inmind\.fr',)),
     ('greenhouse', (r'greenhouse\.io', r'boards\.greenhouse', r'job-boards\.greenhouse')),
     ('lever', (r'jobs\.lever\.co', r'lever\.co')),
     ('ashby', (r'jobs\.ashbyhq\.com', r'ashbyhq')),

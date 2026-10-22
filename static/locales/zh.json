@@ -849,5 +849,18 @@
   "Activités proposées par ChatGPT — à vérifier": "ChatGPT 查询的企业业务 · 待核验",
   "Source entreprise": "企业资料来源",
   "Au clic, le système recherche les activités et choisit le CV. Votre choix manuel reste prioritaire.": "点击后，系统会查询企业业务并选择简历；你手动选定的简历优先。",
-  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "此招聘链接不完整或依赖已失效的会话，请从企业招聘官网重新打开。"
+  "Ce lien est incomplet ou dépend d’une session expirée. Ouvrez-le depuis le site carrière de l’entreprise.": "此招聘链接不完整或依赖已失效的会话，请从企业招聘官网重新打开。",
+  "Lancer la recherche d’offres": "启动岗位扫描",
+  "Faire vérifier les offres par ChatGPT": "让 ChatGPT 复核岗位",
+  "Recherche et revue": "扫描与 AI 复核",
+  "Recherche selon votre profil ; revue des favoris et des correspondances fortes.": "按当前档案扫描。批量复核请进入队列选择范围。",
+  "Recherche en cours…": "正在扫描岗位…",
+  "Revue des offres par ChatGPT": "ChatGPT 岗位复核",
+  "Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.": "准备申请前，先让 ChatGPT 检查岗位条件。复核不会发送申请。",
+  "Périmètre de la revue": "复核范围",
+  "Offres de la file": "队列中尚未复核的岗位",
+  "Favoris et correspondances fortes": "已收藏和高度匹配的岗位",
+  "Favoris uniquement": "仅已收藏岗位",
+  "Lancer la revue du lot": "开始批量复核",
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "让 ChatGPT 复核所选范围内尚未复核的岗位？此操作不会投递。"
 }

@@ -27,6 +27,12 @@
   <aside aria-label="Navigation principale">
     <div class="brand"><img class="brand-mark" src="/static/favicon.svg?v=angelina-20261021" width="44" height="44" alt="" aria-hidden="true" /><span>Job Apply Assistant <small>WORKSPACE</small></span></div>
     <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
+    <!-- Persistent task actions: discovery first, AI review second; use existing theme tokens. -->
+    <section id="discoveryActions" aria-label="Recherche et revue">
+      <button id="searchBtn" class="primary">Lancer la recherche d’offres</button>
+      <button id="batchBtn" class="secondary">Faire vérifier les offres par ChatGPT</button>
+      <p id="discoveryActionStatus" class="small" role="status" aria-live="polite">Recherche selon votre profil ; revue des favoris et des correspondances fortes.</p>
+    </section>
     <nav class="primary-nav" aria-label="Sections">
       <button id="overviewNav" class="navmain">Tableau de bord</button>
       <button id="guideNav" class="navmain">Premiers pas</button>
@@ -37,8 +43,6 @@
     </nav>
 
     <div id="jobSidebar">
-      <button id="searchBtn" class="primary">Scanner le web</button>
-      <button id="batchBtn" class="secondary">终审强匹配</button>
       <button id="healthBtn" class="ghost diag">环境检查</button>
       <button id="startQueueBtn" class="ghost diag">Préparer la suivante</button><p class="queue-help">Une candidature à la fois. Vérifiez le résultat avant de continuer.</p>
 
@@ -126,6 +130,15 @@
         <div class="queue-actions"><button id="browserOpenChrome" class="primary compact">Ouvrir Chrome dédié</button><button id="browserCheckChrome" class="ghost compact">Vérifier la connexion Chrome</button></div>
       </section>
       <section id="analyticsCards" class="metric-grid"></section>
+      <section id="queueReviewPanel" class="settings-card topgap" aria-labelledby="queueReviewTitle">
+        <h2 id="queueReviewTitle">Revue des offres par ChatGPT</h2>
+        <p>Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.</p>
+        <div class="queue-actions">
+          <label>Périmètre de la revue<select id="queueReviewScope"><option value="queued">Offres de la file</option><option value="strong">Favoris et correspondances fortes</option><option value="liked">Favoris uniquement</option></select></label>
+          <button id="queueReviewBtn" class="secondary compact">Lancer la revue du lot</button>
+        </div>
+        <p id="queueReviewStatus" class="small" role="status" aria-live="polite"></p>
+      </section>
       <section class="settings-card topgap"><div class="section-head"><div><h2>File de pré-remplissage</h2><p>Préparez une offre ou toute la file. Le lot s’arrête si une candidature demande votre intervention. Ouvrez ensuite chaque formulaire pour vérifier et envoyer.</p></div><div id="queueControls"><button id="queueAddMatchesBtn" class="ghost compact">Ajouter les postes confirmés</button> <button id="queueRunBtn" class="primary compact">Préparer la suivante</button> <button id="queueBatchBtn" class="primary compact">Préparer tout le lot</button> <button id="queueStopBtn" class="secondary compact" disabled>Arrêter</button> <button id="queueClearBtn" class="ghost compact">Nettoyer terminés</button></div></div><div id="queueFocus" class="queue-focus" aria-live="polite"></div><div class="queue-toolbar"><label>Afficher la file<select id="queueFilter"><option value="all">Tout</option><option value="running">En cours</option><option value="waiting_user">À reprendre par vous</option><option value="error">Préparation échouée</option><option value="queued">En file</option><option value="done">Terminée</option><option value="cancelled">Annulée</option></select></label><p id="queueCounts" class="small"></p></div><div id="queueList" class="queue-list"></div></section>
       <section class="topgap"><div id="pipelineBoard" class="pipeline-board"></div></section>
       <p class="small">Les réponses du recruteur sont enregistrées par vous depuis un e-mail, le portail de candidature ou un appel. Aucun verdict IA ne constitue un refus du recruteur.</p>

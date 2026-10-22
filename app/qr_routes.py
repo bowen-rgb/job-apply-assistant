@@ -65,6 +65,12 @@ def analyze(identifier:str,payload:Analysis|None=None):
     except KeyError:raise HTTPException(404,'qr_not_found')
     except ValueError as exc:raise HTTPException(409,str(exc))
 
+@router.post('/{identifier}/login')
+def login(identifier:str):
+    try:return qr.open_request_for_login(identifier)
+    except KeyError:raise HTTPException(404,'qr_not_found')
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
 @router.post('/{identifier}/start')
 def start(identifier:str,payload:Dispatch):
     try:return qr.start_request(identifier,payload.resume_id,payload.company)
@@ -73,8 +79,8 @@ def start(identifier:str,payload:Dispatch):
     except (OSError,TimeoutError):raise HTTPException(422,'qr_page_unavailable')
 
 @router.post('/{identifier}/resume')
-def resume(identifier:str):
-    try:return qr.resume_request(identifier)
+def resume(identifier:str,privacy_confirmed:bool=False,civility:Literal['','Monsieur','Madame']=''):
+    try:return qr.resume_request(identifier,privacy_confirmed=privacy_confirmed,civility=civility)
     except KeyError:raise HTTPException(404,'qr_not_found')
     except ValueError as exc:raise HTTPException(409,str(exc))
     except (OSError,TimeoutError):raise HTTPException(422,'qr_page_unavailable')

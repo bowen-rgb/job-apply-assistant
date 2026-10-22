@@ -8,6 +8,14 @@ from app import server_launcher as launcher
 from app.main import app
 
 class ServerLauncherTests(unittest.TestCase):
+    def test_runtime_identifies_shared_workspace_without_sensitive_profile(self):
+        response=TestClient(app).get('/api/runtime')
+        self.assertEqual(response.status_code,200)
+        data=response.json()
+        self.assertEqual(data['application'],'job-apply-assistant')
+        self.assertTrue(Path(data['workspace']).is_absolute())
+        self.assertNotIn('identity',data)
+
     def test_existing_server_is_reused_without_spawning(self):
         with patch.object(launcher,'ready',return_value=True),patch.object(launcher.subprocess,'Popen') as spawn:
             self.assertEqual(launcher.main(),0);spawn.assert_not_called()

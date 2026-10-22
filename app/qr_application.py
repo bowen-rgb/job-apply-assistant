@@ -69,10 +69,38 @@ def open_request_for_login(identifier):
     from .worker_runtime import launch, is_running
     from .browser_control import require_connection
     require_connection();row=get_request(identifier)
-    if row['state']!='draft':raise ValueError('qr_already_started')
-    if not is_running('app.qr_login_worker',identifier):
-        launch('app.qr_login_worker',identifier)
+    if row['state'] not in {'draft','authorized'}:raise ValueError('qr_already_started')
+    ensure_application_window(identifier, foreground=True)
     return {'opened':True, 'message':'Login window retained; no automatic reload or retry.'}
+
+
+def ensure_application_window(identifier, foreground=False):
+    """Retain the browser owner while application workers attach and finish."""
+    import time
+    from .worker_runtime import launch,is_running
+    if not is_running('app.qr_login_worker',identifier):
+        owner=uuid.uuid4().hex
+        launch('app.qr_login_worker',identifier,'--owner-token',owner,*([] if foreground else ['--background']))
+        deadline=time.monotonic()+45
+        while time.monotonic()<deadline:
+            payload=json.loads(get_request(identifier)['payload'])
+            if payload.get('handoff_owner')==owner:
+                if payload.get('handoff_error'):raise ValueError(payload['handoff_error'])
+                return payload['handoff_tab_id']
+            if not is_running('app.qr_login_worker',identifier):raise ValueError('Application window could not be retained. Check its task log.')
+            time.sleep(.2)
+        raise ValueError('Application window did not become ready. Check Chrome before retrying.')
+    payload=json.loads(get_request(identifier)['payload'])
+    if foreground:
+        from playwright.sync_api import sync_playwright
+        from .profile_store import runtime_profile
+        from .browser_tabs import find_target
+        with sync_playwright() as p:
+            browser=p.chromium.connect_over_cdp(runtime_profile()['chrome_cdp_endpoint'])
+            page=next((found for context in browser.contexts if (found:=find_target(context,payload.get('handoff_tab_id','')))),None)
+            if page is None:raise ValueError('Login tab was closed. Open it again explicitly.')
+            page.bring_to_front()
+    return payload.get('handoff_tab_id','')
 
 
 def image_path(identifier):
@@ -253,7 +281,7 @@ def start_request(identifier,resume_id,company):
             if row['job_id'] and is_running('app.apply_worker',row['job_id']):return request_status(identifier)
             raise ValueError('qr_already_started')
         browser_control.require_connection()
-        if any_running():raise ValueError('qr_busy')
+        if any_running(include_handoffs=False):raise ValueError('qr_busy')
         payload=json.loads(row['payload'])
         # Do not authorize a portal or a guessed role merely because a company was typed in.
         payload=complete_context(payload)
@@ -323,7 +351,7 @@ def validate_intent(identifier,job,raw):
     return row
 
 
-def resume_request(identifier):
+def resume_request(identifier, *, privacy_confirmed=False, civility=''):
     from . import browser_control
     from .worker_runtime import any_running
     from .browser import launch_apply
@@ -335,9 +363,11 @@ def resume_request(identifier):
         validate_intent(identifier,job,load_profile_raw())
         if safety.has_dispatch(job['id']) or job.get('application_status') in {'submitted','submitted_verified','withdrawn'}:
             raise ValueError('qr_already_started')
-        if any_running():raise ValueError('qr_busy')
+        if any_running(include_handoffs=False):raise ValueError('qr_busy')
         browser_control.require_connection()
-        launch_apply(job['id'],qr_request_id=identifier)
+        options={'privacy_confirmed':True} if privacy_confirmed else {}
+        if civility:options['civility']=civility
+        launch_apply(job['id'],qr_request_id=identifier,**options)
         return request_status(identifier)
 
 
@@ -364,7 +394,7 @@ def analyze_request(identifier,language="zh"):
         if row['state']=='analyzing' and is_running('app.qr_inspect_worker',identifier):return request_status(identifier)
         if row['state'] not in {'draft','analyzing'}:raise ValueError('qr_already_started')
         require_connection()
-        if any_running():raise ValueError('qr_busy')
+        if any_running(include_handoffs=False):raise ValueError('qr_busy')
         with connect() as c:c.execute("UPDATE qr_requests SET state='analyzing',payload=? WHERE id=?",(json.dumps({**json.loads(row["payload"]),"analysis_language":language},ensure_ascii=False),identifier))
         try:launch('app.qr_inspect_worker',identifier)
         except Exception:
@@ -444,7 +474,7 @@ def crawl_request(identifier,language="zh"):
         row=get_request(identifier)
         if row['state']=='crawling' and is_running('app.qr_crawl_worker',identifier):return request_status(identifier)
         if row['state'] not in {'draft','crawling'}:raise ValueError('qr_already_started')
-        if any_running():raise ValueError('qr_busy')
+        if any_running(include_handoffs=False):raise ValueError('qr_busy')
         with connect() as c:c.execute("UPDATE qr_requests SET state='crawling',payload=? WHERE id=?",(json.dumps({**json.loads(row["payload"]),"analysis_language":language},ensure_ascii=False),identifier))
         try:launch('app.qr_crawl_worker',identifier)
         except Exception:

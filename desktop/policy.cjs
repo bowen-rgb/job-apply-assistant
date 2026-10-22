@@ -10,4 +10,8 @@ function backendPaths(packaged, resources, source) {
   const root = packaged ? path.join(resources, 'backend') : path.resolve(source, '..');
   return {root, python: packaged ? path.join(root, 'runtime', 'python.exe') : path.join(root, '.venv', 'Scripts', 'python.exe')};
 }
-module.exports = { internalURL, externalURL, backendPaths };
+function sharedBackend(data, workspace) {
+  return Boolean(data && data.application === 'job-apply-assistant' && typeof data.workspace === 'string'
+    && path.resolve(data.workspace).toLowerCase() === path.resolve(workspace).toLowerCase());
+}
+module.exports = { internalURL, externalURL, backendPaths, sharedBackend };

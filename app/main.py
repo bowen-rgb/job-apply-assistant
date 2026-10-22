@@ -115,6 +115,14 @@ def index():
     return FileResponse(STATIC / 'index.html')
 
 
+@app.get('/api/runtime', include_in_schema=False)
+def local_runtime():
+    import os
+    from .workspaces import storage_root
+    return {'application': 'job-apply-assistant', 'workspace': str(storage_root()),
+            'pid': os.getpid(), 'desktop_owned': bool(os.environ.get('JAA_DESKTOP_INSTANCE'))}
+
+
 @app.post('/api/jobs/translate-titles')
 def translate_job_titles(payload: TitleTranslationRequest):
     return {'language': payload.language, 'translations': translate_jobs(job_repository.titles(payload.job_ids), payload.language)}
