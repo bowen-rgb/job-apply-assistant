@@ -63,3 +63,10 @@ aside :is(.navmain,.filter){font-size:14px;font-weight:600;line-height:1.5}aside
 .card .actions.five .letter-action{background:var(--aa-soft);color:var(--aa-copper);border-color:#c8dfe7;box-shadow:none}
 .card .actions.five button:disabled{background:#edf2f4;color:#61747e;border-color:#d7e2e6;opacity:1;box-shadow:none}
 .card .status-actions button{text-decoration:underline;text-underline-offset:3px}
+
+/* Full workflow access stays in the page as well as the navigation sidebar. */
+.toolbar.job-filters{grid-template-columns:minmax(200px,1.5fr) minmax(160px,1fr) minmax(160px,1fr);align-items:end}
+.job-filters label{display:grid;gap:6px;min-width:0}
+.job-tools{margin:0 0 20px;gap:8px;flex-wrap:wrap}
+@media(max-width:1000px){.toolbar.job-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.job-filters>label:first-child{grid-column:1 / -1}}
+@media(max-width:760px){.toolbar.job-filters{grid-template-columns:1fr}.job-tools button{flex:1 1 160px}}

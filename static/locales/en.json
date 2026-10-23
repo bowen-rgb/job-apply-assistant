@@ -867,5 +867,12 @@
   "Recherche web ; collecteur à mettre à jour": "Web search; direct collector needs updating",
   "Offres publiques ; accès école séparé": "Public jobs; campus access requires login",
   "Pages publiques et recherche web": "Public pages and web search",
-  "Recherche web ciblée": "Targeted web search"
+  "Recherche web ciblée": "Targeted web search",
+  "État des offres": "Job status",
+  "Configurer les sources": "Configure sources",
+  "Vérifier l’environnement": "Check environment",
+  "Source inconnue": "Other source",
+  "Filtres des offres": "Job filters",
+  "Outils des offres": "Job tools",
+  "Rechercher une offre": "Search jobs"
 }

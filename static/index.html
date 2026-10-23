@@ -113,10 +113,16 @@
         <details><summary>Diagnostic des sources</summary><p class="small">Résultats de découverte avant déduplication. Une source sans résultat n’est pas forcément déconnectée.</p><div id="sourceDiagnostics"></div></details>
       </section>
 
-      <section class="toolbar">
-        <input id="q" type="search" placeholder="Filtrer titre, entreprise, lieu…" />
-        <select id="sourceSelect"><option value="">Toutes les sources</option></select>
+      <section class="toolbar job-filters" aria-label="Filtres des offres">
+        <label>Rechercher une offre<input id="q" type="search" placeholder="Filtrer titre, entreprise, lieu…" /></label>
+        <label>État des offres<select id="jobFilterSelect"></select></label>
+        <label>Source<select id="sourceSelect"><option value="">Toutes les sources</option></select></label>
       </section>
+      <div class="queue-actions job-tools" aria-label="Outils des offres">
+        <button type="button" id="jobExportShortcut" class="secondary compact">Exporter pour vérification</button>
+        <button type="button" id="jobSourcesShortcut" class="ghost compact">Configurer les sources</button>
+        <button type="button" id="jobHealthShortcut" class="ghost compact">Vérifier l’environnement</button>
+      </div>
 
       <section id="cards" class="cards" aria-live="polite" aria-busy="false"></section>
     </section>

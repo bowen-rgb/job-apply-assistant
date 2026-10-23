@@ -147,17 +147,39 @@ el('jobsNav').onclick=()=>showView('jobs');
 el('profileNav').onclick=()=>showView('profile');
 el('pipelineNav').onclick=()=>showView('pipeline');
 
+// Keep historical sources selectable even after discovery is disabled.
+function syncSourceOptions(){
+  const selected=sourceSelect.value;
+  const labels=new Map(sourcesCache.filter(x=>x.enabled).map(x=>[x.key,x.label]));
+  for(const job of allJobs){
+    const key=job.provider_key||'__unassigned__';
+    if(!labels.has(key))labels.set(key,sourceLabels[key]||job.source||(key==='__unassigned__'?tr('Source inconnue'):key));
+  }
+  // Preserve a selected view during asynchronous source refresh or locale changes.
+  if(selected&&!labels.has(selected))labels.set(selected,sourceLabels[selected]||selected);
+  sourceSelect.innerHTML=`<option value="">${esc(tr('Toutes les sources'))}</option>`+[...labels].map(([key,label])=>`<option value="${esc(key)}">${esc(label)}</option>`).join('');
+  sourceSelect.value=selected;
+}
+
+// Persist disclosure state by record and heading, independent of list order.
+function rememberDetails(root){
+  const key=detail=>[detail.closest('[data-record-id],[data-queue-job]')?.getAttribute('data-record-id')||detail.closest('[data-queue-job]')?.dataset.queueJob||'',detail.querySelector('summary')?.textContent||''].join('|');
+  const open=new Set([...root.querySelectorAll('details[open]')].map(key));
+  return ()=>root.querySelectorAll('details').forEach(detail=>{if(open.has(key(detail)))detail.open=true;});
+}
+
 async function loadSources(){
   try{
     const r=await fetch('/api/sources');
     const xs=await r.json();
+    if(!r.ok||!Array.isArray(xs))throw new Error('Sources indisponibles');
     sourcesCache=xs;
     sourceLabels=Object.fromEntries(xs.map(x=>[x.key,x.label]));
-    sourceSelect.innerHTML=`<option value="">${esc(tr('Toutes les sources'))}</option>`+xs.filter(x=>x.enabled).map(x=>`<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');
+    syncSourceOptions();
     renderSourceSettings();
   }catch(e){
-    sourceLabels={};
-    sourceSelect.innerHTML=`<option value="">${esc(tr('Sources indisponibles'))}</option>`;
+    syncSourceOptions();
+    statusEl.textContent=tr('Sources indisponibles');
   }
 }
 
@@ -294,6 +316,10 @@ function render(){
     button.tabIndex=selected?0:-1;
   });
   Guide.jobs(allJobs);
+  syncSourceOptions();
+  const filterSelect=el('jobFilterSelect');
+  filterSelect.innerHTML=[...document.querySelectorAll('#jobSidebar .filter')].map(button=>`<option value="${esc(button.dataset.filter)}">${esc(button.textContent)}</option>`).join('');
+  filterSelect.value=current;
   const q=(qInput.value||'').trim().toLowerCase();
   const src=sourceSelect.value;
   const scopedJobs=allJobs.filter(j=>!src || (src==='__unassigned__'?!j.provider_key:j.provider_key===src)).filter(j=>{
@@ -312,7 +338,8 @@ function render(){
   el('jobMetrics').innerHTML=[[tr('Offres'),scopedJobs.filter(j=>matchFilter(j,'all')).length,'all'],[tr('Match fort'),keep,'keep'],[tr('Aimées'),liked,'liked'],[tr('Reviewer: humain'),human,'human'],[tr('Envoyées'),submitted,'submitted']].map(([label,count,filter])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${count}</b></button>`).join('');
   el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>{current=button.dataset.metricFilter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();});
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
-  cards.innerHTML=jobs.map(j=>`<article class="card">
+  const restoreDetails=rememberDetails(cards);
+  cards.innerHTML=jobs.map(j=>`<article class="card" data-record-id="${j.id}">
     <div class="top"><div>${titleMarkup(j)}<div class="company">${esc(j.company||'')} ${j.location?`<span>· ${esc(j.location)}</span>`:''}</div></div><div class="source">${esc(sourceLabels[j.provider_key]||j.source||'web')}</div></div>
     <div class="meta"><span class="tag">${esc(statusLabel(j.decision))}</span>${j.user_action?`<span class="tag user">${esc(statusLabel(j.user_action))}</span>`:''}${j.application_status?`<span class="tag appstate">${esc(applicationLabel(j))}</span>`:''}${j.queue_status?`<span class="tag queue">${esc(tr('File:'))} ${esc(statusLabel(j.queue_status))}</span>`:''}<span title="${esc(tr('Score de matching'))}" class="score ${j.score>=65?'good':j.score>=38?'mid':''}">${Number.isFinite(j.score)?j.score:'—'}</span>${reviewBadge(j)}</div>
     <div class="facts">${fact(tr('Profil'),j.search_profile_label&&j.search_profile_label!=='Default'?j.search_profile_label:'')}${fact('ATS',j.ats&&j.ats!=='generic'?j.ats:'')}${fact(tr('Contrat'),j.employment_type)}${fact(tr('Début'),j.start_date)}${fact(tr('Fin'),j.end_date)}${fact(tr('Salaire'),j.salary)}${fact(tr('Publié'),j.date_posted)}</div>
@@ -335,6 +362,7 @@ function render(){
     </div>
     <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(applicationLabel(j))}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${hasSubmitted(j)?`<button class="ghost compact" onclick="setStage(${j.id},'rejected')">${esc(tr('Enregistrer un refus du recruteur'))}</button>`:''}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<button class="ghost compact" onclick="openMaterials(${j.id})">${esc(tr('Vérifier les documents'))}</button><a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
   </article>`).join('');
+  restoreDetails();
   observeTitles();
 }
 
@@ -447,6 +475,10 @@ qInput.addEventListener('compositionstart',()=>{queryComposing=true;});
 qInput.addEventListener('compositionend',()=>{queryComposing=false;render();});
 qInput.oninput=event=>{if(!queryComposing&&!event.isComposing)render();};
 sourceSelect.onchange=render;
+el('jobFilterSelect').onchange=()=>{current=el('jobFilterSelect').value;document.querySelectorAll('.filter').forEach(button=>button.classList.toggle('active',button.dataset.filter===current));render();};
+el('jobExportShortcut').onclick=()=>{const panel=document.querySelector('.review-export-panel');panel.open=true;panel.scrollIntoView({block:'center',behavior:'smooth'});el('reviewExportScope').focus({preventScroll:true});};
+el('jobSourcesShortcut').onclick=async()=>{await showView('profile');el('search_queries_per_run').closest('.settings-card').scrollIntoView({block:'start',behavior:'smooth'});el('search_queries_per_run').focus({preventScroll:true});};
+el('jobHealthShortcut').onclick=()=>el('healthBtn').click();
 el('searchBtn').onclick=async()=>{
   showView('jobs');el('searchBtn').disabled=true;
   try{statusEl.textContent=tr('Démarrage du scan…');await requestJson('/api/search',{method:'POST'});await pollScan();}
@@ -664,9 +696,11 @@ function handoffActionsMarkup(job){
   return `<div class="queue-actions">${!busy?`<button class="ghost compact" onclick="openMaterials(${id})">${esc(tr('Vérifier les documents'))}</button>`:''}${!busy?`<button class="primary compact" onclick="takeOverApplication(${id})">${esc(tr('Ouvrir ou reprendre la candidature'))}</button>${url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le poste dans mon navigateur'))}</a>`:''}`:''}<button class="primary compact" onclick="confirmQueueSubmitted(${id})">${esc(tr('J’ai déjà envoyé cette candidature'))}</button></div><p class="small">${esc(tr('Déjà envoyée ? Confirmez-la ici, même si la préparation a échoué ou si l’onglet est fermé. Sinon, ouvrir reprend l’onglet existant ou rouvre le poste sans restaurer les anciennes saisies.'))}</p>`;
 }
 function renderQueueItems(){
+  const restoreDetails=rememberDetails(el('queueList'));
   const value=el('queueFilter').value;
   const items=latestQueueItems.filter(x=>value==='all'||x.status===value);
   el('queueList').innerHTML=items.length?items.map(queueItemMarkup).join(''):`<div class="empty">${esc(tr(latestQueueItems.length?'Aucune candidature dans cet état.':'File vide.'))}</div>`;
+  restoreDetails();
 }
 el('queueFilter').onchange=renderQueueItems;
 function queueItemMarkup(x){
@@ -691,7 +725,7 @@ async function loadPipeline(){
   if(q.message==='Human confirmation required')el('pipelineStatus').textContent=tr('Cette préparation attend votre confirmation du résultat IA.');
   if(!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(()=>loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message),q.running?1500:4000);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
-  const openErrors=new Set([...document.querySelectorAll('[data-error-job][open]')].map(x=>x.dataset.errorJob));
+  const restoreDetails=rememberDetails(el('pipelineView'));
   latestQueueItems=q.items||[];renderQueueItems();
   const reviewing=latestQueueItems.find(x=>['RUNNING','QUEUED'].includes(x.review_verdict));
   const reviewed=latestQueueItems.filter(x=>['APPLY','SKIP','HUMAN_REVIEW'].includes(x.review_verdict)).length;
@@ -702,12 +736,13 @@ async function loadPipeline(){
   const actionableItems=latestQueueItems.filter(x=>!hasSubmitted(x)&&x.application_status!=='withdrawn');
   const focus=active||actionableItems.find(x=>q.paused&&x.job_id===q.last_job_id&&['error','waiting_user','cancelled'].includes(x.status))||actionableItems.find(x=>x.status==='waiting_user')||actionableItems.find(x=>x.status==='error');
   const focusedId=focus?.job_id||focus?.id;
+  el('queueFocus').dataset.recordId=String(focusedId||'');
   if(active){el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('Préparation en cours')} · #${focusedId}`;el('queueRunBtn').disabled=true;el('queueBatchBtn').disabled=true;}
   el('queueFocus').innerHTML=focus?`<strong>${esc(tr(active?'En traitement maintenant':'Votre prochaine action'))}</strong>${titleMarkup({id:focusedId,title:focus.title},'h3')}<p>${esc(focus.company||'')} · #${focusedId} · ${esc(tr(focus.status==='error'||focus.application_status==='error'?'Préparation échouée':statusLabels[focus.status||focus.application_status]||focus.status||focus.application_status||'Étape inconnue'))}</p><p>${esc(tr(stepLabels[focus.application_step]||statusLabels[focus.application_status]||'Étape inconnue'))}</p>${focus.application_step_at?`<p class="small">${esc(tr('Depuis'))} ${esc(focus.application_step_at)} UTC</p>`:''}${active?`<p>${esc(tr('L’automatisation travaille dans le navigateur dédié. Pour intervenir, arrêtez-la et attendez sa fin, puis reprenez l’onglet.'))}</p><button class="secondary compact" onclick="stopApplication(${focusedId})">${esc(tr('Arrêter avant de reprendre'))}</button>`:`${failureMarkup(focus)}${handoffActionsMarkup(focus)}`}`:`<p>${esc(tr(q.running?'Démarrage de la préparation…':'Aucune préparation en cours. Choisissez une préparation ou consultez les candidatures à reprendre.'))}</p>`;
   const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':applicationLabel(j)))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card" data-record-id="${j.id}">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':applicationLabel(j)))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
   observeTitles();
-  for(const detail of document.querySelectorAll('[data-error-job]'))if(openErrors.has(detail.dataset.errorJob))detail.open=true;
+  restoreDetails();
 }
 async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
 el('queueRunBtn').onclick=()=>startPreparation('one');
@@ -724,7 +759,12 @@ el('queueAddMatchesBtn').onclick=async()=>{
 function openHumanConfirmation(){showView('jobs');current='human';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();}
 window.openHumanConfirmation=openHumanConfirmation;
 function updateExportCount(){
-  const count=el('reviewExportScope').value==='visible'?visibleJobIds.length:allJobs.filter(j=>matchFilter(j,'human')).length;
+  const scope=el('reviewExportScope').value;
+  const count=scope==='visible'?visibleJobIds.length:allJobs.filter(j=>{
+    if(['submitted','submitted_verified','withdrawn'].includes(j.application_status)||['rejected','withdrawn'].includes(j.tracker_stage)||j.user_action==='skipped'||j.decision==='expired'||j.availability_status==='expired')return false;
+    if(scope==='pending')return humanStatus(j)==='pending';
+    return !['submitted','screening','interview','offer'].includes(j.tracker_stage)&&j.human_review_status!=='declined'&&j.review_verdict!=='SKIP'&&j.decision!=='reject';
+  }).length;
   el('reviewExportCount').textContent=`${count} ${tr('postes dans le fichier')}`;
   el('reviewExportBtn').disabled=reviewExportBusy||count===0;
 }

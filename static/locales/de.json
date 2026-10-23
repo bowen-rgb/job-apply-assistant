@@ -867,5 +867,12 @@
   "Recherche web ; collecteur à mettre à jour": "Websuche; Sammler benötigt Update",
   "Offres publiques ; accès école séparé": "Öffentliche Stellen; Hochschulzugang separat",
   "Pages publiques et recherche web": "Öffentliche Seiten und Websuche",
-  "Recherche web ciblée": "Gezielte Websuche"
+  "Recherche web ciblée": "Gezielte Websuche",
+  "État des offres": "Stellenstatus",
+  "Configurer les sources": "Quellen konfigurieren",
+  "Vérifier l’environnement": "Umgebung prüfen",
+  "Source inconnue": "Andere Quelle",
+  "Filtres des offres": "Stellenfilter",
+  "Outils des offres": "Stellenwerkzeuge",
+  "Rechercher une offre": "Stellen suchen"
 }
