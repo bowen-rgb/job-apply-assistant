@@ -425,9 +425,8 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
         finally:
             if context is not None and mode=='cdp':
                 try:
-                    from . import secret_store
-                    state=context.storage_state()
-                    secret_store.update(lambda data:data.update(browser_state=state))
+                    from .browser_sessions import save_context
+                    save_context(context)
                 except Exception:
                     _record(job_id,'session_not_saved','Browser session could not be encrypted; sign in again next time.')
             if context is not None and mode != 'cdp':

@@ -89,6 +89,8 @@ def favicon():
     return FileResponse(STATIC / 'favicon.svg', media_type='image/svg+xml')
 from .qr_routes import router as qr_router
 app.include_router(qr_router)
+from .platform_login import router as platform_login_router
+app.include_router(platform_login_router)
 
 
 job_repository = JobRepository()

@@ -13,3 +13,4 @@
 #accountsDialog>header{position:sticky;top:0;z-index:1;padding:12px 0;background:var(--bg);border-bottom:1px solid var(--line)}
 @media(max-width:480px){#accountsDialog{padding:16px}#accountsDialog form{padding:12px}#accountsDialog .website-account-actions>*{flex:1 1 auto}}
 .profile-switcher{margin:16px 0}.profile-switcher label{font-weight:650;margin-bottom:6px}.profile-switcher select{width:100%}#candidateSwitchStatus{font-size:12px;line-height:1.5;color:var(--red)}#candidateSwitchStatus:empty{display:none}
+.platform-login-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px}.platform-logins{margin:24px 0}.platform-login-notice:empty{display:none}
