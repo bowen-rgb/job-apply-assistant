@@ -1,11 +1,25 @@
 import unittest
 import json
+import builtins
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 from app import public_boards as boards, pfe
 
 
 class PublicBoardTests(unittest.TestCase):
+    def test_capability_check_does_not_import_scraper_native_dependencies(self):
+        from app.jobspy_provider import supported_sites
+        original=builtins.__import__
+        def guarded(name,*args,**kwargs):
+            if name.startswith('jobspy'):raise AssertionError('Do not import scraper in web server')
+            return original(name,*args,**kwargs)
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder,'model.py').write_text('class Site(Enum):\n    HELLOWORK = "hellowork"\n    INDEED = "indeed"\n')
+            with patch('importlib.util.find_spec',return_value=SimpleNamespace(submodule_search_locations=[folder])),patch('builtins.__import__',side_effect=guarded):
+                self.assertEqual(supported_sites(),{'hellowork','indeed'})
     def test_aggregator_employer_and_dates_are_from_offer_not_site_branding(self):
         offer={'titre':'Stage robotique','description':'Stage de fin d’études de 6 mois','employeur':{'nom':'Example Robotics'},'localisation':{'ville':'Paris','pays':'France'},'dateDeDebutMin':'2030-02-01','dateDeDebutMax':'2030-02-01','urlDeCandidature':'https://example.test/jobs/123','source':'jobteaser'}
         html='<script id="__NEXT_DATA__" type="application/json">'+json.dumps({'props':{'pageProps':{'offreDeStage':offer}}})+'</script>'

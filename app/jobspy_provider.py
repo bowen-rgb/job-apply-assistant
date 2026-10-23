@@ -57,9 +57,19 @@ def available() -> bool:
 
 
 def supported_sites() -> set[str]:
+    # Importing jobspy.model executes jobspy.__init__, loading pandas/numpy DLLs.
+    # Keep those native dependencies in the scraper subprocess, never web threads.
     try:
-        from jobspy.model import Site
-        return {site.value for site in Site}
+        import ast
+        import importlib.util
+        from pathlib import Path
+        spec = importlib.util.find_spec('jobspy')
+        if not spec or not spec.submodule_search_locations:return set()
+        model = Path(next(iter(spec.submodule_search_locations))) / 'model.py'
+        tree = ast.parse(model.read_text(encoding='utf-8'))
+        enum = next(node for node in tree.body if isinstance(node,ast.ClassDef) and node.name=='Site')
+        return {node.value.value for node in enum.body if isinstance(node,ast.Assign)
+                and isinstance(node.value,ast.Constant) and isinstance(node.value.value,str)}
     except Exception:
         return set()
 
