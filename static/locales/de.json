@@ -862,5 +862,10 @@
   "Favoris et correspondances fortes": "Favoriten und passende Stellen",
   "Favoris uniquement": "Nur Favoriten",
   "Lancer la revue du lot": "Stapelprüfung starten",
-  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Ausgewählte Stellen mit ChatGPT prüfen? Keine Bewerbung wird gesendet."
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Ausgewählte Stellen mit ChatGPT prüfen? Keine Bewerbung wird gesendet.",
+  "Collecte JobSpy et recherche web": "JobSpy und Websuche",
+  "Recherche web ; collecteur à mettre à jour": "Websuche; Sammler benötigt Update",
+  "Offres publiques ; accès école séparé": "Öffentliche Stellen; Hochschulzugang separat",
+  "Pages publiques et recherche web": "Öffentliche Seiten und Websuche",
+  "Recherche web ciblée": "Gezielte Websuche"
 }

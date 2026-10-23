@@ -121,6 +121,9 @@ def _allowed_url(url: str) -> bool:
 def _job_detail_url(url: str) -> bool:
     host = _host(url)
     path = urllib.parse.urlparse(url).path
+    from .public_boards import BOARDS, detail_url
+    for key,(domain,_) in BOARDS.items():
+        if host == domain or host.endswith('.'+domain):return detail_url(key,url)
     if host.endswith('francetravail.fr'):
         return '/offres/recherche/detail/' in path
     if host.endswith('hellowork.com'):
@@ -364,6 +367,13 @@ def discover(profile: dict, report=None) -> Iterable[Hit]:
         remembered = remembered_boards()
     else:
         remembered = []
+
+    from .public_boards import discover as discover_public
+    for hit in discover_public(profile, report):
+        key = _dedupe_key(hit.url)
+        if key not in seen:
+            seen.add(key)
+            yield hit
 
     # Public ATS board APIs configured by the user. This mirrors the robust scouting
     # pattern used by mature open-source auto-apply projects, while keeping the board

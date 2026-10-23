@@ -25,6 +25,9 @@ class DirectSeedSpec:
 
 
 SOURCES: tuple[SourceSpec, ...] = (
+    SourceSpec('jobteaser', 'JobTeaser', 'jobteaser.com'),
+    SourceSpec('1jeune1solution', '1jeune1solution · stages', '1jeune1solution.gouv.fr'),
+    SourceSpec('apec', 'Apec · stages', 'apec.fr'),
     SourceSpec('france_travail', 'France Travail', 'francetravail.fr'),
     SourceSpec('hellowork', 'HelloWork', 'hellowork.com'),
     SourceSpec('indeed', 'Indeed', 'indeed.com'),

@@ -1,6 +1,6 @@
 {
   "name": "job-apply-assistant-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Local Job Apply Assistant desktop application",
   "author": "Job Apply Assistant contributors",
   "private": true,
@@ -26,7 +26,8 @@
     "extraResources": [
       {
         "from": "payload",
-        "to": "backend"
+        "to": "backend",
+        "filter": ["app/**", "static/**", "docs/**", "runtime/**", "profile.example.json", "README.md", "LICENSE", "runtime-packages.json"]
       }
     ],
     "win": {

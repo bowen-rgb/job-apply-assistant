@@ -110,18 +110,30 @@ def _upsert_hit(hit, profile: dict, report=None) -> tuple[str, int | None]:
     verify the page without losing the discovery event.
     """
     pre = dict(hit.prefetched or {})
+    from .public_boards import source_for_url
+    board_source = source_for_url(hit.url,hit.provider_key)
     fetch_error = ''
     html = ''
     try:
         if pre.get('user_supplied_text'):raise ValueError('User-provided text; original access is not verified')
         if (profile.get('pfe') or {}).get('enabled'):
             from .pfe_discovery import fetch_document
-            html,fetch_mode=fetch_document(hit.url,hit.title)
+            try:
+                if board_source=='1jeune1solution':
+                    from .public_boards import read_page
+                    html,fetch_mode,_=read_page(hit.url,profile,render=True)
+                else:
+                    html,fetch_mode=fetch_document(hit.url,hit.title)
+            except Exception:
+                from .public_boards import detail_url, read_page
+                if not detail_url(board_source,hit.url):raise
+                html,fetch_mode,_=read_page(hit.url,profile)
         else:
             html, fetch_mode = fetch_html(hit.url, dynamic_fallback=bool(profile.get('dynamic_fetch_fallback', True)))
         if fetch_mode == 'static-blocked':
             raise RuntimeError('Job page blocked or unreadable')
-        doc = extract_job_document(html, hit.url, fallback_title=hit.title, fallback_snippet=hit.snippet)
+        from .public_boards import extract_document
+        doc = extract_document(board_source, html, hit.url, fallback_title=hit.title, fallback_snippet=hit.snippet)
         payload = doc.to_dict()
         ats = detect_ats(hit.url, html)
         canonical_url = doc.canonical_url or hit.url

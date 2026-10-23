@@ -329,6 +329,8 @@ def sources():
         {'key': s.key, 'label': s.label, 'domain': s.domain, 'enabled': s.key in enabled, 'custom': s.key.startswith('custom_')}
         for s in all_sources(auto)
     ]
+    from .public_boards import capability
+    for row in rows:row.update(capability(row['key']))
     if auto.get('jobspy_enabled', True):
         known = {x['key'] for x in rows}
         for site in auto.get('jobspy_sites', []) or []:

@@ -482,7 +482,7 @@ el('addAnswerBtn').onclick=()=>answerRow({});
 
 function renderSourceSettings(){
   const enabled=new Set(loadedProfile?.automation?.enabled_sources||sourcesCache.filter(x=>x.enabled).map(x=>x.key));
-  el('sourcesGrid').innerHTML=sourcesCache.filter(s=>!s.filter_only).map(s=>`<label class="source-check"><input type="checkbox" data-source="${esc(s.key)}" ${enabled.has(s.key)?'checked':''}> ${esc(s.label)}</label>`).join('');
+  el('sourcesGrid').innerHTML=sourcesCache.filter(s=>!s.filter_only).map(s=>`<label class="source-check" title="${esc(tr(s.access_hint||'Recherche web ciblée'))}"><input type="checkbox" data-source="${esc(s.key)}" ${enabled.has(s.key)?'checked':''}> ${esc(s.label)}</label>`).join('');
 }
 
 async function loadResumes(){

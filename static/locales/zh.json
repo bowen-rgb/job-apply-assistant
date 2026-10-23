@@ -862,5 +862,10 @@
   "Favoris et correspondances fortes": "已收藏和高度匹配的岗位",
   "Favoris uniquement": "仅已收藏岗位",
   "Lancer la revue du lot": "开始批量复核",
-  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "让 ChatGPT 复核所选范围内尚未复核的岗位？此操作不会投递。"
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "让 ChatGPT 复核所选范围内尚未复核的岗位？此操作不会投递。",
+  "Collecte JobSpy et recherche web": "JobSpy 采集和网页搜索",
+  "Recherche web ; collecteur à mettre à jour": "网页搜索；直接采集器需升级",
+  "Offres publiques ; accès école séparé": "公开岗位；学校专属入口需登录",
+  "Pages publiques et recherche web": "公开页面采集和网页搜索",
+  "Recherche web ciblée": "定向网页搜索"
 }

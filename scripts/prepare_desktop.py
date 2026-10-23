@@ -34,6 +34,12 @@ def main():
     copy_tree(base / 'Lib', runtime / 'Lib')
     copy_tree(base / 'DLLs', runtime / 'DLLs')
     packages = Path(sys.prefix) / 'Lib' / 'site-packages'
+    # Replaced optional packages must not leave old version metadata in the bundle.
+    bundled = runtime / 'Lib' / 'site-packages'
+    for pattern in ('python_jobspy-*.dist-info', 'markdownify-*.dist-info'):
+        for old in bundled.glob(pattern):
+            old.resolve().relative_to(bundled.resolve())
+            shutil.rmtree(old)
     shutil.copytree(packages, runtime / 'Lib' / 'site-packages', dirs_exist_ok=True,
         ignore=shutil.ignore_patterns('__pycache__', '*.pyc', 'pip', 'pip-*.dist-info'))
     # Explicit allowlist, never copy the project root recursively.

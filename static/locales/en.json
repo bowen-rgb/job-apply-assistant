@@ -862,5 +862,10 @@
   "Favoris et correspondances fortes": "Saved and strong-match jobs",
   "Favoris uniquement": "Saved jobs only",
   "Lancer la revue du lot": "Start batch review",
-  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Review unreviewed jobs in the selected scope with ChatGPT? No applications will be sent."
+  "Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.": "Review unreviewed jobs in the selected scope with ChatGPT? No applications will be sent.",
+  "Collecte JobSpy et recherche web": "JobSpy collection and web search",
+  "Recherche web ; collecteur à mettre à jour": "Web search; direct collector needs updating",
+  "Offres publiques ; accès école séparé": "Public jobs; campus access requires login",
+  "Pages publiques et recherche web": "Public pages and web search",
+  "Recherche web ciblée": "Targeted web search"
 }

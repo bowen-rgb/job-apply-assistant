@@ -56,6 +56,14 @@ def available() -> bool:
         return False
 
 
+def supported_sites() -> set[str]:
+    try:
+        from jobspy.model import Site
+        return {site.value for site in Site}
+    except Exception:
+        return set()
+
+
 def _text(v: Any) -> str:
     if v is None:
         return ''
@@ -107,6 +115,12 @@ def discover(profile: dict[str, Any], report=None) -> Iterable[JobSpyResult]:
     sites = [str(x).strip().lower() for x in profile.get('jobspy_sites', []) if str(x).strip()]
     if not sites:
         sites = ['indeed', 'linkedin', 'google']
+    supported = supported_sites()
+    for site in sites:
+        if site not in supported:
+            emit(report,'jobspy_'+site,'jobspy','unavailable',error='Installed JobSpy does not support '+site)
+    sites = [site for site in sites if site in supported]
+    if not sites:return
     roles = [str(x).strip() for x in profile.get('preferred_roles', []) if str(x).strip()]
     locations = [str(x).strip() for x in profile.get('locations', []) if str(x).strip()] or ['']
     if (profile.get('pfe') or {}).get('enabled'):

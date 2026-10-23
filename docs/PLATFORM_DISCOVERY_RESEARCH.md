@@ -46,3 +46,14 @@ GitHub 项目的数量和星数只用于核查维护情况，不单独作为成�
 - [Apec 工程机械实习](https://www.apec.fr/candidat/recherche-stage.html/stage?motsCles=Ing%C3%A9nieur+M%C3%A9canique+-+Stage)
 - [France Travail 官方 API 目录](https://www.data.gouv.fr/dataservices/api-offres-demploi)
 - [JobSpy 当前依赖和版本](https://github.com/speedyapply/JobSpy/blob/main/pyproject.toml)
+
+## 已实施与验证（2026-10-23）
+
+- 新增 JobTeaser、1jeune1solution、Apec 独立来源；HelloWork、Welcome to the Jungle、France Travail 增加有限分页公开列表发现，六个平台均保留预算内的定向搜索。启用来源后使用原有“扫描招聘网站”按钮。
+- JobTeaser 使用实测有效的 `q`、`contract=internship` 和分页参数，避免使用被网站忽略的 `query`。1jeune1solution 从渲染页面的岗位数据读取雇主、地点、开始日期区间、时长、原始来源和申请链接；已知平台的原始详情链接用于跨站合并。
+- JobSpy 固定升级至 1.4.1，启动时检查实际支持的平台。新版包含 HelloWork，但不把安装成功当作每次查询必定有结果。
+- PFE 地区、时间和合同类型仍在详情核验后匹配；信息不明须复核，不强迫搜索结果包含开始月份或六个月。已明确处于法国其他地区的岗位不列为法兰西岛匹配，alternance 不冒充毕业实习。
+- 联网小样本验证：JobTeaser、1jeune1solution、France Travail 公开列表返回详情链接；Apec 返回验证拦截；Welcome to the Jungle 和 HelloWork 此次公开页未给出可解析列表，明确记录失败后保留搜索补充。搜索引擎也可能拦截或返回空结果，不能保证后备路径始终成功。
+- 动态读取使用专用 Chrome 的独立上下文，不刷新用户正在登录的标签页。扫描和验证不会提交申请。
+- France Travail 当前接入公开页及搜索，尚未接入需申请授权的官方 API；学校专属 Career Center 也尚未实现自动采集。界面和文档不将这两项标成已连通。
+- 没有直接复制外部项目源码；借鉴政府项目的雇主、来源和原始申请链接分离模型，保留现有架构。

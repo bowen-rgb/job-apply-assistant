@@ -67,7 +67,12 @@ def query_plan(profile):
   key=directions[index%len(directions)]
   out.insert(5+index*6,dict(channel='learned',direction=key,query=f"site:{row['domain']} stage {DIRECTIONS[key][0]} {locations}"))
  from .providers import enabled_sources
- out.extend(dict(channel='supplement',direction='',query=f'site:{s.domain} stage {locations}') for s in enabled_sources(profile))
+ # Reserve in-budget searches for explicitly selected boards, not unreachable tail entries.
+ platforms=[s for s in enabled_sources(profile) if s.key in {'jobteaser','1jeune1solution','apec','hellowork','wttj','france_travail'}]
+ for index,source in enumerate(platforms):
+  key=directions[index%len(directions)]
+  out.insert(5+index*4,dict(channel=source.key,direction=key,query=f'site:{source.domain} stage {DIRECTIONS[key][0]} {locations}'))
+ out.extend(dict(channel='supplement',direction='',query=f'site:{s.domain} stage {locations}') for s in enabled_sources(profile) if s not in platforms)
  return out[:max(1,min(120,int(profile.get('search_queries_per_run',36))))]
 
 def facts(job,profile):
@@ -117,6 +122,13 @@ def facts(job,profile):
  advertised_country=country(location)
  allowed_countries={country(value) for value in requested if country(value)}
  location_conflict=bool(advertised_country and allowed_countries and advertised_country not in allowed_countries)
+ # A known French region/postcode can establish a conflict; unknown towns remain unverified.
+ region_locations={value.replace('-',' ') for value in requested}
+ if 'ile de france' in region_locations and region_locations <= {'paris','paris france','ile de france'}:
+  place=location.replace('-',' ').replace('’',"'")
+  outside=('auvergne rhone alpes','bourgogne franche comte','bretagne','centre val de loire','corse','grand est','hauts de france','normandie','nouvelle aquitaine','occitanie','pays de la loire',"provence alpes cote d'azur")
+  postcodes=re.findall(r'(?<!\d)(\d{2})\d{3}(?!\d)',location)
+  location_conflict=location_conflict or any(region in place for region in outside) or bool(postcodes and all(code not in {'75','77','78','91','92','93','94','95'} for code in postcodes))
  if not location or (requested and not any(value in location for value in requested) and not (advertised_country and advertised_country in allowed_countries)):unknown.append('location')
  if not (profile.get('prepared_degree_level') or profile.get('education_level')):unknown.append('candidate_degree')
  return dict(version=1,kind='pfe' if pfe and internship else 'research_internship' if internship and research else 'internship' if internship else 'unclassified',score=score,axes=axes,directions=hits,skills=skills,eligibility=eligibility,start_month=start,duration_months=duration,flexible_start=flexible,time_conflict=time_conflict,location_conflict=location_conflict,junior_level=bool(junior),unknown=unknown,evidence=dict(level=pfe,junior=junior,duration=duration_evidence,start=start_evidence,research=research,phd=phd,supervisor=supervisor),phd_followup='explicit_opportunity' if phd else 'not_stated',requires_review=True)
@@ -127,6 +139,7 @@ def evaluate_pfe(job,profile):
  if f['location_conflict']:return -95,'reject','pfe_location_conflict; '+reason,['location_conflict']
  if f['time_conflict']:return -95,'reject','pfe_time_conflict; '+reason,['pfe_time_conflict']
  if f['junior_level']:return -80,'reject','pfe_junior_level; '+reason,['pfe_level_conflict']
+ if re.search(r'\balternance\b|\bapprenti(?:ssage)?\b',norm(job.get('title') or '')) and not re.search(r'\bstage\b|\binternship\b',norm(job.get('title') or '')):return -90,'reject','pfe_apprenticeship_not_internship; '+reason,['pfe_not_internship']
  t=norm((job.get('title') or '')+' '+(job.get('employment_type') or ''))
  if not re.search(r'\bstage\b|\bintern(?:ship)?\b|stagiaire',t) and re.search(r'\bcdi\b|permanent|\bphd position\b|doctorant',t):return -90,'reject','pfe_not_internship; '+reason,['pfe_not_internship']
  score=min(100,f['score'])
