@@ -21,3 +21,32 @@ def save_context(context):
         except Exception:pass
     snapshot={'cookies':context.cookies(),'origins':origins}
     secret_store.update(lambda data:data.update(browser_state=merge_states(data.get('browser_state') or {},snapshot)))
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def inspection_context(playwright, target_id=''):
+    """Background reads own a hidden browser; handoffs borrow an existing tab."""
+    if target_id:
+        from .apply_worker import _open_browser
+        from .profile_store import runtime_profile
+        from .browser_control import require_connection
+        require_connection()
+        _, context, mode = _open_browser(playwright, runtime_profile(), {'application_tab_id': target_id})
+        if mode != 'cdp':
+            raise ValueError('Dedicated Chrome required for the existing login tab')
+        yield context
+        return
+    from .browser_control import chrome_executable
+    from . import secret_store
+    executable = chrome_executable()
+    if not executable:
+        raise ValueError('Install Google Chrome to read recruitment pages in the background')
+    browser = playwright.chromium.launch(executable_path=str(executable), headless=True)
+    try:
+        context = browser.new_context(storage_state=secret_store.read().get('browser_state') or None)
+        yield context
+    finally:
+        browser.close()

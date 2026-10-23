@@ -4,21 +4,15 @@ from html import escape
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-from .browser_control import require_connection
+from .browser_sessions import inspection_context
 from .profile_store import runtime_profile
 from .pfe_discovery import validate_destination
 from .worker_runtime import check_cancelled
 
 
 def read_rendered(url, *, search_filters=True, target_id=''):
-    require_connection()
     validate_destination(url)
-    from .apply_worker import _open_browser
-    with sync_playwright() as p:
-        _,context,mode=_open_browser(p,runtime_profile(),{'application_tab_id':target_id} if target_id else None)
-        if mode!='cdp':
-            if not target_id:context.close()
-            raise ValueError('Chrome CDP required for page inspection')
+    with sync_playwright() as p, inspection_context(p, target_id) as context:
         checked=set()
         def guard(route):
             target=route.request.url
@@ -86,4 +80,4 @@ def read_rendered(url, *, search_filters=True, target_id=''):
             if not chunks:raise ValueError('qr_page_unavailable')
             return ('<html><head>'+head+'</head><body>'+ '\n'.join(chunks)+'</body></html>').encode(), 'text/html', page.url
         finally:
-            if not target_id:context.close()
+            if not target_id:context.unroute('**/*', guard)

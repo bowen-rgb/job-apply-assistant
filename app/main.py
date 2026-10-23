@@ -774,6 +774,14 @@ def gmail_config(payload: dict):
     return {'ok':True}
 
 
+@app.put('/api/gmail/verification')
+def gmail_verification_options(payload: dict):
+    from .gmail_verification import configure
+    try: configure(payload.get('enabled'))
+    except ValueError as exc: raise HTTPException(400,str(exc))
+    return {'ok':True}
+
+
 @app.post('/api/gmail/connect')
 def gmail_connect():
     from .gmail_connection import begin

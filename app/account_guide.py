@@ -12,7 +12,7 @@ GUIDES = {
         '用 start.bat 启动系统（端口 8765），点击“连接 Gmail”，再点击出现的授权链接。在 Google 页面选正确的邮箱并授权。',
         '授权完成后关闭该标签，重新打开“个人档案与账号”，核对显示的邮箱。若失败：确认 Gmail API 已启用、已添加测试用户、客户端类型是桌面应用，并重新连接。',
         '测试模式授权可能在七天后失效，需要重新授权。撤销权限可到 Google 账号的第三方连接页；“断开本地连接”仅删除本地令牌。',
-        '目前连接完成后只保存授权并验证邮箱，还没有自动读取验证码或处理找回密码。没有 Gmail 配置仍可使用网站登录和申请队列。']),
+        '连接后可选择开启“自动读取登录验证码”。只尝试当前网站发给当前账号的近期验证码；不确定时保留页面让你处理。不会自动找回密码。Gmail 仍是可选功能。']),
     'fr': ('Connecter Gmail : configuration unique', [
         'Ouvrez Google Cloud Console avec votre compte. Créez ou sélectionnez un projet.',
         'Dans API et services → Bibliothèque, activez Gmail API.',
@@ -23,7 +23,7 @@ GUIDES = {
         'Lancez start.bat (port 8765). Cliquez Connecter Gmail puis le lien affiché. Choisissez le bon compte Google et autorisez.',
         'Fermez cet onglet puis rouvrez Profils & comptes et vérifiez l’adresse. En cas d’échec, vérifiez Gmail API, utilisateur de test et client Desktop app.',
         'En mode test, l’autorisation peut expirer après sept jours. Pour la révoquer, utilisez les connexions tierces du compte Google. Déconnecter localement retire uniquement le jeton local.',
-        'La connexion vérifie et conserve l’autorisation du compte. Les codes et récupérations de mot de passe ne sont pas encore automatisés. Gmail reste facultatif.']),
+        'Après connexion, la lecture des codes de connexion est facultative : codes récents du même site et du même compte uniquement. Les autres vérifications restent manuelles. Aucune récupération automatique de mot de passe.']),
     'en': ('Connect Gmail: one-time setup', [
         'Open Google Cloud Console with your own account. Create or select a project.',
         'Enable Gmail API under APIs & Services → Library.',
@@ -34,7 +34,7 @@ GUIDES = {
         'Run start.bat on port 8765. Click Connect Gmail, then the displayed authorization link. Select the correct Google mailbox and approve access.',
         'Close the authorization tab, reopen Profiles & accounts and check the mailbox address. If unsuccessful, check Gmail API, test user and Desktop app client type.',
         'Testing-mode grants may expire after seven days. Revoke access in Google Account third-party connections. Disconnect locally removes only the local token.',
-        'Connection verifies the mailbox and stores authorization. Verification codes and password recovery are not automated yet. Gmail is optional.']),
+        'After connecting, optionally enable email login codes: recent codes from the same site for the same account only. Other challenges stay manual. Password recovery is never automated. Gmail remains optional.']),
 }
 
 

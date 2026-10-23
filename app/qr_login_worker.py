@@ -1,6 +1,6 @@
 """Keep a candidate-owned Chrome login window alive for a QR draft."""
 import json,sys
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as NavigationTimeout
 from . import qr_application as qr
 from .profile_store import runtime_profile
 from .apply_worker import _open_browser
@@ -15,7 +15,12 @@ def run(identifier, owner_token='', foreground=True):
         _,context,mode=_open_browser(p,runtime_profile())
         if mode!='cdp':raise ValueError('Dedicated Chrome required')
         try:
-            page=context.new_page();page.goto(url,wait_until='domcontentloaded',timeout=35000)
+            page=context.new_page()
+            try:
+                page.goto(url,wait_until='domcontentloaded',timeout=35000)
+            except NavigationTimeout:
+                # Slow sign-in pages remain available for the person to finish.
+                pass
             session=context.new_cdp_session(page);target=session.send('Target.getTargetInfo')['targetInfo']['targetId'];session.detach()
             if foreground:page.bring_to_front()
             payload.update(handoff_tab_id=target,handoff_url=page.url,handoff_owner=owner_token,handoff_error='')
@@ -34,6 +39,10 @@ def run(identifier, owner_token='', foreground=True):
                     c.execute('UPDATE qr_requests SET payload=? WHERE id=?',(json.dumps(value,ensure_ascii=False),identifier))
             raise
         finally:
+            # Capture once on exit, never on a timer during manual sign-in.
+            from .browser_sessions import save_context
+            try:save_context(context)
+            except Exception:pass
             # A closed/crashed window is reported; never recreate or reload it.
             context.close()
 

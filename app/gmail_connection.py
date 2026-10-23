@@ -22,7 +22,7 @@ def status():
     connection = data.get('gmail_connection', {})
     return {'configured': bool(config.get('client_id') and config.get('client_secret')),
             'connected': bool(connection.get('refresh_token')), 'email': connection.get('email', ''),
-            'redirect_uri': REDIRECT, 'scope': SCOPE}
+            'redirect_uri': REDIRECT, 'scope': SCOPE, 'auto_codes': bool(data.get('gmail_auto_codes'))}
 
 
 def configure(payload):

@@ -24,6 +24,25 @@ class WindowOwnerTests(unittest.TestCase):
         page.goto.assert_called_once_with('https://example.test/login',wait_until='domcontentloaded',timeout=35000)
         page.reload.assert_not_called()
 
+    def test_slow_login_navigation_keeps_window_alive(self):
+        from app import qr_login_worker as owner
+        context=MagicMock();page=context.new_page.return_value
+        from playwright.sync_api import TimeoutError
+        page.goto.side_effect=TimeoutError('slow sign-in')
+        page.url='https://example.test/login'
+        page.is_closed.side_effect=[False,True]
+        context.new_cdp_session.return_value.send.return_value={'targetInfo':{'targetId':'stable'}}
+        row={'payload':json.dumps({'url':'https://example.test/login'}),'job_id':None}
+        with patch.object(owner.qr,'get_request',return_value=row),patch.object(owner.qr,'validate_destination'), \
+             patch.object(owner.qr,'connect'),patch.object(owner,'candidate_id',return_value='default'), \
+             patch.object(owner,'active_id',return_value='default'),patch.object(owner,'runtime_profile',return_value={}), \
+             patch.object(owner,'_open_browser',return_value=(MagicMock(),context,'cdp')),patch.object(owner,'sync_playwright'):
+            owner.run('qr',owner_token='owner')
+        page.wait_for_timeout.assert_called_once_with(2000)
+        context.storage_state.assert_not_called()
+        page.goto.assert_called_once_with('https://example.test/login',wait_until='domcontentloaded',timeout=35000)
+        page.reload.assert_not_called()
+
     def test_desktop_worker_does_not_inherit_control_input_pipe(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(worker_runtime,'data_dir',return_value=Path(folder)), \
              patch.object(worker_runtime,'_workers',{}),patch.object(worker_runtime.subprocess,'Popen') as spawn:

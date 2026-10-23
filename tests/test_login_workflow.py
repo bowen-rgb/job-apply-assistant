@@ -75,3 +75,32 @@ class LoginWorkflowTests(unittest.TestCase):
     page=b.new_page();page.route('https://recruiter.test/**',lambda r:r.fulfill(content_type='text/html',body='''<form><input type=email><input type=password><button>Sign in</button></form><script>document.querySelector('form').onsubmit=e=>{e.preventDefault();history.pushState({},'','/apply');document.body.innerHTML='<form><input type=email><input type=file></form>';};</script>'''));page.goto('https://recruiter.test/login')
     with patch('app.login_flow.account_for',return_value=ACCOUNT):self.assertEqual(login_if_needed(page)['status'],'logged_in')
    finally:b.close()
+
+ def test_email_code_after_password_is_used_once_and_session_is_checked(self):
+  with sync_playwright() as p:
+   b=p.chromium.launch(headless=True)
+   try:
+    page=b.new_page()
+    page.route('https://recruiter.test/**',lambda r:r.fulfill(content_type='text/html',body="""<form><input type=email><input type=password><button>Sign in</button></form><script>
+    window.sends=0;document.querySelector('form').onsubmit=e=>{e.preventDefault();window.sends++;
+    document.body.innerHTML='<form><input autocomplete=one-time-code><button>Verify</button></form>';
+    document.querySelector('form').onsubmit=e=>{e.preventDefault();window.sends++;document.body.innerHTML='<h1>My applications</h1>';};};</script>"""))
+    page.goto('https://recruiter.test/login')
+    with patch('app.login_flow.account_for',return_value=ACCOUNT),patch('app.gmail_verification.wait_for_code',return_value='123456') as code:
+     result=login_if_needed(page)
+    self.assertEqual(result['status'],'logged_in')
+    self.assertEqual(page.evaluate('window.sends'),2)
+    code.assert_called_once()
+   finally:b.close()
+
+ def test_code_with_insecure_form_action_stays_manual(self):
+  from app.login_flow import _email_verification
+  import time
+  with sync_playwright() as p:
+   b=p.chromium.launch(headless=True)
+   try:
+    page=b.new_page();page.route('https://recruiter.test/**',lambda r:r.fulfill(content_type='text/html',body='<form action="http://recruiter.test/verify"><input autocomplete=one-time-code><button>Verify</button></form>'));page.goto('https://recruiter.test/login')
+    with patch('app.gmail_verification.wait_for_code') as code:
+     self.assertFalse(_email_verification(page.main_frame,ACCOUNT,time.time()))
+     code.assert_not_called()
+   finally:b.close()

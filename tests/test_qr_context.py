@@ -148,7 +148,7 @@ class QRContextTests(unittest.TestCase):
                 setTimeout(()=>{document.querySelector('#root').innerHTML='<h1>Stage ingénieur robotique</h1><section class="missions">Développer la commande du quadrirotor et valider les modèles en simulation.</section><button onclick="document.title=String(1/0)">Apply now</button>';let host=document.createElement('div');document.body.append(host);host.attachShadow({mode:'open'}).innerHTML='<a href="https://employer.test/job/second">Stage ingénieur mécanique</a>';},60);
             </script></body></html>'''))
             try:
-                with patch.object(reader,'require_connection'),patch.object(reader,'validate_destination'),patch.object(reader,'runtime_profile',return_value={}),patch.object(reader,'sync_playwright',return_value=MagicMock()),patch('app.apply_worker._open_browser',return_value=(browser,context,'cdp')):
+                with patch.object(reader,'validate_destination'),patch.object(reader,'runtime_profile',return_value={}),patch.object(reader,'sync_playwright',return_value=MagicMock()),patch.object(reader,'inspection_context',return_value=__import__('contextlib').nullcontext(context)):
                     raw,_,url=reader.read_rendered('https://employer.test/job/robot')
                 result=page_context(raw,url)
                 self.assertEqual(result['company'],'Example Robotics')

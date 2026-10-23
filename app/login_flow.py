@@ -1,8 +1,9 @@
 """Deterministic login only on the configured HTTPS origin; no AI sees secrets."""
 import re
+import time
 from urllib.parse import urljoin
 from .site_accounts import account_for,origin
-from .worker_runtime import check_cancelled
+from .worker_runtime import check_cancelled, Cancelled
 
 
 def dismiss_optional_popups(page):
@@ -43,6 +44,47 @@ def _verification(frame):
     return ''
 
 
+def _email_verification(frame, account, started):
+    """Only a code challenge reached by this invocation's saved-account login."""
+    if not account:
+        return False
+    fields = frame.locator('input[autocomplete="one-time-code"]:visible,input[name=otp]:visible,input[name=verificationCode]:visible')
+    try:
+        same_origin = origin(frame.url) == account['origin']
+    except ValueError:
+        return False
+    if fields.count() != 1 or not same_origin:
+        return False
+    form = fields.locator('xpath=ancestor::form[1]')
+    if form.count() != 1:
+        return False
+    try:
+        if origin(urljoin(frame.url, form.get_attribute('action') or frame.url)) != account['origin']:
+            return False
+    except ValueError:
+        return False
+    if form.locator('input[type=password],input[type=file]').count():
+        return False
+    buttons = form.get_by_role('button', name=re.compile(r'^(verify|verify code|confirm|continue|vérifier|confirmer|continuer|验证|确认)$', re.I))
+    if buttons.count() != 1 or not buttons.is_visible():
+        return False
+    from .gmail_verification import wait_for_code
+    try:
+        code = wait_for_code(frame.url, account['username'], started)
+    except Cancelled:
+        raise
+    except Exception:
+        return False  # OAuth/network failures preserve the manual challenge.
+    if not code:
+        return False
+    try:
+        fields.fill(code)
+        buttons.click(timeout=5000)
+        return True
+    except Exception:
+        return False
+
+
 def _authenticated_surface(frame):
     try:
         return bool(re.search(r'my applications|mes candidatures|tableau de bord',frame.locator('body').inner_text(timeout=1500),re.I)) or any(
@@ -71,6 +113,7 @@ def login_if_needed(page, on_progress=None):
     """
     from urllib.parse import urlparse
     sent=set();email_origin='';attempted=False
+    started=time.time();login_account=None;code_attempted=False
     for step in range(3):
         selected=None
         for frame in page.frames:
@@ -115,7 +158,7 @@ def login_if_needed(page, on_progress=None):
         if form_users.count()>1:return _handoff('Login username field is ambiguous.')
         check_cancelled()
         if on_progress:on_progress('Signing in with the locally saved website account.')
-        sent.add((current_origin,stage));attempted=True
+        sent.add((current_origin,stage));attempted=True;login_account=account
         try:
             if form_users.count():form_users.fill(account['username'])
             if passwords.count():passwords.fill(account['password'])
@@ -128,7 +171,14 @@ def login_if_needed(page, on_progress=None):
             check_cancelled();page.wait_for_timeout(500)
             for current in page.frames:
                 problem=_verification(current)
-                if problem:return _handoff(problem)
+                if problem:
+                    if not code_attempted and login_account:
+                        code_attempted=True
+                        if _email_verification(current,login_account,started):
+                            transitioned=True
+                            break
+                    return _handoff(problem)
+            if transitioned:break
             try:
                 if form.locator('[role=alert]:visible').count():
                     return _handoff('The website reported a login error. Check credentials; automatic retry is paused.')
