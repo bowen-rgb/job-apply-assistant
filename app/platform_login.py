@@ -103,7 +103,7 @@ def run(idx):
  from .apply_worker import _open_browser
  from .profile_store import runtime_profile
  from .browser_sessions import save_context
- site=list(SITES)[int(idx)-1];owner=candidate_id();last=''
+ site=list(SITES)[int(idx)-1];owner=candidate_id();last='';next_check=0
  with sync_playwright() as p:
   _,context,mode=_open_browser(p,runtime_profile())
   if mode!='cdp':raise ValueError('Dedicated Chrome required')
@@ -118,6 +118,16 @@ def run(idx):
     if not pages:break
     if page.is_closed():page=pages[-1]
     check_cancelled();row=read().get(site,{})
+    # The optional manual window is a fallback. Once a definite signed-in
+    # surface appears, save once and close; never navigate or refresh to check.
+    if time.monotonic()>=next_check:
+     next_check=time.monotonic()+3
+     try:
+      state,verified=page_state(page,SITES[site][2])
+      if state=='saved' and verified:
+       save_context(context);update(site,state='saved',verified=True,saved_at=datetime.now(timezone.utc).isoformat(),error='')
+       break
+     except Exception:pass
     request=row.get('request','')
     if request and request!=last:
      last=request

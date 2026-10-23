@@ -176,14 +176,20 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
             except Exception:
                 pass
             page.wait_for_timeout(1000)
-            from .login_flow import dismiss_optional_popups,login_if_needed
+            from .login_flow import dismiss_optional_popups,login_if_needed,resume_application_after_login
             page.on('dialog',lambda dialog:dialog.dismiss())
             dismiss_optional_popups(page)
-            login=login_if_needed(page)
+            def login_progress(message):
+                _update_status(job_id,'preparing',application_step='login')
+                _record(job_id,'login_automatic',message)
+            login=login_if_needed(page,on_progress=login_progress)
             if login['status']=='handoff':
                 _update_status(job_id,'needs_human',application_step='login')
                 _record(job_id,'login_required',login['reason'])
                 return
+            if login['status']=='logged_in':
+                _record(job_id,'login_restored','Website sign-in completed automatically; continuing the application.')
+                resume_application_after_login(page,job['url'])
             try:
                 html = page.content()
             except Exception:
@@ -193,12 +199,15 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
             _update_status(job_id, 'preparing', application_step='finding_form', apply_adapter=adapter.info.key, ats=ats)
 
             adapter.prepare(page)
-            login=login_if_needed(page)
+            login=login_if_needed(page,on_progress=login_progress)
             if login['status']=='handoff':
                 _update_status(job_id,'needs_human',application_step='login')
                 _record(job_id,'login_required',login['reason'])
                 return
-            if login['status']=='logged_in':adapter.prepare(page)
+            if login['status']=='logged_in':
+                _record(job_id,'login_restored','Website sign-in completed automatically; continuing the application.')
+                resume_application_after_login(page,job['url'])
+                adapter.prepare(page)
             form_scope = wait_for_form_scope(page)
             if form_scope is None and consent_pending(page) and privacy_confirmed:
                 accept_confirmed_privacy(page)
