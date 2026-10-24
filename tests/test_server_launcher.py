@@ -8,6 +8,15 @@ from app import server_launcher as launcher
 from app.main import app
 
 class ServerLauncherTests(unittest.TestCase):
+    def test_only_menu_document_allows_same_origin_embedding(self):
+        client=TestClient(app)
+        response=client.get('/static/vendor/endfield-menu/index.html')
+        self.assertEqual(response.status_code,200)
+        self.assertNotIn('x-frame-options',response.headers)
+        self.assertEqual(response.headers['content-security-policy'],"frame-ancestors 'self'")
+        for path in ['/', '/api/runtime', '/static/app.js']:
+            self.assertEqual(client.get(path).headers['x-frame-options'],'DENY')
+
     def test_runtime_identifies_shared_workspace_without_sensitive_profile(self):
         response=TestClient(app).get('/api/runtime')
         self.assertEqual(response.status_code,200)

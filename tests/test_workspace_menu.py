@@ -3,6 +3,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright,expect
 from app.profile_store import default_profile
+from fastapi.testclient import TestClient
+from app.main import app
 
 STATIC=Path(__file__).resolve().parents[1]/'static'
 class WorkspaceMenuTests(unittest.TestCase):
@@ -16,9 +18,9 @@ class WorkspaceMenuTests(unittest.TestCase):
   def respond(r):
    path=urlparse(r.request.url).path
    if urlparse(r.request.url).hostname!='menu.test':self.remote.append(r.request.url)
-   if path=='/':r.fulfill(path=str(STATIC/'index.html'),content_type='text/html');return
-   if path.startswith('/static/'):
-    r.fulfill(path=str(STATIC/path.removeprefix('/static/')));return
+   if path=='/' or path.startswith('/static/'):
+    response=TestClient(app).get(path)
+    r.fulfill(status=response.status_code,body=response.content,headers=dict(response.headers));return
    if r.request.method!='GET':self.writes.append(path)
    data={}
    if path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Example Candidate','identity':{},'active':True}]}
@@ -77,6 +79,10 @@ class WorkspaceMenuTests(unittest.TestCase):
   self.page.keyboard.press('Escape')
   expect(self.page.locator('#profileView')).to_be_visible()
   expect(self.page.locator('#first_name')).to_have_value('Unsaved value')
+  self.page.locator('#workspaceMenuButton').click()
+  frame.locator('#efMenu').evaluate('(e)=>e.dispatchEvent(new MouseEvent("click",{bubbles:true}))')
+  expect(self.page.locator('#profileView')).to_be_visible()
+  expect(self.page.locator('#first_name')).to_have_value('Unsaved value')
   self.assertEqual(self.writes,[]);self.assertEqual(self.errors,[])
  def test_stats_failure_preserves_navigation_and_forged_messages_do_nothing(self):
   self.queue_unavailable=True;self.page.evaluate('WorkspaceMenu.refresh()')
@@ -85,4 +91,55 @@ class WorkspaceMenuTests(unittest.TestCase):
   expect(self.page.locator('#mainMenuView')).to_be_visible()
   self.page.locator('#menuSearch').fill('jobs');self.page.locator('[data-menu-page=jobs]').click()
   expect(self.page.locator('#jobsView')).to_be_visible()
+  self.assertEqual(self.writes,[])
+ def test_tab_toggles_from_page_and_scene_preserving_inputs_and_camera_moves(self):
+  from tests.ui_navigation import navigate
+  navigate(self.page,'profile')
+  self.page.locator('#first_name').fill('Unsaved name')
+  self.page.keyboard.press('Tab')
+  expect(self.page.locator('#profileView')).to_be_visible()
+  self.page.evaluate('document.activeElement.blur()');self.page.keyboard.press('Tab')
+  expect(self.page.locator('#mainMenuView')).to_be_visible()
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('.jaa-center-widget')).to_be_visible()
+  self.page.wait_for_timeout(1000)
+  world=frame.locator('#efWorld');before=world.evaluate('(e)=>getComputedStyle(e).transform')
+  frame.locator('.jaa-menu-clock').hover(force=True);self.page.wait_for_timeout(300)
+  self.assertNotEqual(before,world.evaluate('(e)=>getComputedStyle(e).transform'))
+  frame.locator('body').evaluate('(e)=>e.focus()');self.page.locator('#menuScene').focus();self.page.keyboard.press('Tab')
+  expect(self.page.locator('#profileView')).to_be_visible();expect(self.page.locator('#first_name')).to_have_value('Unsaved name')
+  self.assertEqual(self.writes,[])
+ def test_clock_local_playlist_and_map_are_opt_in_and_stats_do_not_restart_animation(self):
+  import struct,io,wave
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('#menuClock')).to_contain_text(':')
+  self.page.wait_for_timeout(1100)
+  self.page.evaluate('WorkspaceMenu.refresh()')
+  expect(frame.locator('body')).not_to_have_class(__import__('re').compile(r'\bef-in\b'))
+  output=io.BytesIO()
+  with wave.open(output,'wb') as wav:
+   wav.setnchannels(1);wav.setsampwidth(2);wav.setframerate(8000);wav.writeframes(struct.pack('<h',0)*8000)
+  frame.locator('#widgetMusicFiles').set_input_files([{'name':'Test track.wav','mimeType':'audio/wav','buffer':output.getvalue()},{'name':'Next track.wav','mimeType':'audio/wav','buffer':output.getvalue()}])
+  expect(frame.locator('#widgetTrack')).to_have_text('Test track.wav');frame.locator('#widgetNext').click();expect(frame.locator('#widgetTrack')).to_have_text('Next track.wav')
+  self.assertTrue(frame.locator('#widgetAudio').evaluate('(e)=>e.src.startsWith("blob:")'))
+  frame.locator('[data-widget=map]').click();expect(frame.locator('#widgetLocate')).to_be_visible()
+  expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(0)
+  self.assertEqual(self.remote,[]);self.assertEqual(self.writes,[])
+ def test_map_requests_location_only_after_click_and_can_clear_it(self):
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('[data-widget=map]')).to_be_visible();self.page.wait_for_timeout(1000)
+  self.page.evaluate("Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:ok=>{window.geoCalls=(window.geoCalls||0)+1;ok({coords:{latitude:48.85,longitude:2.35}})}}})")
+  frame.locator('[data-widget=map]').click();self.assertEqual(self.page.evaluate('window.geoCalls||0'),0)
+  frame.locator('#widgetLocate').click();expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(1)
+  self.assertEqual(self.page.evaluate('window.geoCalls'),1)
+  expect(frame.locator('#widgetGoogleMap')).to_have_attribute('href',__import__('re').compile(r'https://www.google.com/maps/search/\?api=1&query=48.85'))
+  frame.locator('#widgetClearLocation').click();expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(0)
+  expect(frame.locator('#widgetGoogleMap')).to_be_hidden()
+  self.page.evaluate("()=>{navigator.geolocation.getCurrentPosition=(ok,fail)=>fail({code:1});}")
+  frame.locator('#widgetLocate').click();expect(frame.locator('#widgetLocationStatus')).to_contain_text('无法定位')
+  frame.locator('#widgetRotate').check()
+  frame.locator('body').evaluate('()=>{const original=Date.now;Date.now=()=>original()+31000;}')
+  expect(frame.locator('#musicWidget')).to_be_visible(timeout=3000)
+  self.assertEqual(self.writes,[])
+ def test_blocked_scene_falls_back_to_working_page_cards(self):
+  self.page.route('**/static/vendor/endfield-menu/index.html*',lambda r:r.abort())
+  self.page.reload();expect(self.page.locator('#menuPageGrid')).to_be_visible(timeout=8000)
+  self.page.locator('[data-menu-page=jobs]').click();expect(self.page.locator('#jobsView')).to_be_visible()
   self.assertEqual(self.writes,[])

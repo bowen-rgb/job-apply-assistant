@@ -98,7 +98,8 @@ class PendingTaskTests(unittest.TestCase):
                 expect(page.locator('#pendingTasksDialog')).to_contain_text('Candidate A')
                 expect(page.locator('.pending-task')).to_have_count(0)
                 page.locator('#pendingClose').click()
-                page.locator('#candidateSelect').select_option('000000000001')
+                with page.expect_navigation(wait_until='domcontentloaded'):
+                    page.locator('#candidateSelect').select_option('000000000001')
                 expect(page.locator('#candidateSelect')).to_have_value('000000000001')
                 navigate(page,'pendingTasksNav')
                 expect(page.locator('#pendingTasksDialog')).to_contain_text('Candidate B')
@@ -108,7 +109,8 @@ class PendingTaskTests(unittest.TestCase):
                 page.locator('[data-task-filter=done]').click()
                 expect(page.locator('.pending-task')).to_contain_text('Research task B')
                 page.locator('#pendingClose').click()
-                page.locator('#candidateSelect').select_option('default')
+                with page.expect_navigation(wait_until='domcontentloaded'):
+                    page.locator('#candidateSelect').select_option('default')
                 expect(page.locator('#candidateSelect')).to_have_value('default')
                 navigate(page,'pendingTasksNav')
                 expect(page.locator('.pending-task')).to_have_count(0)

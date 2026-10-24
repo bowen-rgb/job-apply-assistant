@@ -902,5 +902,19 @@
   "menu.unavailable": "Statistiques indisponibles. Les pages restent accessibles.",
   "menu.updated": "Profil actif · statistiques actualisées",
   "menu.retry": "Réessayer",
-  "menu.data": "Gestion des données locales"
+  "menu.data": "Gestion des données locales",
+  "menu.music": "Musique",
+  "menu.map": "Carte",
+  "menu.chooseMusic": "Choisir des morceaux",
+  "menu.noTrack": "Votre musique préférée",
+  "menu.localMusic": "Lecture locale, sans envoi des fichiers.",
+  "menu.locate": "Afficher ma position",
+  "menu.locating": "Localisation…",
+  "menu.locationHint": "Localisez-vous pour charger la carte. La position est transmise au service cartographique.",
+  "menu.locationError": "Position indisponible. Autorisez la localisation ou réessayez plus tard.",
+  "menu.openMap": "Ouvrir Google Maps",
+  "menu.clearLocation": "Effacer la position",
+  "menu.rotate": "Alterner",
+  "menu.clock": "Heure locale",
+  "menu.audioError": "Lecture impossible. Essayez un autre fichier audio."
 }

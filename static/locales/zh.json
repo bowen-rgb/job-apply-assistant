@@ -902,5 +902,19 @@
   "menu.unavailable": "暂时无法读取统计，可继续打开页面或重试。",
   "menu.updated": "统计来自当前档案，已更新",
   "menu.retry": "重试",
-  "menu.data": "本机数据管理"
+  "menu.data": "本机数据管理",
+  "menu.music": "音乐",
+  "menu.map": "地图",
+  "menu.chooseMusic": "选择本机歌曲",
+  "menu.noTrack": "放一首喜欢的歌",
+  "menu.localMusic": "歌曲只在本机播放，不会上传。",
+  "menu.locate": "显示我的位置",
+  "menu.locating": "正在定位…",
+  "menu.locationHint": "点击定位后加载地图，位置会发给地图服务。",
+  "menu.locationError": "无法定位。请允许浏览器定位权限，或稍后重试。",
+  "menu.openMap": "用 Google 地图打开",
+  "menu.clearLocation": "清除位置",
+  "menu.rotate": "自动轮换",
+  "menu.clock": "本地时间",
+  "menu.audioError": "这首歌无法播放，换一个音频文件试试。"
 }

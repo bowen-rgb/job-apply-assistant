@@ -902,5 +902,19 @@
   "menu.unavailable": "Statistics unavailable. You can still open pages or retry.",
   "menu.updated": "Current profile · statistics updated",
   "menu.retry": "Retry",
-  "menu.data": "Local data management"
+  "menu.data": "Local data management",
+  "menu.music": "Music",
+  "menu.map": "Map",
+  "menu.chooseMusic": "Choose local music",
+  "menu.noTrack": "Bring your favourite song",
+  "menu.localMusic": "Music plays locally and is never uploaded.",
+  "menu.locate": "Show my location",
+  "menu.locating": "Locating…",
+  "menu.locationHint": "Locate to load a map. Your position is shared with the map service.",
+  "menu.locationError": "Location unavailable. Allow browser location access or try again later.",
+  "menu.openMap": "Open Google Maps",
+  "menu.clearLocation": "Clear location",
+  "menu.rotate": "Rotate panels",
+  "menu.clock": "Local time",
+  "menu.audioError": "Unable to play this track. Try another audio file."
 }

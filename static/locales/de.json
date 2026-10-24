@@ -902,5 +902,19 @@
   "menu.unavailable": "Statistiken nicht verfügbar. Seiten bleiben erreichbar.",
   "menu.updated": "Aktuelles Profil · Statistiken aktualisiert",
   "menu.retry": "Erneut versuchen",
-  "menu.data": "Lokale Daten verwalten"
+  "menu.data": "Lokale Daten verwalten",
+  "menu.music": "Musik",
+  "menu.map": "Karte",
+  "menu.chooseMusic": "Lokale Musik auswählen",
+  "menu.noTrack": "Ihr Lieblingslied",
+  "menu.localMusic": "Musik bleibt lokal und wird nicht hochgeladen.",
+  "menu.locate": "Meinen Standort zeigen",
+  "menu.locating": "Standort wird ermittelt…",
+  "menu.locationHint": "Beim Laden der Karte wird Ihr Standort an den Kartendienst übermittelt.",
+  "menu.locationError": "Standort nicht verfügbar. Erlauben Sie den Standortzugriff oder versuchen Sie es später.",
+  "menu.openMap": "Google Maps öffnen",
+  "menu.clearLocation": "Standort löschen",
+  "menu.rotate": "Automatisch wechseln",
+  "menu.clock": "Ortszeit",
+  "menu.audioError": "Wiedergabe fehlgeschlagen. Wählen Sie eine andere Audiodatei."
 }

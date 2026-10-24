@@ -3,16 +3,21 @@
 (()=>{
  const token=new URLSearchParams(location.hash.slice(1)).get('token');
  const tell=(type,extra={})=>parent.postMessage({type,token,...extra},'*');
+ let active=null,quiet=null;
  document.addEventListener('ef-action',event=>tell('jaa-menu:navigate',{action:event.detail.action}));
- document.addEventListener('click',event=>{if(event.target.closest('[data-action="close"]'))tell('jaa-menu:back');});
- document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();tell('jaa-menu:back');}},true);
+ document.addEventListener('click',event=>{if(event.target.id==='efMenu'||event.target.closest('[data-action="close"]'))tell('jaa-menu:back');});
+ document.addEventListener('keydown',event=>{if((event.key==='Escape'||event.key==='Tab'&&!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey)&&!event.repeat&&!event.target.closest('input,textarea,select,audio,[contenteditable=true]')){event.preventDefault();event.stopImmediatePropagation();tell('jaa-menu:back');}},true);
+ document.addEventListener('jaa-widget:locate',()=>tell('jaa-menu:locate'));
  window.addEventListener('message',event=>{
   const data=event.data;
-  if(event.source!==parent||!data||data.token!==token||data.type!=='jaa-menu:state')return;
+  if(event.source!==parent||!data||data.token!==token)return;
+  if(data.type==='jaa-menu:location'){EF.widgets.location(data);return;}
+  if(data.type!=='jaa-menu:state')return;
   document.documentElement.lang=data.language;
   document.body.classList.toggle('jaa-quiet',!!data.quiet);
-  if(data.active)EF.menu.setClosed(false);else EF.menu.setClosed(true);
-  if(data.quiet)EF.scene.pause();
+  if(active!==data.active){if(data.active)EF.menu.setClosed(false);else EF.menu.setClosed(true);}
+  if(quiet!==data.quiet||active!==data.active){if(data.quiet||!data.active)EF.scene.pause();else EF.scene.resume();}
+  active=data.active;quiet=data.quiet;EF.widgets.update(data);
   document.getElementById('sceneOwner').textContent=data.owner||'';
   document.getElementById('sceneOwnerHint').textContent=data.profileLabel;
   document.getElementById('sceneHint').textContent=data.hint;

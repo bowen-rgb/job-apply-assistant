@@ -75,7 +75,12 @@ async def local_security(request: Request, call_next):
         response = await call_next(request)
     finally:
         CURRENT.reset(token)
-    response.headers['X-Frame-Options'] = 'DENY'
+    # Only our sandboxed menu document may be embedded by this local origin.
+    # APIs, exports and the main dashboard remain non-embeddable.
+    if request.url.path == '/static/vendor/endfield-menu/index.html':
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'self'"
+    else:
+        response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'no-referrer'
     response.headers['Cache-Control'] = 'no-store'

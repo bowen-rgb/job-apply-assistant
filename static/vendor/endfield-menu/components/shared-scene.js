@@ -123,6 +123,11 @@
   }
 
   function onMouseMove(e) {
+    // Keep small player/map controls still under the pointer while interacting.
+    if(e.target.closest('.jaa-center-widget')){
+      cancelAnimationFrame(rafId);rafId=0;vel.rx=0;vel.ry=0;
+      return;
+    }
     const mx = e.clientX / window.innerWidth * 2 - 1;
     const my = e.clientY / window.innerHeight * 2 - 1;
     target.rx = CAM.pitch + my * CAM.maxPitch;

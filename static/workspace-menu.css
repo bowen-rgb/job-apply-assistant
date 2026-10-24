@@ -16,3 +16,4 @@ body[data-workspace-view=menu] main{max-width:none;padding:0}body[data-workspace
 #workspaceOptions{position:relative;flex:none;background:transparent;border:0;padding:0}
 #workspaceOptions>summary{list-style:none;cursor:pointer;min-width:36px;min-height:40px;display:grid;place-items:center;font-size:23px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 #workspaceOptions[open]>button{position:absolute;top:44px;left:0;width:210px;margin:0;padding:12px;background:var(--panel);box-shadow:0 8px 24px #254b482b;z-index:3}
+.menu-fallback #menuScene{display:none}.menu-fallback #menuPageGrid{display:grid}.menu-fallback .main-menu-stage{height:auto;min-height:0}

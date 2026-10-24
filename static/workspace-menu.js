@@ -8,19 +8,20 @@ window.WorkspaceMenu=(()=>{
   ['export','jobExportShortcut'],['sources','jobSourcesShortcut'],['resumes','resumeFile'],['appearance','appearanceSettings']
  ];
  const $=id=>document.getElementById(id),t=key=>Locale.t('menu.'+key);
- let view='menu',previous='jobs',frame,ready=false,token='',summary=null,loading=false,serial=0;
+ let view='menu',previous='jobs',frame,ready=false,token='',summary=null,loading=false,serial=0,frameDeadline;
  const entries=()=>routes.map(([id,target])=>({id,target,label:t(id),short:t(id)}));
  const shown=()=>view==='menu';
  function state(){
   const owner=$('candidateSelect')?.selectedOptions[0]?.textContent||'';
   return {type:'jaa-menu:state',token,active:shown()&&!document.hidden,language:Locale.language,
    quiet:document.documentElement.dataset.angelinaMode==='quiet',owner,profileLabel:t('profile'),hint:t('hint'),
+   widget:Object.fromEntries(['music','map','chooseMusic','noTrack','localMusic','locate','locating','locationHint','locationError','openMap','clearLocation','rotate','clock','audioError'].map(key=>[key,t(key)])),
    sync:loading?t('loading'):summary?.error?t('unavailable'):summary?t('updated'):'',entries:entries(),
    metrics:['jobs','pipeline','human','submitted'].map(id=>({label:t(id),value:summary?.counts?.[id]??'—'}))};
  }
  function notify(){if(ready)frame.contentWindow.postMessage(state(),'*');}
  function render(){
-  $('workspaceMenuButton').textContent=t('back');$('mainMenuTitle').textContent=t('title');
+  $('workspaceMenuButton').textContent=t('back')+' · Tab';$('mainMenuTitle').textContent=t('title');
   $('mainMenuHint').textContent=t('hint');$('menuSearch').placeholder=t('search');$('menuSearch').setAttribute('aria-label',t('search'));
   $('workspaceTitle').textContent=view==='menu'?t('title'):(t(view));
   const query=$('menuSearch').value.trim().toLocaleLowerCase();
@@ -71,7 +72,7 @@ window.WorkspaceMenu=(()=>{
   if(view!=='menu')previous=view;view=next;document.body.dataset.workspaceView=next;
   render();
   if(shown()){
-   if(!frame.src){token=[...crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');frame.src='/static/vendor/endfield-menu/index.html#token='+encodeURIComponent(token);}
+   if(!frame.src){token=[...crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');frame.src='/static/vendor/endfield-menu/index.html#token='+encodeURIComponent(token);frameDeadline=setTimeout(()=>{if(!ready)$('mainMenuView').classList.add('menu-fallback');},5000);}
    refresh();
   }
  }
@@ -96,18 +97,23 @@ window.WorkspaceMenu=(()=>{
   // Retain existing command/filter bindings without retaining a sidebar UI.
   const commands=document.createElement('div');commands.id='workspaceCommands';commands.hidden=true;
   const oldAside=document.querySelector('aside');while(oldAside.firstChild)commands.append(oldAside.firstChild);oldAside.replaceWith(commands);
-  $('mainMenuView').innerHTML='<div class="main-menu-heading"><div><h1 id="mainMenuTitle"></h1><p id="mainMenuHint"></p></div><input id="menuSearch" type="search" autocomplete="off"></div><div class="main-menu-stage"><iframe id="menuScene" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><nav id="menuPageGrid"></nav><p id="menuEmpty" hidden></p></div><footer class="main-menu-footer"><span id="menuDataStatus" role="status"></span><button id="menuRetry" type="button" hidden></button><a href="/static/vendor/endfield-menu/NOTICE.md" target="_blank" rel="noopener">Endfield menu · source & credits ↗</a></footer>';
+  $('mainMenuView').innerHTML='<div class="main-menu-heading"><div><h1 id="mainMenuTitle"></h1><p id="mainMenuHint"></p></div><input id="menuSearch" type="search" autocomplete="off"></div><div class="main-menu-stage"><iframe id="menuScene" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe><nav id="menuPageGrid"></nav><p id="menuEmpty" hidden></p></div><footer class="main-menu-footer"><span id="menuDataStatus" role="status"></span><button id="menuRetry" type="button" hidden></button><a href="/static/vendor/endfield-menu/NOTICE.md" target="_blank" rel="noopener">Endfield menu · source & credits ↗</a></footer>';
   frame=$('menuScene');$('menuSearch').oninput=render;$('menuRetry').onclick=refresh;
   window.addEventListener('message',event=>{
    if(event.source!==frame.contentWindow||!event.data||event.data.token!==token)return;
-   if(event.data.type==='jaa-menu:ready'){ready=true;notify();}
+   if(event.data.type==='jaa-menu:ready'){ready=true;clearTimeout(frameDeadline);$('mainMenuView').classList.remove('menu-fallback');notify();}
    if(event.data.type==='jaa-menu:navigate')navigate(event.data.action);
    if(event.data.type==='jaa-menu:back')showView(previous,{resume:true});
+   if(event.data.type==='jaa-menu:locate'&&shown()){
+    const reply=value=>frame.contentWindow.postMessage({type:'jaa-menu:location',token,...value},'*');
+    if(!navigator.geolocation){reply({error:true});return;}
+    navigator.geolocation.getCurrentPosition(position=>reply({latitude:position.coords.latitude,longitude:position.coords.longitude}),()=>reply({error:true}),{timeout:12000,maximumAge:60000,enableHighAccuracy:false});
+   }
   });
   document.addEventListener('localechange',()=>{heading.textContent=t('appearance');caption.textContent=t('data');render();});
   document.addEventListener('visibilitychange',()=>{notify();if(shown()&&!document.hidden)refresh();});
   document.addEventListener('jaa:view-change',event=>activate(event.detail.view));
-  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]')&&!event.target.closest('input,textarea,select,[contenteditable=true]')){event.preventDefault();showView(shown()?previous:'menu',{resume:true});}});
+  document.addEventListener('keydown',event=>{if((event.key==='Escape'||event.key==='Tab'&&!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey)&&!event.repeat&&!document.querySelector('dialog[open]')&&!event.target.closest('input,textarea,select,audio,[contenteditable=true]')){event.preventDefault();showView(shown()?previous:'menu',{resume:true});}});
   setInterval(()=>{if(shown()&&!document.hidden)refresh();},10000);
   showView('menu');
  }

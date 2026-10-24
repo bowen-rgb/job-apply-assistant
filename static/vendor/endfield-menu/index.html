@@ -7,7 +7,7 @@
 
 
 
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'self'; media-src 'self' blob:; frame-src https://www.openstreetmap.org">
 <style>
 :root {
   --ef-ink: #1A1C1E;
@@ -164,6 +164,7 @@ body.ef-out .ef-overlay { pointer-events: none; }
 
 <script src="components/disc-buttons.js"></script>
 <script src="components/app.js"></script>
+<script src="workspace-widgets.js"></script>
 <script src="workspace-bridge.js"></script>
 </body>
 </html>
