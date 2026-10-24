@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 """Exercise the real local frontend using isolated example data, never live jobs."""
 import json
 import unittest
@@ -23,7 +24,7 @@ class PFEUITests(unittest.TestCase):
             try:
                 page = browser.new_page(locale='zh-CN'); errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
-                page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','full')")
                 def respond(route):
                     path = urlparse(route.request.url).path
                     method = route.request.method
@@ -40,7 +41,7 @@ class PFEUITests(unittest.TestCase):
                     elif path == '/api/pfe': data = state
                     route.fulfill(json=data)
                 page.route('**/*',respond); page.goto('http://pfe-ui.test/')
-                page.locator('#pfeNav').click()
+                navigate(page,'pfeNav')
                 expect(page.locator('#pfeView')).to_be_visible()
                 expect(page.locator('#pfeScan')).to_be_disabled()
                 page.locator('#pfeEnabled').check()

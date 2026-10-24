@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import tempfile
 import unittest
@@ -199,16 +200,17 @@ class AutomationBrowserTests(unittest.TestCase):
                     elif path not in {'/api/accounts','/api/jobs','/api/sources','/api/resumes','/api/pipeline'}:data={}
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://ui.test/')
-                page.locator('#accountsNav').wait_for()
+                page.locator('#workspaceMenuButton').wait_for()
                 for language in ['zh','fr','en','de','es','pt']:
                     page.evaluate('(language)=>Locale.setLanguage(language)',language)
-                    page.locator('#accountsNav').click()
+                    navigate(page,'accountsNav')
                     page.locator('#accountPassword').wait_for()
                     self.assertEqual(page.locator('#accountPassword').get_attribute('type'),'password')
                     self.assertEqual(page.locator('#accountPassword').input_value(),'')
                     self.assertFalse(page.locator('#gmailConnect').is_enabled())
                     self.assertEqual(page.evaluate('Accounts.words[Locale.language].length'),34)
                     page.locator('#accountsClose').click()
+                navigate(page,'guideNav')
                 page.locator('#coachAutomate').click()
                 page.wait_for_function('!document.getElementById("pipelineView").classList.contains("hidden")')
                 self.assertEqual(writes,[('/api/queue',json.dumps({'job_ids':[8]},separators=(',',':')))])

@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import unittest
 from contextlib import ExitStack
@@ -18,7 +19,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             page.on('dialog',lambda d:d.accept())
             def respond(route):
                 path=urlparse(route.request.url).path
@@ -31,7 +32,7 @@ class DashboardMetricTests(unittest.TestCase):
                 elif path.endswith('/applications'):route.fulfill(json=[{'status':'apply_error','note':'Previous failure retained'}])
                 elif path.endswith('/stage-events') or path.endswith('/human-review-events'):route.fulfill(json=[])
                 else:route.fulfill(json=[] if path=='/api/sources' else {})
-            page.route('**/*',respond);page.goto('http://dashboard.test/');page.locator('#pipelineNav').click()
+            page.route('**/*',respond);page.goto('http://dashboard.test/');navigate(page,'jobs');navigate(page,'pipelineNav')
             expect(page.locator('#queueFocus')).to_contain_text('VIP reception')
             expect(page.locator('#queueFocus')).to_contain_text('我已手动投递完成')
             expect(page.locator('#queueFocus')).to_contain_text('页面已关闭')
@@ -54,7 +55,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             def respond(route):
                 path=urlparse(route.request.url).path
                 if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html')
@@ -64,7 +65,7 @@ class DashboardMetricTests(unittest.TestCase):
                 elif path.endswith('/take-over'):
                     requests.append(path);route.fulfill(json={'message':'Onglet activé. Vérifiez les documents et réponses, puis envoyez sur le site et confirmez ici.'})
                 else:route.fulfill(json=[] if path=='/api/sources' else {})
-            page.route('**/*',respond);page.goto('http://dashboard.test/');page.locator('#pipelineNav').click()
+            page.route('**/*',respond);page.goto('http://dashboard.test/');navigate(page,'jobs');navigate(page,'pipelineNav')
             expect(page.locator('#queueFocus')).to_contain_text('当前正在处理')
             expect(page.locator('#queueFocus')).to_contain_text('Reception 1')
             expect(page.locator('#queueFocus')).to_contain_text('正在撰写求职信')
@@ -97,7 +98,7 @@ class DashboardMetricTests(unittest.TestCase):
         with sync_playwright() as p,ExitStack() as cleanup:
             browser=p.chromium.launch(headless=True);cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
             def respond(route):
                 path=urlparse(route.request.url).path
@@ -110,9 +111,10 @@ class DashboardMetricTests(unittest.TestCase):
                 elif path.startswith('/api/review-exports/'):route.fulfill(json=state)
                 else:route.fulfill(json={})
             page.route('**/*',respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
             page.locator('.review-export-panel summary').click()
             expect(page.locator('#reviewExportCount')).to_have_text('2 个岗位将导出')
+            navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             page.locator('#sourceSelect').select_option('one')
             page.locator('#reviewExportScope').select_option('visible')
@@ -146,7 +148,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser=playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror',lambda e:errors.append(str(e)))
             def respond(route):
@@ -169,31 +171,34 @@ class DashboardMetricTests(unittest.TestCase):
                 elif path=='/api/analytics':route.fulfill(json={'totals':{}})
                 else:route.fulfill(json=[] if path in {'/api/sources','/api/pipeline'} else {})
             page.route('**/*',respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
+            navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             expect(page.locator('#cards .card')).to_have_count(2)
             expect(page.locator('#cards .apply:disabled')).to_have_count(2)
             page.locator('button[onclick="confirmHumanReview(1,\'approved\')"]').click()
             expect(page.locator('[data-metric-filter="human"] b')).to_have_text('1')
-            page.locator('.filter[data-filter="confirmed"]').click()
+            page.locator('#jobFilterSelect').select_option('confirmed')
             expect(page.locator('#cards .apply')).to_be_enabled()
             page.locator('button[onclick="confirmHumanReview(1,\'pending\')"]').click()
             expect(page.locator('#cards .card')).to_have_count(0)
+            navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             expect(page.locator('#cards .card')).to_have_count(2)
             page.locator('button[onclick="confirmHumanReview(1,\'declined\')"]').click()
             expect(page.locator('#cards .card')).to_have_count(1)
             page.locator('button[onclick="confirmHumanReview(2,\'approved\')"]').click()
             expect(page.locator('[data-metric-filter="human"] b')).to_have_text('0')
-            page.locator('.filter[data-filter="human_declined"]').click()
+            page.locator('#jobFilterSelect').select_option('human_declined')
             expect(page.locator('#cards')).to_contain_text('Review 1')
             expect(page.locator('#cards .apply')).to_be_disabled()
-            page.locator('#pipelineNav').click()
+            navigate(page,'pipelineNav')
             page.locator('#queueAddMatchesBtn').click()
             expect(page.locator('#queueList')).to_contain_text('Review 2')
             self.assertEqual(requests,[[2]])  # Orange accepted by the user, not the unconfirmed strong match.
             jobs[1]['review_revision']='second'
             page.reload()
+            navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             expect(page.locator('#cards')).to_contain_text('Review 2')
             expect(page.locator('#cards .apply')).to_be_disabled()
@@ -221,7 +226,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror', lambda error: errors.append(str(error)))
             def respond(route):
@@ -232,17 +237,17 @@ class DashboardMetricTests(unittest.TestCase):
                 elif path=='/api/sources': route.fulfill(json=[dict(key='one',label='Source one',enabled=True),dict(key='two',label='Source two',enabled=True)])
                 else: route.fulfill(json={})
             page.route('**/*',respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
             for name, ids in expected.items():
                 with self.subTest(filter=name):
-                    page.locator(f'.filter[data-filter="{name}"]').click()
+                    page.locator('#jobFilterSelect').select_option(name)
                     expect(page.locator('#cards .card')).to_have_count(len(ids))
                     for job_id in ids:
                         expect(page.locator('#cards .card').filter(has=page.locator(f'button[onclick="openLetter({job_id})"]'))).to_have_count(1)
-            page.locator('.filter[data-filter="rejected"]').click()
+            page.locator('#jobFilterSelect').select_option('rejected')
             expect(page.locator('#cards')).to_contain_text('招聘方邮件')
             expect(page.locator('#cards .apply')).to_be_disabled()
-            page.locator('.filter[data-filter="expired"]').click()
+            page.locator('#jobFilterSelect').select_option('expired')
             expect(page.locator('#cards')).to_contain_text('2000-01-01')
             expect(page.locator('#cards .apply')).to_be_disabled()
             for metric in ['all','keep','liked','human','submitted']:
@@ -263,7 +268,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser=playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page=browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors=[]
             page.on('pageerror',lambda error:errors.append(str(error)))
             page.on('dialog',lambda dialog:dialog.accept())
@@ -279,7 +284,7 @@ class DashboardMetricTests(unittest.TestCase):
                 elif route.request.method=='POST': route.fulfill(status=409,json={'detail':'Server rejected this action'})
                 else: route.fulfill(json=[] if path=='/api/sources' else {})
             page.route('**/*',respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
             page.locator('#cards .like').click()
             expect(page.locator('#cards .like')).to_have_text('取消收藏')
             page.locator('#cards .like').click()
@@ -301,7 +306,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='fr-FR')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -325,7 +330,7 @@ class DashboardMetricTests(unittest.TestCase):
                     route.fulfill(json={})
 
             page.route('**/*', respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
             human = page.locator('[data-metric-filter="human"]')
             human.click()
 
@@ -341,13 +346,14 @@ class DashboardMetricTests(unittest.TestCase):
             human.click()
             check_metrics(1, 1, 1)
             page.reload()
+            navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             check_metrics(1, 1, 1)
             page.locator('#cards .skip').click()
             check_metrics(0, 0, 1)  # Ignoring a listing must preserve submission history.
             expect(page.locator('#cards .empty')).to_be_visible()
 
-            page.locator('.filter[data-filter="skipped"]').click()
+            page.locator('#jobFilterSelect').select_option('skipped')
             expect(page.locator('#cards .card')).to_have_count(7)
             page.locator('#cards .card').filter(has_text='Job 1').locator('.skip').click()
             expect(page.locator('#cards .card')).to_have_count(6)
@@ -369,7 +375,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -393,8 +399,8 @@ class DashboardMetricTests(unittest.TestCase):
                     route.fulfill(json=[] if path in {'/api/jobs', '/api/sources', '/api/pipeline'} else {})
 
             page.route('**/*', respond)
-            page.goto('http://dashboard.test/')
-            page.locator('#pipelineNav').click()
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
+            navigate(page,'pipelineNav')
             first = page.locator('[data-queue-job="1"]')
             expect(first).to_contain_text('需在招聘网站补充')
             expect(first).to_contain_text('简历已附上')
@@ -422,7 +428,7 @@ class DashboardMetricTests(unittest.TestCase):
             browser = playwright.chromium.launch(headless=True)
             cleanup.callback(browser.close)
             page = browser.new_page(locale='zh-CN')
-            page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+            page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
             def respond(route):
                 path = urlparse(route.request.url).path
                 if path == '/':
@@ -434,7 +440,7 @@ class DashboardMetricTests(unittest.TestCase):
                 else:
                     route.fulfill(json=[] if path in {'/api/jobs', '/api/sources'} else {})
             page.route('**/*', respond)
-            page.goto('http://dashboard.test/')
+            page.goto('http://dashboard.test/');navigate(page,'jobs')
             page.locator('#scanPanel summary').click()
             panel = page.locator('#sourceDiagnostics')
             expect(panel).to_contain_text('搜索已完成，未发现岗位')

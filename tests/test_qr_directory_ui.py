@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json, unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -35,7 +36,7 @@ class DirectoryUITests(unittest.TestCase):
                     elif path=='/api/profile':data=profile
                     elif path in {'/api/jobs','/api/resumes','/api/accounts','/api/sources','/api/pipeline'}:data=[]
                     route.fulfill(json=data)
-                page.route('**/*',respond);page.goto('http://directory.test/');page.locator('#qrNav').click()
+                page.route('**/*',respond);page.goto('http://directory.test/');navigate(page,'qrNav')
                 expect(page.locator('.qr-role-cards article')).to_have_count(3)
                 page.locator('#qrRoleDirection').select_option('control');page.locator('#qrRolePlace').fill('Paris')
                 page.locator('#qrRoleFrom').fill('2027-02');page.locator('#qrRoleTo').fill('2027-03')

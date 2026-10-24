@@ -119,27 +119,22 @@ async function translateVisibleTitles(){
   }finally{titleRequestRunning=false;scheduleTitles();}
 }
 
-function showView(which){
-  el('pfeView').classList.toggle('hidden',which!=='pfe');
-  const pfeNav=el('pfeNav');if(pfeNav){pfeNav.classList.toggle('active',which==='pfe');if(which==='pfe'){pfeNav.setAttribute('aria-current','page');PFE.open();}else pfeNav.removeAttribute('aria-current');}
-  el('overviewView').classList.toggle('hidden',which!=='overview');
-  el('overviewNav').classList.toggle('active',which==='overview');
-  if(which==='overview'){el('overviewNav').setAttribute('aria-current','page');Workbench.refresh();}else el('overviewNav').removeAttribute('aria-current');
-  const jobs=which==='jobs', profile=which==='profile', pipeline=which==='pipeline';
-  el('guideView').classList.toggle('hidden',which!=='guide');
+function showView(which,{resume=false}={}){
+  const views=['menu','overview','guide','jobs','profile','pipeline','pfe'];
+  if(!views.includes(which))return;
+  for(const name of views){
+    el(name==='menu'?'mainMenuView':name+'View')?.classList.toggle('hidden',name!==which);
+    const nav=el(name+'Nav');
+    if(nav){nav.classList.toggle('active',name===which);if(name===which)nav.setAttribute('aria-current','page');else nav.removeAttribute('aria-current');}
+  }
+  el('jobSidebar').classList.toggle('hidden',which!=='jobs');
   Guide.view(which);
-  el('jobsView').classList.toggle('hidden',!jobs);
-  el('profileView').classList.toggle('hidden',!profile);
-  el('pipelineView').classList.toggle('hidden',!pipeline);
-  el('jobSidebar').classList.toggle('hidden',!jobs);
-  [['guideNav',which==='guide'],['jobsNav',jobs],['profileNav',profile],['pipelineNav',pipeline]].forEach(([id,active])=>{
-    el(id).classList.toggle('active',active);
-    el(id).toggleAttribute('aria-current',active);
-    if(active) el(id).setAttribute('aria-current','page');
-  });
-  window.InteractionMotion?.enterView(el(which+'View'));
-  if(profile) return loadProfile();
-  if(pipeline) loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
+  document.dispatchEvent(new CustomEvent('jaa:view-change',{detail:{view:which}}));
+  window.InteractionMotion?.enterView(el(which==='menu'?'mainMenuView':which+'View'));
+  if(which==='overview')Workbench.refresh();
+  if(which==='pfe'&&!resume)PFE.open();
+  if(which==='profile'&&!resume)return loadProfile();
+  if(which==='pipeline')loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
 }
 el('guideNav').onclick=()=>showView('guide');
 el('overviewNav').onclick=()=>showView('overview');
@@ -820,7 +815,7 @@ for(const button of document.querySelectorAll('button[id]')){
   };
 }
 document.addEventListener('localechange',()=>{renderSkillInventory();Guide.render();render();load();loadSources();pollScan();if(!el('pipelineView').classList.contains('hidden'))loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);refreshAutomationStatus();Locale.apply();});
-async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();QRApplication.init();AngelinaUI.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
+async function init(){await Locale.ready;await Accounts.init();await PendingTasks.init();Guide.init();Coach.init();Workbench.init();Surfaces.init();PFE.init();ChromeControl.init();QRApplication.init();AngelinaUI.init();el('reviewExportLanguage').value=Locale.language;await loadSources();await load();await pollScan();await refreshAutomationStatus();WorkspaceMenu.init();const previous=localStorage.getItem(Accounts.key('jaa-review-export'));if(/^[0-9a-f]{32}$/.test(previous||'')){reviewExportId=previous;await pollReviewExport();}}
 init();
 setInterval(refreshAutomationStatus,15000);
 

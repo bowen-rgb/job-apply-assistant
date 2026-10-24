@@ -91,6 +91,7 @@ window.Accounts=(()=>{
   }
   async function init(){
     try{const response=await originalFetch('/api/candidates');const data=await response.json();owner=data.active_id||'default';registry=data;}
+    catch{registry={items:[{id:owner,name:'—'}]};}
     finally{resolveReady();}
     const switchLabels={zh:'当前档案',fr:'Profil actif',en:'Active profile',de:'Aktuelles Profil',es:'Perfil activo',pt:'Perfil ativo'};
     const switcher=document.createElement('div');switcher.className='profile-switcher';

@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import tempfile
 import unittest
@@ -21,7 +22,7 @@ class GuideTests(unittest.TestCase):
             browser=p.chromium.launch(headless=True)
             try:
                 page=browser.new_page(locale='fr-FR')
-                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
                 errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
                 def respond(route):
                     path=urlparse(route.request.url).path
@@ -32,7 +33,7 @@ class GuideTests(unittest.TestCase):
                     elif path in {'/api/jobs','/api/sources','/api/resumes','/api/pipeline'}:route.fulfill(json=[])
                     else:route.fulfill(json={})
                 page.route('**/*',respond);page.goto('http://example.test/')
-                page.locator('#guideNav').click()
+                navigate(page,'guideNav')
                 expect(page.locator('#workedExample')).to_contain_text('Exercice fictif')
                 page.locator('#exampleReal').click()
                 expect(page.locator('#resumeFile')).to_be_focused()
@@ -48,7 +49,7 @@ class GuideTests(unittest.TestCase):
                 page.locator('#languageSelect').select_option('en')
                 expect(page.locator('#workedExample')).to_contain_text('Check the recruiter’s form')
                 page.locator('#exampleAdvance').click()
-                page.reload();page.locator('#guideNav').click()
+                page.reload();navigate(page,'guideNav')
                 expect(page.locator('#workedExample')).to_contain_text('Send on the site and wait for confirmation')
                 page.locator('#exampleAdvance').click()
                 expect(page.locator('#workedExample')).to_contain_text('Return and record the application')
@@ -87,7 +88,7 @@ class GuideTests(unittest.TestCase):
             browser = p.chromium.launch(headless=True)
             try:
                 page = browser.new_page(locale='fr-FR')
-                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
                 errors = []
                 page.on('pageerror', lambda e: errors.append(str(e)))
                 def respond(route):
@@ -109,7 +110,7 @@ class GuideTests(unittest.TestCase):
                     else:
                         route.fulfill(json={})
                 page.route('**/*', respond)
-                page.goto('http://guide.test/')
+                page.goto('http://guide.test/');navigate(page,'jobs')
                 expect(page.locator('#welcomeGuide')).to_be_visible()
                 page.locator('#welcomeGuide [data-guide-target="guide"]').click()
                 expect(page.locator('#guideNav')).to_have_attribute('aria-current', 'page')
@@ -124,7 +125,7 @@ class GuideTests(unittest.TestCase):
                 page.locator('#profileHelp [data-guide-id="saveProfileBtn"]').click()
                 expect(page.locator('#saveProfileBtn')).to_be_focused()
                 expect(page.locator('#first_name')).to_have_value('Draft')
-                page.locator('#guideNav').click()
+                navigate(page,'guideNav')
                 health.update(resume_ok=True, cdp_ok=True)
                 page.locator('#guideRetry').click()
                 expect(page.locator('#guideView')).to_contain_text('connexion ChatGPT à vérifier')
@@ -132,11 +133,11 @@ class GuideTests(unittest.TestCase):
                 expect(page.locator('#guideView')).to_contain_text('我已经投递了')
                 page.locator('#guideView [data-guide-id="pipelineBoard"]').click()
                 expect(page.locator('#pipelineView')).to_be_visible()
-                page.locator('#jobsNav').click()
+                navigate(page,'jobsNav')
                 page.locator('#guideDismiss').click()
                 page.reload()
                 expect(page.locator('#welcomeGuide')).to_be_hidden()
-                page.locator('#guideNav').click()
+                navigate(page,'guideNav')
                 expect(page.locator('#guideView')).to_be_visible()
                 self.assertEqual(mutations, [])
                 self.assertEqual(errors, [])
@@ -148,7 +149,7 @@ class GuideTests(unittest.TestCase):
             browser = p.chromium.launch(headless=True)
             try:
                 page = browser.new_page(locale='fr-FR')
-                page.add_init_script("localStorage.setItem('jaa-ui-mode', 'full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode', 'full')")
                 def respond(route):
                     path = urlparse(route.request.url).path
                     if path == '/':
@@ -158,8 +159,8 @@ class GuideTests(unittest.TestCase):
                     else:
                         route.abort('failed')
                 page.route('**/*', respond)
-                page.goto('http://guide.test/')
-                page.locator('#guideNav').click()
+                page.goto('http://guide.test/');navigate(page,'jobs')
+                navigate(page,'guideNav')
                 expect(page.locator('#guideView')).to_contain_text('État non vérifié')
                 page.locator('#guideView .guide-trouble summary').click()
                 expect(page.locator('#guideView .guide-trouble')).to_contain_text('vérifiez que start.bat reste ouvert')

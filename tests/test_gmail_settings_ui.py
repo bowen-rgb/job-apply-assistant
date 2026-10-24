@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -27,8 +28,8 @@ class GmailSettingsUITests(unittest.TestCase):
                         r.fulfill(json=data)
                     page.route('**/*',route);page.goto('http://ui.test/')
                     page.evaluate("Locale.setLanguage('zh')")
-                    if width<600:page.locator('#mobileNavToggle').click()
-                    page.locator('#accountsNav').click()
+                    if width<600:page.locator('#workspaceMenuButton').click()
+                    navigate(page,'accountsNav')
                     switch=page.locator('#gmailAutoCodes')
                     expect(switch).to_be_enabled();expect(switch).not_to_be_checked()
                     switch.check()

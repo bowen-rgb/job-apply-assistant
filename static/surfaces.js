@@ -31,30 +31,6 @@ window.Surfaces=(()=>{
     if(dialog?.querySelector('.surface-account-section'))rail(dialog,[...dialog.querySelectorAll(':scope > .surface-account-section')],'account');
   }
   function init(){
-    const aside=document.querySelector('aside'),primary=document.querySelector('.primary-nav');
-    primary.id='primaryNavigation';
-    const toggle=document.createElement('button');toggle.id='mobileNavToggle';toggle.type='button';
-    toggle.setAttribute('aria-controls',primary.id);toggle.setAttribute('aria-expanded','false');
-    toggle.onclick=()=>{const open=aside.classList.toggle('navigation-open');toggle.setAttribute('aria-expanded',String(open));};
-    aside.addEventListener('keydown',event=>{if(event.key==='Escape'&&aside.classList.contains('navigation-open')){aside.classList.remove('navigation-open');toggle.setAttribute('aria-expanded','false');toggle.focus();}});
-    aside.querySelector('.brand').after(toggle);
-    const updateNavigation=()=>{toggle.textContent=Locale.t('Navigation principale')+' · '+(primary.querySelector('[aria-current="page"]')?.textContent||'');};
-    primary.addEventListener('click',event=>{if(event.target.closest('button')&&matchMedia('(max-width:760px)').matches){aside.classList.remove('navigation-open');toggle.setAttribute('aria-expanded','false');toggle.focus();}});
-    new MutationObserver(updateNavigation).observe(primary,{attributes:true,subtree:true,characterData:true,childList:true});
-    updateNavigation();document.addEventListener('localechange',updateNavigation);
-    // A fade indicates additional content; endpoints and keyboard focus stay clear.
-    const updateEdges=()=>{
-      const distance=aside.scrollHeight-aside.clientHeight;
-      aside.classList.add('scroll-edges');
-      aside.dataset.edgeTop=String(aside.scrollTop>2);
-      aside.dataset.edgeBottom=String(distance-aside.scrollTop>2);
-      aside.style.setProperty('--fade-top',aside.scrollTop>2?'24px':'0px');
-      aside.style.setProperty('--fade-bottom',distance-aside.scrollTop>2?'24px':'0px');
-    };
-    aside.addEventListener('scroll',updateEdges,{passive:true});
-    new ResizeObserver(updateEdges).observe(aside);
-    new MutationObserver(updateEdges).observe(aside,{childList:true,subtree:true});updateEdges();
-    // Separate track and selected thumb from SegmentedControl.tsx; retain every metric.
     const metrics=document.getElementById('jobMetrics');
     if(metrics){
       const updateSelection=()=>{

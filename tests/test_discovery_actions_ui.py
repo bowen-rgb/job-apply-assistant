@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate
 import unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -12,7 +13,7 @@ class DiscoveryActionsUITests(unittest.TestCase):
             browser = p.chromium.launch(headless=True)
             try:
                 context = browser.new_context(locale='zh-CN', viewport={'width': 1280, 'height': 1000})
-                context.add_init_script("localStorage.setItem('jaa-ui-mode','simple');localStorage.setItem('jaa-ui-language','zh')")
+                context.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','simple');window===window.top&&localStorage.setItem('jaa-ui-language','zh')")
                 page = context.new_page()
                 writes = []
                 review_urls = []
@@ -47,22 +48,22 @@ class DiscoveryActionsUITests(unittest.TestCase):
                         data = dict(running=running,scan_id=1,found=3,fetched=2,inserted=1,updated=0,errors=0)
                     route.fulfill(json=data)
                 context.route('**/*', respond)
-                page.goto('http://discovery-ui.test/')
+                page.goto('http://discovery-ui.test/');navigate(page,'jobs')
                 expect(page.locator('#batchBtn')).to_have_text('让 ChatGPT 复核岗位')
                 expect(page.locator('body')).to_have_class(__import__('re').compile('simple-mode'))
                 for view in ['overview', 'pfe', 'profile', 'pipeline', 'jobs']:
                     page.evaluate('(view)=>showView(view)', view)
-                    expect(page.locator('#searchBtn')).to_be_visible()
-                    expect(page.locator('#batchBtn')).to_be_visible()
+                    expect(page.locator('#workspaceMenuButton')).to_be_visible()
+                navigate(page,'jobs')
                 self.assertEqual(writes, [])
                 for width in [1280, 375]:
                     page.set_viewport_size({'width':width,'height':1000})
                     expect(page.locator('#searchBtn')).to_be_visible()
                     expect(page.locator('#batchBtn')).to_be_visible()
-                    self.assertTrue(page.locator('#discoveryActions').evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
+                    self.assertTrue(page.locator('.workspace-page-actions').evaluate('n=>n.scrollWidth<=n.clientWidth+1'))
                     page.screenshot(path=f'tmp/discovery-actions-{width}.png', full_page=True)
                 other = context.new_page()
-                other.goto('http://discovery-ui.test/')
+                other.goto('http://discovery-ui.test/');navigate(other,'jobs')
                 expect(other.locator('#searchBtn')).to_be_enabled()
                 page.bring_to_front()
                 page.locator('#searchBtn').click()
@@ -89,6 +90,7 @@ class DiscoveryActionsUITests(unittest.TestCase):
                 page.evaluate('pollScan()')
                 expect(page.locator('#searchBtn')).to_be_enabled()
                 fail_scan = True
+                navigate(page,'jobs')
                 page.locator('#searchBtn').click()
                 expect(page.locator('#discoveryActionStatus')).to_contain_text('Test scan unavailable')
                 expect(page.locator('#searchBtn')).to_be_enabled()

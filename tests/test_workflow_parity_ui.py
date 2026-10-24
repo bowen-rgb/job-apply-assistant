@@ -35,7 +35,7 @@ class WorkflowParityTests(unittest.TestCase):
             route.fulfill(json=value)
         self.page.route('**/*',respond)
         self.page.goto('http://parity.test/')
-        expect(self.page.locator('#simpleModeToggle')).to_be_visible()
+        expect(self.page.locator('#workspaceMenuButton')).to_be_visible()
         self.page.evaluate("showView('jobs')")
         expect(self.page.locator('#cards .card')).to_have_count(2)
 

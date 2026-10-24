@@ -20,11 +20,12 @@
   <link rel="stylesheet" href="/static/angelina-ui.css" />
   <link rel="stylesheet" href="/static/typography.css" />
   <link rel="stylesheet" href="/static/motion.css" />
+  <link rel="stylesheet" href="/static/workspace-menu.css" />
 </head>
 <body>
 <a class="skip-link" href="#mainContent">Passer au contenu principal</a>
 <div class="shell">
-  <aside aria-label="Navigation principale">
+  <aside hidden aria-label="Navigation principale">
     <div class="brand"><img class="brand-mark" src="/static/favicon.svg?v=angelina-20261021" width="44" height="44" alt="" aria-hidden="true" /><span>Job Apply Assistant <small>WORKSPACE</small></span></div>
     <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
     <!-- Persistent task actions: discovery first, AI review second; use existing theme tokens. -->
@@ -75,6 +76,7 @@
   </aside>
 
   <main id="mainContent" tabindex="-1">
+    <section id="mainMenuView" class="hidden" aria-labelledby="mainMenuTitle"></section>
     <div id="automationStatus" class="automation-status" role="status"></div>
     <section id="overviewView" class="hidden" aria-labelledby="overviewTitle"></section>
     <section id="guideView" class="hidden" aria-labelledby="guideTitle"></section>
@@ -353,6 +355,7 @@
 <script src="/static/qr-application.js"></script>
 <script src="/static/angelina-gallery.js"></script>
 <script src="/static/angelina-ui.js"></script>
+<script src="/static/workspace-menu.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

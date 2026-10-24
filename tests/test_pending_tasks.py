@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import tempfile
 import unittest
@@ -74,7 +75,7 @@ class PendingTaskTests(unittest.TestCase):
         with sync_playwright() as p:
             browser=p.chromium.launch(headless=True)
             try:
-                page=browser.new_page(locale='zh-CN');errors=[]
+                page=browser.new_page(locale='zh-CN');errors=[];queue_writes=[]
                 page.on('pageerror',lambda error:errors.append(str(error)))
                 def respond(route):
                     nonlocal active
@@ -82,6 +83,7 @@ class PendingTaskTests(unittest.TestCase):
                     if path=='/':route.fulfill(path=str(STATIC/'index.html'),content_type='text/html');return
                     if path.startswith('/static/'):route.fulfill(path=str(STATIC/path.removeprefix('/static/')));return
                     requests.append((path,route.request.headers.get('x-candidate-id')))
+                    if path=='/api/queue' and route.request.method!='GET':queue_writes.append(path)
                     data={}
                     if path=='/api/candidates':data={'active_id':active,'items':[dict(id='default',name='Candidate A',identity={},active=active=='default'),dict(id='000000000001',name='Candidate B',identity={},active=active!='default')]}
                     elif path.startswith('/api/candidates/') and path.endswith('/activate'):active=path.split('/')[3];data={'ok':True}
@@ -92,13 +94,13 @@ class PendingTaskTests(unittest.TestCase):
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://profiles.test/')
                 expect(page.locator('#candidateSelect')).to_have_value('default')
-                page.locator('#pendingTasksNav').click()
+                navigate(page,'pendingTasksNav')
                 expect(page.locator('#pendingTasksDialog')).to_contain_text('Candidate A')
                 expect(page.locator('.pending-task')).to_have_count(0)
                 page.locator('#pendingClose').click()
                 page.locator('#candidateSelect').select_option('000000000001')
                 expect(page.locator('#candidateSelect')).to_have_value('000000000001')
-                page.locator('#pendingTasksNav').click()
+                navigate(page,'pendingTasksNav')
                 expect(page.locator('#pendingTasksDialog')).to_contain_text('Candidate B')
                 expect(page.locator('.pending-task')).to_contain_text('Research task B')
                 page.locator('[data-task-id=abc123]').click()
@@ -108,10 +110,11 @@ class PendingTaskTests(unittest.TestCase):
                 page.locator('#pendingClose').click()
                 page.locator('#candidateSelect').select_option('default')
                 expect(page.locator('#candidateSelect')).to_have_value('default')
-                page.locator('#pendingTasksNav').click()
+                navigate(page,'pendingTasksNav')
                 expect(page.locator('.pending-task')).to_have_count(0)
                 self.assertEqual(errors,[])
                 self.assertIn(('/api/pending-tasks','000000000001'),requests)
                 self.assertIn(('/api/pending-tasks','default'),requests)
-                self.assertFalse(any('/application-status' in path or path=='/api/queue' for path,_ in requests))
+                self.assertFalse(any('/application-status' in path for path,_ in requests))
+                self.assertEqual(queue_writes,[])
             finally:browser.close()

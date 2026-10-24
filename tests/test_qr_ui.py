@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import io
 import unittest
@@ -17,7 +18,7 @@ class QRUITests(unittest.TestCase):
             browser=p.chromium.launch(headless=True)
             try:
                 page=browser.new_page(locale='zh-CN',viewport={'width':1280,'height':1000})
-                page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','full')")
                 writes=[];errors=[];started=False;resumed=False;resume_polls=0
                 page.on('pageerror',lambda error:errors.append(str(error)))
                 def respond(route):
@@ -45,7 +46,7 @@ class QRUITests(unittest.TestCase):
                     elif path in {'/api/jobs','/api/sources','/api/pipeline','/api/accounts','/api/resumes'}:data=[]
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://qr-ui.test/')
-                page.locator('#qrNav').click()
+                navigate(page,'qrNav')
                 expect(page.locator('#qrApplicationDialog')).to_be_visible()
                 expect(page.locator('#qrApplicationDialog')).to_contain_text('上传图片不会发送申请')
                 self.assertEqual(writes,[])
@@ -106,7 +107,7 @@ class QRUITests(unittest.TestCase):
                         else:route.fulfill(json=records[key])
                         return
                     route.fulfill(status=404,json={'detail':'qr_not_found'})
-                page.route('**/*',respond);page.goto('http://batch.test/');page.locator('#qrNav').click()
+                page.route('**/*',respond);page.goto('http://batch.test/');navigate(page,'qrNav')
                 picture=Image.fromarray(zxingcpp.create_barcode('https://employer.test/a',zxingcpp.BarcodeFormat.QRCode).to_image(scale=4));buffer=io.BytesIO();picture.save(buffer,format='PNG')
                 image={'name':'code.png','mimeType':'image/png','buffer':buffer.getvalue()}
                 page.locator('#qrFile').set_input_files([image,{**image,'name':'duplicate.png'},{**image,'name':'unreadable.png'}])
@@ -123,7 +124,7 @@ class QRUITests(unittest.TestCase):
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertTrue(page.locator('#qrApplicationDialog').evaluate('e=>e.scrollWidth<=e.clientWidth+1'))
                     page.screenshot(path=f'tmp/qr-ui/batch-{width}.png',animations='disabled')
-                page.locator('#qrClose').click();page.locator('#qrNav').click()
+                page.locator('#qrClose').click();navigate(page,'qrNav')
                 expect(page.locator('[data-qr-select]')).to_have_count(3)
                 page.evaluate("""bytes=>{const files=[new File([new Uint8Array(bytes)],'paste1.png',{type:'image/png'}),new File([new Uint8Array(bytes)],'paste2.png',{type:'image/png'})];const e=new Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(e,'clipboardData',{value:{items:files.map(f=>({kind:'file',type:'image/png',getAsFile:()=>f}))}});document.querySelector('#qrApplicationDialog').dispatchEvent(e)}""",list(buffer.getvalue()))
                 expect(page.locator('[data-qr-select]')).to_have_count(5)
@@ -164,7 +165,7 @@ class QRUITests(unittest.TestCase):
                         if req.method=='DELETE':del records[key];route.fulfill(json={'removed':True});return
                         route.fulfill(json=records[key]);return
                     route.fulfill(status=404,json={'detail':'qr_not_found'})
-                page.route('**/*',respond);page.goto('http://desk.test/');page.locator('#qrNav').click()
+                page.route('**/*',respond);page.goto('http://desk.test/');navigate(page,'qrNav')
                 picture=Image.fromarray(zxingcpp.create_barcode('https://employer.test/a',zxingcpp.BarcodeFormat.QRCode).to_image(scale=4));buffer=io.BytesIO();picture.save(buffer,format='PNG')
                 file={'name':'first.png','mimeType':'image/png','buffer':buffer.getvalue()}
                 picker=page.locator('#qrFile').element_handle()

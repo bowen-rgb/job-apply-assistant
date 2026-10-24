@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -12,7 +13,7 @@ class ChromeControlUITests(unittest.TestCase):
             browser=p.chromium.launch(headless=True)
             try:
                 page=browser.new_page(locale='zh-CN')
-                page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','full')")
                 writes=[]
                 unavailable=False
                 ready=False
@@ -36,7 +37,7 @@ class ChromeControlUITests(unittest.TestCase):
                     route.fulfill(json=data)
                 page.route('**/*',respond)
                 page.goto('http://chrome-ui.test/')
-                page.locator('#pipelineNav').click()
+                navigate(page,'pipelineNav')
                 status=page.locator('[data-chrome-status]')
                 expect(status).to_contain_text('请从平台打开 Chrome')
                 self.assertEqual(writes,[])

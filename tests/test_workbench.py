@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import unittest
 from pathlib import Path
@@ -34,7 +35,7 @@ class WorkbenchTests(unittest.TestCase):
                     elif path in {'/api/sources','/api/pipeline'}:data=[]
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://workbench.test/')
-                page.locator('#overviewNav').click()
+                navigate(page,'overviewNav')
                 expect(page.locator('[data-wb-filter=all] b')).to_have_text('2')
                 expect(page.locator('[data-wb-filter=submitted] b')).to_have_text('1')
                 expect(page.locator('.wb-owner')).to_contain_text('Bowen Li')
@@ -61,11 +62,11 @@ class WorkbenchTests(unittest.TestCase):
                 page.locator('[data-wb-source=""]').click()
                 expect(page.locator('#sourceSelect')).to_have_value('__unassigned__')
                 expect(page.locator('#cards .card')).to_have_count(1)
-                page.locator('#overviewNav').click()
+                navigate(page,'overviewNav')
                 page.locator('[data-wb-source=pending_tasks]').click()
                 expect(page.locator('#sourceSelect')).to_have_value('pending_tasks')
                 expect(page.locator('#jobsView')).to_be_visible()
-                page.locator('#overviewNav').click()
+                navigate(page,'overviewNav')
                 for width in [320,768,1440]:
                     page.set_viewport_size({'width':width,'height':1000})
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
@@ -81,7 +82,7 @@ class WorkbenchTests(unittest.TestCase):
                 self.assertEqual(mutations,['/api/pending-tasks/vacancy/queue'])
                 page.locator('[data-view-task-queue]').click()
                 expect(page.locator('#pipelineView')).to_be_visible()
-                page.locator('#overviewNav').click()
+                navigate(page,'overviewNav')
                 page.locator('.wb-data').first.evaluate('(node)=>node.open=false')
                 page.evaluate('window.scrollTo(0,0)')
                 page.locator('#wbRefresh').focus()

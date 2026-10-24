@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance, toggle_guidance
 import json
 import unittest
 from pathlib import Path
@@ -28,7 +29,7 @@ class CoachTests(unittest.TestCase):
                     elif path=='/api/profile':route.fulfill(json=default_profile())
                     elif path in {'/api/sources','/api/resumes','/api/pipeline'}:route.fulfill(json=[])
                     else:route.fulfill(json={})
-                page.route('**/*',respond);page.goto('http://coach.test/')
+                page.route('**/*',respond);page.goto('http://coach.test/');navigate(page,'guide')
                 callback(page,writes)
                 self.assertEqual(errors,[])
             finally:browser.close()
@@ -58,11 +59,11 @@ class CoachTests(unittest.TestCase):
             page.locator('#coachRecord').click()
             expect(page.locator('#coachStatus')).to_contain_text('Cela n’a pas été enregistré')
             expect(page.locator('#coachRecord')).to_be_enabled()
-            page.reload()
+            page.reload();navigate(page,'guide')
             expect(page.locator('#coachRecord')).to_be_disabled()
             page.locator('#coachConfirmed').check();page.locator('#coachRecord').click()
             expect(page.locator('#beginnerGuide')).to_contain_text('Vous avez terminé')
-            page.reload();expect(page.locator('#coachNext')).to_be_visible()
+            page.reload();navigate(page,'guide');expect(page.locator('#coachNext')).to_be_visible()
             self.assertEqual(attempts,[{'status':'submitted'},{'status':'submitted'}])
             self.assertFalse(any('/apply' in path or path=='/api/queue' for path,_ in writes))
         self.run_browser(check,health,[job],responses)
@@ -89,9 +90,9 @@ class CoachTests(unittest.TestCase):
             page.locator('#coachUpload').click()
             expect(page.locator('#coachSearch')).to_be_visible()
             page.locator('#coachRole').fill('Receptionist');page.locator('#coachPlace').fill('Paris')
-            page.locator('#simpleModeToggle').click()
+            toggle_guidance(page)
             expect(page.locator('body')).not_to_have_class('simple-mode')
-            page.locator('#simpleModeToggle').click()
+            toggle_guidance(page)
             expect(page.locator('#coachRole')).to_have_value('Receptionist')
             expect(page.locator('#coachPlace')).to_have_value('Paris')
             self.assertEqual(len(uploads),2)
@@ -104,9 +105,9 @@ class CoachTests(unittest.TestCase):
             page.locator('#coachSearch').click()
             expect(page.locator('#coachStatus')).to_contain_text('Indiquez le poste et la ville')
             self.assertEqual(writes,[])
-            page.locator('#simpleModeToggle').click();page.locator('#jobsNav').click()
+            toggle_guidance(page);navigate(page,'jobsNav')
             expect(page.locator('#batchBtn')).to_be_visible()
-            page.reload();expect(page.locator('body')).not_to_have_class('simple-mode')
+            page.reload();navigate(page,'guide');expect(page.locator('body')).not_to_have_class('simple-mode')
         self.run_browser(check,dict(resume_ok=True),jobs)
 
     def test_all_coach_languages_have_the_same_nonempty_keys(self):

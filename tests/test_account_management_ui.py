@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import json
 import unittest
 from pathlib import Path
@@ -19,7 +20,7 @@ class AccountManagementUITests(unittest.TestCase):
             try:
                 page=browser.new_page(locale='zh-CN');errors=[]
                 page.on('pageerror',lambda e:errors.append(str(e)))
-                page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','full')")
                 def respond(route):
                     nonlocal fail_save
                     path=urlparse(route.request.url).path
@@ -41,7 +42,7 @@ class AccountManagementUITests(unittest.TestCase):
                     elif path in {'/api/jobs','/api/sources','/api/pipeline'}:data=[]
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://account-ui.test/')
-                page.locator('#accountsNav').click()
+                navigate(page,'accountsNav')
                 cards=page.locator('#savedAccounts [role=listitem]')
                 expect(cards).to_have_count(2)
                 expect(cards.first).to_contain_text('Indeed')
@@ -79,7 +80,7 @@ class AccountManagementUITests(unittest.TestCase):
                 expect(page.locator('#accountURL')).not_to_have_attribute('readonly','')
                 expect(page.locator('#accountPassword')).to_have_attribute('required','')
                 page.locator('#accountsClose').click()
-                page.locator('#profileNav').click()
+                navigate(page,'profileNav')
                 expect(page.locator('#skillInventory')).to_contain_text('2 项技能已保存')
                 page.locator('#skillInventory summary').click()
                 expect(page.locator('#skillInventory')).to_contain_text('学习目标')

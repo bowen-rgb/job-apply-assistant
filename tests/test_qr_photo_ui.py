@@ -1,3 +1,4 @@
+from tests.ui_navigation import navigate, set_appearance
 import copy,io,unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -21,7 +22,7 @@ class PhotoAndBatchUITests(unittest.TestCase):
             browser=p.chromium.launch(headless=True)
             try:
                 page=browser.new_page(viewport={'width':1280,'height':1000})
-                page.add_init_script("localStorage.setItem('jaa-ui-mode','full')")
+                page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-mode','full')")
                 page.on('pageerror',lambda error:errors.append(str(error)))
                 def route(r):
                     path=urlparse(r.request.url).path
@@ -40,7 +41,7 @@ class PhotoAndBatchUITests(unittest.TestCase):
                     elif path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Example Candidate','active':True,'identity':{}}]}
                     elif path in {'/api/jobs','/api/sources','/api/pipeline','/api/accounts','/api/resumes'}:data=[]
                     r.fulfill(json=data)
-                page.route('**/*',route);page.goto('http://photo.test/');page.locator('#qrNav').click()
+                page.route('**/*',route);page.goto('http://photo.test/');navigate(page,'qrNav')
                 expect(page.locator('#qrResultTitle')).to_have_text('SNCF')
                 page.locator('.qr-photo-open').click();expect(page.locator('#qrPhotoDialog')).to_be_visible()
                 page.locator('#qrPhotoZoom').fill('200')
