@@ -45,9 +45,9 @@ class ReportTests(unittest.TestCase):
 
     def test_xlsx_marks_text_truncation_instead_of_silently_losing_content(self):
         value=job();value['review_summary']='a'*40000
-        data=render_xlsx([report_row(value)],{'language':'en','created_at':'2026-10-06'})
+        data=render_xlsx([report_row(value)],{'language':'fr','created_at':'2026-10-06'})
         with zipfile.ZipFile(io.BytesIO(data)) as book:
-            self.assertIn('Text exceeds the Excel cell limit',book.read('xl/sharedStrings.xml').decode())
+            self.assertIn('Texte trop long : utilisez HTML pour le lire intégralement.',book.read('xl/sharedStrings.xml').decode())
     def test_html_is_standalone_readable_and_safe_with_review_details_and_originals(self):
         row=report_row(job())
         worker.apply_translations(row,{'title':'接待岗位','summary':'核实每周 20 小时。','reasons.0':'固定期限合同相关',
@@ -74,7 +74,7 @@ class ReportTests(unittest.TestCase):
 
     def test_xlsx_has_filter_freeze_notes_dropdown_and_no_injected_formulas(self):
         value=job();value.update(title='=HYPERLINK("https://bad.test")',company='+cmd',review_summary='@SUM(1,2)')
-        data=render_xlsx([report_row(value)],{'language':'en','created_at':'2026-10-06T10:00:00+00:00'})
+        data=render_xlsx([report_row(value)],{'language':'fr','created_at':'2026-10-06T10:00:00+00:00'})
         with zipfile.ZipFile(io.BytesIO(data)) as book:
             ns={'x':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
             root=ET.fromstring(book.read('xl/worksheets/sheet1.xml'))
@@ -84,8 +84,8 @@ class ReportTests(unittest.TestCase):
             table=ET.fromstring(book.read('xl/tables/table1.xml'))
             self.assertIsNotNone(table.find('x:autoFilter',ns))
             texts=book.read('xl/sharedStrings.xml').decode()
-            self.assertIn('Questions to verify',texts)
-            self.assertIn('Reviewer comments',texts)
+            self.assertIn('Questions à vérifier',texts)
+            self.assertIn('Commentaire du vérificateur',texts)
             self.assertIn('HYPERLINK',texts)
             self.assertNotIn('PRIVATE FULL BODY',texts)
 
@@ -147,7 +147,7 @@ class ExportApiTests(unittest.TestCase):
         self.assertEqual(JobRepository().list()[0]['human_review_status'],'pending')
 
     def test_visible_scope_is_exact_and_contracts_reject_invalid_requests(self):
-        result=self.client.post('/api/review-exports',json={'scope':'visible','job_ids':[2,2,1],'format':'xlsx','language':'en','translate_text':False}).json()
+        result=self.client.post('/api/review-exports',json={'scope':'visible','job_ids':[2,2,1],'format':'xlsx','language':'fr','translate_text':False}).json()
         snapshot=json.loads((exports.directory(result['id'])/'snapshot.json').read_text(encoding='utf-8'))
         self.assertEqual([r['id'] for r in snapshot['rows']],[2,1])
         worker.main(result['id'])

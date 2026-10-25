@@ -28,7 +28,7 @@
 <div class="shell">
   <aside hidden aria-label="Navigation principale">
     <div class="brand"><img class="brand-mark" src="/static/favicon.svg?v=angelina-20261021" width="44" height="44" alt="" aria-hidden="true" /><span>Job Apply Assistant <small>WORKSPACE</small></span></div>
-    <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></div>
+    <div class="language-control"><label for="languageSelect">Langue de l’interface</label><select id="languageSelect" aria-label="Langue de l’interface"><option value="zh">中文</option><option value="fr">Français</option></select></div>
     <!-- Persistent task actions: discovery first, AI review second; use existing theme tokens. -->
     <section id="discoveryActions" aria-label="Recherche et revue">
       <button id="searchBtn" class="primary">Lancer la recherche d’offres</button>
@@ -100,7 +100,7 @@
         <div class="export-controls">
           <label>Contenu<select id="reviewExportScope"><option value="pending">Tous les postes à confirmer</option><option value="visible">Vue affichée avec ses filtres</option><option value="unsubmitted">Offres sans envoi enregistré</option></select></label>
           <label>Format<select id="reviewExportFormat"><option value="html">HTML</option><option value="xlsx">Excel (.xlsx)</option></select></label>
-          <label>Langue du fichier<select id="reviewExportLanguage"><option value="zh">中文</option><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select></label>
+          <label>Langue du fichier<select id="reviewExportLanguage"><option value="zh">中文</option><option value="fr">Français</option></select></label>
         </div>
         <label class="check"><input type="checkbox" id="reviewExportTranslate" checked>Traduire les résumés et questions via ChatGPT, en conservant les originaux</label>
         <p class="small">La traduction utilise le navigateur ChatGPT déjà configuré. Si elle est indisponible, le fichier conserve les originaux avec une indication explicite.</p>

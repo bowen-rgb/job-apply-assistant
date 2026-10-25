@@ -13,7 +13,7 @@ from .review_exports import directory, update_state
 from .review_report import render_html, render_xlsx
 from .worker_runtime import check_cancelled, Cancelled
 
-LANGUAGES={'zh':'Simplified Chinese','fr':'French','en':'English','de':'German','es':'Spanish','pt':'Portuguese'}
+LANGUAGES = {'zh': 'Simplified Chinese', 'fr': 'French'}
 CACHE=ROOT/'data'/'review_translation_cache'
 
 

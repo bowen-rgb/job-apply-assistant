@@ -45,6 +45,11 @@ def main():
     # Explicit allowlist, never copy the project root recursively.
     for name in ('app', 'static', 'docs'):
         copy_tree(ROOT / name, PAYLOAD / name)
+    # Incremental bundles must not retain catalogs removed from the source tree.
+    locale_dir = PAYLOAD / 'static' / 'locales'
+    for catalog in locale_dir.glob('*.json'):
+        if not (ROOT / 'static' / 'locales' / catalog.name).exists():
+            catalog.unlink()
     shutil.copy2(ROOT / 'profile.example.json', PAYLOAD / 'profile.example.json')
     for name in ('LICENSE', 'README.md'):
         if (ROOT / name).exists():shutil.copy2(ROOT / name, PAYLOAD / name)

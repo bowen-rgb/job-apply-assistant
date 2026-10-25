@@ -22,7 +22,7 @@
   <img alt="版本 8.4" src="https://img.shields.io/badge/version-8.4-2247df?style=flat-square">
   <img alt="Python 3.11 及以上" src="https://img.shields.io/badge/Python-3.11%2B-20342b?style=flat-square">
   <img alt="提供 Windows 安装入口" src="https://img.shields.io/badge/setup-Windows-20342b?style=flat-square">
-  <img alt="支持六种界面语言" src="https://img.shields.io/badge/interface-6_languages-687762?style=flat-square">
+  <img alt="支持中文和法语界面" src="https://img.shields.io/badge/interface-Chinese_%2F_French-687762?style=flat-square">
 </p>
 
 在自己的电脑上管理岗位、简历、申请材料和投递记录。第一次使用可以跟着指引手动投递；需要时，再开启浏览器辅助。个人档案与求职历史保存在本机。
@@ -35,7 +35,7 @@
 | **随时知道下一步** | **跟进真实结果** |
 | 工作台与准备队列显示当前步骤、已就绪材料和需要你接管的地方。 | 记录收藏、已确认投递、面试和招聘方反馈；将复核结果导出为独立 HTML 或 Excel。 |
 | **分开管理不同候选人** | **使用熟悉的语言** |
-| 每个档案分别保存个人资料、文件、网站账号、待处理事项和历史记录。 | 支持中文、法语、英语、德语、西班牙语和葡萄牙语；保留岗位原标题供核验。 |
+| 每个档案分别保存个人资料、文件、网站账号、待处理事项和历史记录。 | 仅支持中文和法语；保留岗位原标题供核验。 |
 
 ### 从发现岗位到跟进结果
 

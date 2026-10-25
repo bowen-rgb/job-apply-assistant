@@ -22,6 +22,7 @@ FIELDS = ('id', 'title', 'company', 'location', 'url', 'source', 'employment_typ
 
 
 def labels(language):
+    language = language if language in {'zh', 'fr'} else 'fr'
     return json.loads((ROOT / 'static' / 'locales' / f'{language}.json').read_text(encoding='utf-8'))
 
 

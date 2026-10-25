@@ -72,7 +72,7 @@ class WorkbenchTests(unittest.TestCase):
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
                     if width==320:
                         page.screenshot(path='data/workbench-mobile-preview.png')
-                for language in ['en','fr','de','es','pt','zh']:
+                for language in ['zh','fr']:
                     page.locator('#languageSelect').select_option(language)
                     expect(page.locator('#overviewTitle')).not_to_have_text('undefined')
                 page.locator('#wbTasks').click()

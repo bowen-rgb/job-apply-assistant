@@ -370,7 +370,7 @@ def open_platform_chrome():
 
 @app.get('/api/jobs')
 def jobs(decision: str | None = None, source: str | None = None, language: str = 'fr'):
-    if language not in {'fr','zh','en','de','es','pt'}:
+    if language not in {'fr','zh'}:
         raise HTTPException(400, 'Unsupported language')
     rows = job_repository.list(decision, source)
     if language != 'fr':

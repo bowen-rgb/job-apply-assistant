@@ -54,7 +54,7 @@ class MaterialApproval(BaseModel):
 
 class ReviewExport(BaseModel):
     format: Literal['html', 'xlsx'] = 'html'
-    language: Literal['zh', 'fr', 'en', 'de', 'es', 'pt'] = 'zh'
+    language: Literal['zh', 'fr'] = 'zh'
     scope: Literal['pending', 'visible', 'unsubmitted'] = 'pending'
     job_ids: list[int] = Field(default_factory=list, max_length=1000)
     translate_text: bool = True
@@ -67,7 +67,7 @@ class QueueRequest(BaseModel):
 
 class TitleTranslationRequest(BaseModel):
     job_ids: list[int] = Field(min_length=1, max_length=12)
-    language: Literal['zh', 'fr', 'en', 'de', 'es', 'pt']
+    language: Literal['zh', 'fr']
 
 
 class TrackPatch(BaseModel):

@@ -16,7 +16,7 @@ English · [简体中文](README.zh-CN.md)
   <img alt="Version 8.4" src="https://img.shields.io/badge/version-8.4-2247df?style=flat-square">
   <img alt="Python 3.11 or newer" src="https://img.shields.io/badge/Python-3.11%2B-20342b?style=flat-square">
   <img alt="Windows setup included" src="https://img.shields.io/badge/setup-Windows-20342b?style=flat-square">
-  <img alt="Six interface languages" src="https://img.shields.io/badge/interface-6_languages-687762?style=flat-square">
+  <img alt="Chinese and French interface" src="https://img.shields.io/badge/interface-Chinese_%2F_French-687762?style=flat-square">
 </p>
 
 Keep job discovery, CVs, application preparation and follow-up records in one local workspace. Start with a guided manual application, then enable browser assistance when you need it. Your profile and application history are stored on your computer.
@@ -37,7 +37,7 @@ Keep job discovery, CVs, application preparation and follow-up records in one lo
 | **Keep the next step visible** | **Follow the real outcome** |
 | A live dashboard and preparation queue show what is running, what is ready and where your input is needed. | Track saved jobs, confirmed submissions, interviews and outcomes. Export review reports as standalone HTML or Excel. |
 | **Separate candidate workspaces** | **Choose your language** |
-| Give each candidate their own profile, documents, accounts, tasks and history. | Use Chinese, French, English, German, Spanish or Portuguese. Original job titles remain available for verification. |
+| Give each candidate their own profile, documents, accounts, tasks and history. | Use Chinese or French. Original job titles remain available for verification. |
 
 ### From discovery to follow-up
 
@@ -51,7 +51,7 @@ Keep job discovery, CVs, application preparation and follow-up records in one lo
 
 This screenshot shows the running application with an empty candidate workspace. Zero counts are real; no sample applications or personal CVs were added for the image.
 
-<img src="docs/assets/dashboard-en.png" alt="English workspace in its narrow-screen layout, showing an empty profile, next steps and application tracking" width="380">
+<img src="docs/assets/dashboard-zh.png" alt="Chinese workspace in its narrow-screen layout, showing an empty profile, next steps and application tracking" width="380">
 
 </details>
 

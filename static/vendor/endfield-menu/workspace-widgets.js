@@ -7,7 +7,7 @@
  document.querySelector('.ef-stage').append(root);
  const clock=document.createElement('section');clock.className='jaa-menu-clock';clock.innerHTML='<span data-word="clock"></span><time id="menuClock"></time><small id="menuCalendar"></small>';
  EF.scene.layer('top').append(clock);
- let words={},language='en',active=false,current='music',tracks=[],index=0,lastSwitch=0;
+ let words={},language='fr',active=false,current='music',tracks=[],index=0,lastSwitch=0;
  const audio=$('widgetAudio'),files=$('widgetMusicFiles');
  function show(name){current=name;lastSwitch=Date.now();$('musicWidget').hidden=name!=='music';$('mapWidget').hidden=name!=='map';for(const button of root.querySelectorAll('[data-widget]'))button.setAttribute('aria-pressed',String(button.dataset.widget===name));}
  for(const button of root.querySelectorAll('[data-widget]'))button.onclick=()=>show(button.dataset.widget);
@@ -43,7 +43,7 @@
   if($('widgetRotate').checked&&Date.now()-lastSwitch>30000)show(current==='music'?'map':'music');
  }
  function update(state){
-  active=state.active;language=state.language||'en';words=state.widget||{};
+  active=state.active;language=state.language||'fr';words=state.widget||{};
   for(const element of document.querySelectorAll('[data-word]'))element.textContent=words[element.dataset.word]||'';
   for(const button of root.querySelectorAll('[data-widget]'))button.textContent=words[button.dataset.widget]||button.dataset.widget;
   if(!tracks.length)$('widgetTrack').textContent=words.noTrack||'';

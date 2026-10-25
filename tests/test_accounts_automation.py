@@ -178,7 +178,7 @@ class AutomationBrowserTests(unittest.TestCase):
                 self.assertEqual(page.evaluate('window.sent'),1)
             finally:browser.close()
 
-    def test_accounts_ui_six_languages_redaction_and_candidate_header(self):
+    def test_accounts_ui_two_languages_redaction_and_candidate_header(self):
         static=Path(__file__).resolve().parents[1]/'static'
         with sync_playwright() as p:
             browser=p.chromium.launch(headless=True)
@@ -201,7 +201,7 @@ class AutomationBrowserTests(unittest.TestCase):
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://ui.test/')
                 page.locator('#workspaceMenuButton').wait_for()
-                for language in ['zh','fr','en','de','es','pt']:
+                for language in ['zh','fr']:
                     page.evaluate('(language)=>Locale.setLanguage(language)',language)
                     navigate(page,'accountsNav')
                     page.locator('#accountPassword').wait_for()

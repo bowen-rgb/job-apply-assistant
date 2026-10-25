@@ -10,7 +10,8 @@ window.Surfaces=(()=>{
   function rail(root,sections,id){
     let nav=root.querySelector(':scope > .surface-jumps');
     if(!nav){nav=document.createElement('nav');nav.className='surface-jumps';root.querySelector(':scope > header')?.after(nav);}
-    const label=({zh:'页面分区',fr:'Sections de la page',en:'Page sections',de:'Seitenbereiche',es:'Secciones de la página',pt:'Secções da página'})[Locale.language];nav.setAttribute('aria-label',label);
+    const label=({zh:'页面分区',
+fr:'Sections de la page'})[Locale.language];nav.setAttribute('aria-label',label);
     sections.forEach((section,index)=>{
       const title=section.querySelector('h2,h3');if(!title)return;
       if(!section.id)section.id=id+'Section'+index;

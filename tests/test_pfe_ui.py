@@ -65,7 +65,7 @@ class PFEUITests(unittest.TestCase):
                 expect(page.locator('#pfeList')).to_contain_text('lab.example.org')
                 page.locator('#pfeSettings summary').click()
                 page.locator('#pfeSkills').fill('MATLAB, Python')
-                for language,title in [('de','PFE & Forschung'),('es','Prácticas e investigación'),('pt','Estágio e investigação'),('fr','PFE & recherche'),('en','PFE & research'),('zh','毕业实习与科研机会')]:
+                for language,title in [('fr','PFE & recherche'),('zh','毕业实习与科研机会')]:
                     page.locator('#languageSelect').select_option(language)
                     expect(page.locator('#pfeNav')).to_have_text(title)
                     expect(page.locator('#pfeSkills')).to_have_value('MATLAB, Python')

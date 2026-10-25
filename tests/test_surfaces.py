@@ -149,7 +149,7 @@ class SurfaceTests(unittest.TestCase):
                 page.evaluate('window.failCopy=true');copy.click()
                 expect(copy.locator('..').locator('[role="status"]')).to_contain_text('复制失败')
                 expect(page.locator('.application-error pre').first).to_have_text(job['application_error'])
-                for language in ['en','fr','de','es','pt','zh']:
+                for language in ['zh','fr']:
                     page.locator('#languageSelect').select_option(language)
                     expect(page.locator('#pipelineView h1')).not_to_have_text('undefined')
                 page.goto('http://surfaces.test/api/gmail/guide')

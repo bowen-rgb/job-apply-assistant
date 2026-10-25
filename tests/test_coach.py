@@ -82,10 +82,10 @@ class CoachTests(unittest.TestCase):
             expect(page.locator('#coachFile')).to_be_visible()
             page.locator('#coachFile').set_input_files({'name':'my.pdf','mimeType':'application/pdf','buffer':b'%PDF'})
             page.evaluate('refreshAutomationStatus()')
-            page.locator('#languageSelect').select_option('en')
+            page.locator('#languageSelect').select_option('fr')
             self.assertEqual(page.locator('#coachFile').evaluate('e=>e.files[0].name'),'my.pdf')
             page.locator('#coachUpload').click()
-            expect(page.locator('#coachStatus')).to_contain_text('This was not saved')
+            expect(page.locator('#coachStatus')).to_contain_text('Cela n’a pas été enregistré')
             self.assertEqual(page.locator('#coachFile').evaluate('e=>e.files[0].name'),'my.pdf')
             page.locator('#coachUpload').click()
             expect(page.locator('#coachSearch')).to_be_visible()
@@ -112,7 +112,7 @@ class CoachTests(unittest.TestCase):
 
     def test_all_coach_languages_have_the_same_nonempty_keys(self):
         d=json.loads((STATIC/'coach-text.js').read_text(encoding='utf-8').removeprefix('window.CoachTexts=').rstrip(';\n'))
-        self.assertEqual(set(d),{'fr','zh','en','de','es','pt'})
+        self.assertEqual(set(d),{'fr','zh'})
         for values in d.values():
             self.assertEqual(set(values),set(d['fr']))
             self.assertTrue(all(value.strip() for value in values.values()))

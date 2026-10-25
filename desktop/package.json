@@ -1,6 +1,6 @@
 {
   "name": "job-apply-assistant-desktop",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Local Job Apply Assistant desktop application",
   "author": "Job Apply Assistant contributors",
   "private": true,
@@ -54,7 +54,7 @@
       "runAfterFinish": false,
       "installerLanguages": [
         "zh_CN",
-        "en_US"
+        "fr_FR"
       ],
       "displayLanguageSelector": true,
       "artifactName": "Job-Apply-Assistant-Setup-${version}.${ext}"

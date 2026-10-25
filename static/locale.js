@@ -1,9 +1,10 @@
 /* Local UI translations. Job descriptions and user-entered profile data stay in their original language. */
 const Locale = (() => {
-  const supported = ['zh', 'fr', 'en', 'de', 'es', 'pt'];
+  const supported = ['zh', 'fr'];
   const browser = (navigator.language || 'fr').split('-')[0].toLowerCase();
   const saved = localStorage.getItem('jaa-ui-language');
   let language = supported.includes(saved) ? saved : (supported.includes(browser) ? browser : 'fr');
+  if (saved && !supported.includes(saved)) localStorage.setItem('jaa-ui-language', language);
   const catalogs = {};
   const originals = new WeakMap();
   const attributes = new WeakMap();

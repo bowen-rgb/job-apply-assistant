@@ -11,7 +11,7 @@ class Selection(BaseModel):
     source_name:str=Field(default="",max_length=180)
 
 class Analysis(BaseModel):
-    language:Literal["zh","fr","en","de","es","pt"]="zh"
+    language:Literal["zh","fr"]="zh"
 
 class Dispatch(BaseModel):
     resume_id:str=Field(max_length=80)

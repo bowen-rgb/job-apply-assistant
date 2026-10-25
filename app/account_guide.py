@@ -24,20 +24,9 @@ GUIDES = {
         'Fermez cet onglet puis rouvrez Profils & comptes et vérifiez l’adresse. En cas d’échec, vérifiez Gmail API, utilisateur de test et client Desktop app.',
         'En mode test, l’autorisation peut expirer après sept jours. Pour la révoquer, utilisez les connexions tierces du compte Google. Déconnecter localement retire uniquement le jeton local.',
         'Après connexion, la lecture des codes de connexion est facultative : codes récents du même site et du même compte uniquement. Les autres vérifications restent manuelles. Aucune récupération automatique de mot de passe.']),
-    'en': ('Connect Gmail: one-time setup', [
-        'Open Google Cloud Console with your own account. Create or select a project.',
-        'Enable Gmail API under APIs & Services → Library.',
-        'Configure Google Auth Platform branding and contact email. For personal use choose External and add the Gmail address as a test user under Audience.',
-        'Add gmail.readonly under Data Access. This permits reading, without sending or deleting messages.',
-        'Under Clients → Create client, select Desktop app. Copy Client ID and Client secret. Do not select Web application.',
-        'Open Profiles & accounts in this app, select the right person, then save the Google configuration. Secrets are encrypted on this PC.',
-        'Run start.bat on port 8765. Click Connect Gmail, then the displayed authorization link. Select the correct Google mailbox and approve access.',
-        'Close the authorization tab, reopen Profiles & accounts and check the mailbox address. If unsuccessful, check Gmail API, test user and Desktop app client type.',
-        'Testing-mode grants may expire after seven days. Revoke access in Google Account third-party connections. Disconnect locally removes only the local token.',
-        'After connecting, optionally enable email login codes: recent codes from the same site for the same account only. Other challenges stay manual. Password recovery is never automated. Gmail remains optional.']),
 }
 
 
 def render(language):
-    title, steps = GUIDES.get(language, GUIDES['en'])
-    return '<!doctype html><html lang="'+html.escape(language if language in GUIDES else 'en')+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+title+'</title><link rel="stylesheet" href="/static/connection.css"><main><img class="connection-scene" src="/static/artwork/angelina/read.png" alt="" aria-hidden="true"><h1>'+title+'</h1><ol>'+''.join('<li>'+html.escape(step)+'</li>' for step in steps)+'</ol><p><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console ↗</a></p><p><a href="https://developers.google.com/identity/protocols/oauth2/native-app">Google OAuth documentation</a></p><p><a href="/">Job Apply Assistant</a></p></main></html>'
+    title, steps = GUIDES.get(language, GUIDES['fr'])
+    return '<!doctype html><html lang="'+html.escape(language if language in GUIDES else 'fr')+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+title+'</title><link rel="stylesheet" href="/static/connection.css"><main><img class="connection-scene" src="/static/artwork/angelina/read.png" alt="" aria-hidden="true"><h1>'+title+'</h1><ol>'+''.join('<li>'+html.escape(step)+'</li>' for step in steps)+'</ol><p><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console ↗</a></p><p><a href="https://developers.google.com/identity/protocols/oauth2/native-app">Google OAuth documentation</a></p><p><a href="/">Job Apply Assistant</a></p></main></html>'

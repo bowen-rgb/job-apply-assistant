@@ -659,7 +659,8 @@ function applicationFailure(value){
 }
 // CodeBlock.tsx reference: explicit copy result and a 2.5s reset, keeping the original details.
 function failureCopyText(state){
-  const rows={zh:['复制详情','已复制','复制失败，请选中详情手动复制。'],fr:['Copier le détail','Copié','Copie impossible. Sélectionnez le détail et copiez-le manuellement.'],en:['Copy details','Copied','Could not copy. Select the details and copy manually.'],de:['Details kopieren','Kopiert','Kopieren fehlgeschlagen. Details auswählen und manuell kopieren.'],es:['Copiar detalles','Copiado','No se pudo copiar. Selecciona los detalles y copia manualmente.'],pt:['Copiar detalhes','Copiado','Não foi possível copiar. Selecione os detalhes e copie manualmente.']};
+  const rows={zh:['复制详情','已复制','复制失败，请选中详情手动复制。'],
+fr:['Copier le détail','Copié','Copie impossible. Sélectionnez le détail et copiez-le manuellement.']};
   return (rows[Locale.language]||rows.fr)[state];
 }
 async function copyFailureDetail(button){

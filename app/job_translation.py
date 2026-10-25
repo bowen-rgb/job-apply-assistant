@@ -20,30 +20,30 @@ from uuid import uuid4
 from .profile_store import ROOT
 
 CACHE_DIR = ROOT / 'data' / 'title_translations'
-LANGUAGES = ('zh', 'en', 'de', 'es', 'pt')
+LANGUAGES = ('zh',)
 _network_slots = threading.BoundedSemaphore(3)
 # Ordered by specificity. Brands and place names remain verbatim.
 TERMS = (
-    (r'assistant(?:e)?\s+hall\s+de\s+nuit', ('夜班酒店大堂助理', 'Night lobby assistant', 'Nacht-Lobbyassistenz', 'Asistente nocturno de vestíbulo', 'Assistente noturno de receção')),
-    (r'agent(?:e)?\s+polyvalent(?:e)?\s+en\s+cr[eè]che', ('托育中心综合工作人员', 'Nursery support worker', 'Kita-Allroundkraft', 'Personal polivalente de guardería', 'Assistente polivalente de creche')),
-    (r'h[oô]te(?:\(sse\)|sse)?\s+d[’\x27]\s*accueil', ('接待员', 'Reception host', 'Empfangskraft', 'Personal de recepción', 'Assistente de receção')),
-    (r'chef(?:fe)?\s+de\s+service', ('部门主管', 'Department manager', 'Abteilungsleitung', 'Jefe de departamento', 'Chefe de departamento')),
-    (r'r[eé]ceptionniste', ('前台接待员', 'Receptionist', 'Rezeptionist', 'Recepcionista', 'Rececionista')),
-    (r'agent(?:e)?\s+d[’\x27]\s*accueil', ('接待专员', 'Reception officer', 'Empfangsmitarbeiter', 'Agente de recepción', 'Agente de receção')),
-    (r'employ[eé](?:e|\(e\))?\s+polyvalent(?:e|\(e\))?(?:\s+de\s+restauration)?', ('综合服务员工', 'General service worker', 'Allround-Servicekraft', 'Empleado polivalente', 'Funcionário polivalente')),
-    (r'agent(?:e)?\s+polyvalent(?:e)?', ('综合工作人员', 'General support worker', 'Allroundkraft', 'Agente polivalente', 'Agente polivalente')),
-    (r'pr[eé]parateur(?:trice)?\s+de\s+commandes', ('订单拣货员', 'Order picker', 'Kommissionierer', 'Preparador de pedidos', 'Preparador de encomendas')),
+    ('assistant(?:e)?\\s+hall\\s+de\\s+nuit', ('夜班酒店大堂助理',)),
+    ('agent(?:e)?\\s+polyvalent(?:e)?\\s+en\\s+cr[eè]che', ('托育中心综合工作人员',)),
+    ('h[oô]te(?:\\(sse\\)|sse)?\\s+d[’\\x27]\\s*accueil', ('接待员',)),
+    ('chef(?:fe)?\\s+de\\s+service', ('部门主管',)),
+    ('r[eé]ceptionniste', ('前台接待员',)),
+    ('agent(?:e)?\\s+d[’\\x27]\\s*accueil', ('接待专员',)),
+    ('employ[eé](?:e|\\(e\\))?\\s+polyvalent(?:e|\\(e\\))?(?:\\s+de\\s+restauration)?', ('综合服务员工',)),
+    ('agent(?:e)?\\s+polyvalent(?:e)?', ('综合工作人员',)),
+    ('pr[eé]parateur(?:trice)?\\s+de\\s+commandes', ('订单拣货员',)),
 )
 QUALIFIERS = (
-    (r'\bextra\b', ('临时支援', 'Casual shift', 'Aushilfe', 'Refuerzo temporal', 'Reforço temporário')),
-    (r'\bCDD\b', ('固定期限合同', 'Fixed-term', 'Befristet', 'Contrato temporal', 'Contrato a termo')),
-    (r'\bCDI\b', ('无固定期限合同', 'Permanent', 'Unbefristet', 'Contrato indefinido', 'Contrato sem termo')),
-    (r'\bde\s+nuit\b|\bnuit\b', ('夜班', 'Night shift', 'Nachtschicht', 'Turno nocturno', 'Turno noturno')),
-    (r'\btournant(?:e)?\b', ('轮班', 'Rotating shifts', 'Wechselschicht', 'Turnos rotativos', 'Turnos rotativos')),
-    (r'\btemps\s+partiel\b', ('兼职', 'Part-time', 'Teilzeit', 'Tiempo parcial', 'Tempo parcial')),
-    (r'\btemps\s+(?:plein|complet)\b', ('全职', 'Full-time', 'Vollzeit', 'Tiempo completo', 'Tempo inteiro')),
-    (r'\bpolyvalent(?:e)?\b', ('多职能', 'Multifunctional', 'Vielseitig', 'Polivalente', 'Polivalente')),
-    (r'\b([0-9]+)\s*[hH]\b', (r'\1小时', r'\1h', r'\1h', r'\1h', r'\1h')),
+    ('\\bextra\\b', ('临时支援',)),
+    ('\\bCDD\\b', ('固定期限合同',)),
+    ('\\bCDI\\b', ('无固定期限合同',)),
+    ('\\bde\\s+nuit\\b|\\bnuit\\b', ('夜班',)),
+    ('\\btournant(?:e)?\\b', ('轮班',)),
+    ('\\btemps\\s+partiel\\b', ('兼职',)),
+    ('\\btemps\\s+(?:plein|complet)\\b', ('全职',)),
+    ('\\bpolyvalent(?:e)?\\b', ('多职能',)),
+    ('\\b([0-9]+)\\s*[hH]\\b', ('\\1小时',)),
 )
 
 
