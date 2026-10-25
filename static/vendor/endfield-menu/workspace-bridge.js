@@ -30,8 +30,23 @@
     button.setAttribute('aria-label',item.label);button.title=item.label;
     for(const text of button.querySelectorAll('text[data-menu-label]')){
      text.textContent=item.short;
-     const units=[...item.short].reduce((n,char)=>n+(char.charCodeAt(0)>255?1:.56),0);
-     text.setAttribute('font-size',Math.min(+text.dataset.labelSize,+text.dataset.labelWidth/Math.max(units,1)));
+     // Fit the rendered glyphs, not an estimated character count; French and
+     // Chinese labels must both stay inside their own card.
+     text.setAttribute('font-size',text.dataset.labelSize);
+     const measured=text.getComputedTextLength(),limit=+text.dataset.labelWidth;
+     if(measured>limit&&text.closest('.ef-rtile')&&(/\s/.test(item.short)||/[\u3400-\u9fff]/.test(item.short))){
+      const label=item.short;let split=1,best=Infinity;
+      const spaces=[...label].map((char,i)=>char===' '?i:-1).filter(i=>i>0);
+      const candidates=spaces.length?spaces:Array.from({length:label.length-1},(_,i)=>i+1);
+      for(const i of candidates){const width=Math.max(text.getSubStringLength(0,i),text.getSubStringLength(i,label.length-i));if(width<best){best=width;split=i;}}
+      text.textContent='';text.setAttribute('font-size',Math.min(+text.dataset.labelSize,+text.dataset.labelSize*limit/best));
+      for(const [i,line] of [label.slice(0,split).trim(),label.slice(split).trim()].entries()){
+       const span=document.createElementNS('http://www.w3.org/2000/svg','tspan');span.setAttribute('x',text.getAttribute('x'));span.setAttribute('y',+text.getAttribute('y')+(i?7:-13));span.textContent=line;text.append(span);
+      }
+     }else if(measured>limit)text.setAttribute('font-size',+text.dataset.labelSize*(limit/measured));
+     // Ink bounds may extend beyond advance width for bold CJK glyphs.
+     const ink=text.getBBox().width;
+     if(ink>limit)text.setAttribute('font-size',+text.getAttribute('font-size')*(limit/ink)*.99);
     }
    }
   }

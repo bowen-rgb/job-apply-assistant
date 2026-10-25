@@ -1,0 +1,121 @@
+/* Endfield visual layer: existing tokens and business components, one palette. */
+:root {
+ --bg:#e6e7e3;--panel:#fafaf7;--panel2:#eceeea;--text:#1a1c1e;--muted:#5d6266;--line:#c8cbc7;
+ --accent:#ffde00;--focus:#1a1c1e;--green:#246541;--red:#a43127;--amber:#805400;--cyan:#245371;
+ --aa-orange:#ffde00;--aa-copper:#25292c;--aa-hover:#3b4145;--aa-ink:#1a1c1e;--aa-paper:#fafaf7;--aa-soft:#eceeea;--aa-rule:#c8cbc7;
+ --ui-text:#1a1c1e;--ui-secondary:#5d6266;--ref-soft:#eceeea;--ref-surface-1:#f0f1ed;--ref-surface-2:#fff;--ref-line:#d0d3ce;--ref-line-strong:#aeb3ae;
+ --ref-radius-control:4px;--ref-radius-panel:6px;--ref-radius-dialog:8px;--ref-shadow:0 2px 6px #15181c09;
+ --surface:#fafaf7;--card:#fafaf7;--border:#c8cbc7;--danger:#a43127;
+}
+body {background:var(--bg);color:var(--text);background-image:none}
+body::before {content:'';position:fixed;left:0;top:0;bottom:0;width:7px;background:#ffde00;z-index:65;pointer-events:none}
+.workspace-header {background:#191c1f;color:#f1f2ed;border-bottom:1px solid #41464a;box-shadow:0 4px 18px #0002}
+.workspace-header .brand,.workspace-header .brand>span,.workspace-header .profile-switcher label,.workspace-controls label {color:#f1f2ed}
+.workspace-header .brand img {background:#ededdf;border:1px solid #ffde0080;border-radius:3px;padding:2px}
+.workspace-header button,#workspaceOptions>summary {background:#292e32;border-color:#555c60;color:#f1f2ed;border-radius:4px}
+.workspace-header #workspaceMenuButton {background:#ffde00;color:#1a1c1e;border-color:#ffde00;box-shadow:3px 3px 0 #0004}
+.workspace-header select,.workspace-header select option {background:#252a2e;color:#f1f2ed;-webkit-text-fill-color:#f1f2ed;border:1px solid #555c60;border-radius:4px}
+#workspaceTitle {color:#b7bdbd}#workspaceOptions[open]>button{background:#292e32;color:#f1f2ed}
+.shell>main {padding-top:24px}
+:is(main,dialog) :is(h1,h2,h3,h4) {color:var(--text)}
+:is(main,dialog) :is(input:not([type=checkbox]),textarea,select) {border-radius:4px;background:#fff;border:1px solid var(--ref-line-strong);color:var(--text);box-shadow:none}
+:is(main,dialog) :is(input,textarea,select):focus {outline:2px solid #b49d00;outline-offset:2px;border-color:#343a3d;box-shadow:none}
+:is(main,dialog) input[type=checkbox] {accent-color:#454c50}
+:is(main,dialog) button {border-radius:4px}
+:is(main,dialog) .primary,:is(main,dialog) .actions.five .apply,#searchBtn,#qrSend {background:#ffde00;color:#1a1c1e;border:1px solid #bba400;box-shadow:2px 2px 0 #1a1c1e20}
+:is(main,dialog) .primary:hover:not(:disabled),#searchBtn:hover:not(:disabled),#qrSend:hover:not(:disabled) {background:#f4ce00;color:#1a1c1e}
+:is(main,dialog) .secondary,.workspace-page-actions #batchBtn {background:#252a2e;color:#f2f3ee;border:1px solid #444c50}
+:is(main,dialog) button:disabled {color:#747a7c;background:#e4e6e2;border-color:#d1d4ce;box-shadow:none}
+:is(main,dialog) :is(a,summary,.audit-link) {color:#303c42}
+:is(main,dialog) a:hover {color:#101719;text-decoration:underline}
+:is(main,dialog) .ghost {color:#4d555a}
+:is(main,dialog) .ghost:hover {background:#e6e9e2;color:#1a1c1e}
+:is(main,dialog) :is(button,a):focus-visible {outline:3px solid #9a8200;outline-offset:3px}
+/* Page heads use actual official key art, with an opaque reading zone. */
+:is(#jobsView,#profileView,#pipelineView,#guideView,#pfeView,#overviewView)>header.aa-heading,
+#qrApplicationDialog .qr-desk-heading {
+ background:#1a1c1e;color:#f1f2ed;border:1px solid #343a3f;border-left:5px solid #ffde00;border-radius:4px;min-height:156px;overflow:hidden;isolation:isolate;
+}
+:is(#jobsView,#profileView,#pipelineView,#guideView,#pfeView,#overviewView)>header.aa-heading:after,
+#qrApplicationDialog .qr-desk-heading:after {
+ content:'';position:absolute;inset:0 0 0 43%;width:auto;height:auto;z-index:-1;opacity:1;transform:none;
+ background:linear-gradient(90deg,#1a1c1e 0%,#1a1c1e20 55%,#1a1c1e36),url('/static/artwork/endfield/keyvisual.jpg') center 55%/cover no-repeat;
+}
+:is(#jobsView,#profileView,#pipelineView,#guideView,#pfeView,#overviewView)>header.aa-heading:before {display:none}
+:is(main,dialog) .aa-heading :is(h1,h2#qrTitle) {color:#f6f7f0;font-weight:700;letter-spacing:.015em}
+:is(main,dialog) .aa-heading :is(p,.status,.small) {color:#c4c9c8;max-width:65ch}
+.aa-heading .surface-mark,.aa-heading .qr-kicker {color:#ffde00;background:transparent;border:0;letter-spacing:.16em;font-family:Consolas,monospace}
+.aa-heading .aa-scene {width:100px;height:100px;object-fit:contain;align-self:end;filter:drop-shadow(0 4px 6px #0006)}
+.aa-route {border:1px solid #c5cac4;border-radius:4px;background:#f3f4ed}
+.aa-route button[aria-current=step] {background:#ffde00;color:#1a1c1e;border-color:#b8a000}
+:is(.card,.settings-card,.wb-panel,.pfe-card,.queue-item,.pipeline-card,.metric,.browser-control,.coach-panel) {background:var(--panel);border-color:var(--line);border-radius:6px;color:var(--text);box-shadow:0 2px 6px #15181c07}
+:is(.card,.settings-card,.pfe-card) {border-top:2px solid #31373b}
+:is(.card,.settings-card,.pfe-card):hover {border-top-color:#a38c00}
+.card :is(h2,h3),.settings-card h2,.pfe-card h2 {color:#1a1c1e}
+.surface-jumps {border-color:var(--line)}.surface-jumps button{background:#f2f3ed;border-color:#bfc5be;color:#343c3f;border-radius:3px}
+.surface-jumps button:hover {background:#252a2e;color:#fff}
+#jobMetrics {background:#f3f4ef;border:1px solid #c8ccc5;border-radius:4px}
+#jobMetrics::before {background:#1a1c1e;border-radius:3px}
+#jobMetrics button {color:#4d555a}#jobMetrics button[aria-pressed=true] {color:#ffde00}
+#jobMetrics button b {color:inherit}
+:is(.aa-help,.review-export-panel,.job-tools,.scan-panel,.search-profile-row,#resumeList>div,.resume-item,.profile-research-section) {background:#f0f2eb;border-color:#c4cac1;border-radius:4px}
+:is(.review-box,.queue-explanation,.queue-focus,.qr-help,.qr-insight,.qr-directory,.qr-feedback,.material-review-letter) {background:#ecefe7;border-color:#bcc5b9;color:#303a32;border-radius:4px}
+#scanPanel,.scan-progress,.queue-focus {border-left:3px solid #827000}
+.tag,.tag.queue,.tag.stage {background:#e6e9e1;color:#394d3d;border:1px solid #c8d0c2;border-radius:3px}
+.tag.review,.tag.warning {background:#f6edcd;color:#735405;border-color:#dace9d}
+.tag.error,.tag.failed {background:#f8e6df;color:#8f3026;border-color:#e3b5a7}
+.tag.score {background:#e2ebdd;color:#2e573c}
+:is(.pfe-tabs,.pfe-actions) button {border-color:#aeb6ad;background:#eef1e8;color:#27352e}
+.pfe-tabs button[aria-pressed=true] {background:#252a2e;color:#ffde00;border-color:#252a2e}
+#pfeView>details,.pfe-card blockquote {background:#f0f2eb;border-color:#bfc7bb}
+#pfeNotice:not(:empty) {background:#f5edcf;border-left-color:#9b8100}
+.pipeline-col {background:#dde1d9;border-color:#b9c0b4;border-radius:4px}
+:is(dialog,.material-review,.connection-dialog,#accountsDialog,#pendingTasksDialog) {background:#f7f8f2;color:#1a1c1e;border:1px solid #9fa89f;border-top:4px solid #ffde00;border-radius:8px;box-shadow:0 24px 90px #0005}
+dialog::backdrop {background:#111518a8;backdrop-filter:blur(5px)}
+#qrApplicationDialog {background:#f2f4ed;border-radius:6px}
+#qrApplicationDialog .qr-desk-heading #qrClose {color:#f4f5ef;background:#1b2024b0;border-color:#ffffff50}
+.qr-desk-toolbar,.qr-desk-footer,.qr-batch-summary {background:#ecefe7;border-color:#c3cabe}
+#qrList.qr-imports {background:#dde2d8;border-color:#b9c3b3}
+#qrList li {background:#f8faf3;border-color:#bbc5b5;border-radius:5px}
+#qrList li.qr-active,#qrList li[aria-current=true] {background:#f4edc5;border-color:#a38c00;box-shadow:inset 4px 0 0 #ffde00}
+.qr-directory,.qr-result,.qr-item-title {border-color:#bac4b5}
+.qr-progress,.qr-step,.qr-notice-area {background:#edf0e6;border-color:#c2caba}
+.qr-select strong {color:#202b24}
+#mainMenuView {background:#171a1e;color:#eee}
+.main-menu-heading {background:#171a1e;color:#eee;border-bottom:1px solid #353b40;padding-bottom:14px}
+.main-menu-heading h1 {color:#f0f2ec;font-family:Bahnschrift,"Microsoft YaHei",sans-serif;letter-spacing:.04em}
+.main-menu-heading p,.main-menu-footer,#menuDataStatus,.main-menu-footer a {color:#b7bebf}
+.main-menu-heading input {background:#292e33;color:#f1f2ee;border:1px solid #596166;border-radius:3px}
+.main-menu-heading input::placeholder {color:#a5adae}
+#menuScene {background:#111418}
+.main-menu-footer {background:#171a1e;border-top:1px solid #353b40}
+#menuPageGrid>button {background:#e9ebe4;border:1px solid #aeb7ad;border-radius:4px;color:#1a1c1e}
+#menuPageGrid>button:hover {background:#ffde00;box-shadow:4px 4px 0 #0005}
+.menu-page-icon,.menu-page-arrow {color:#343e40}
+@media(max-width:760px){body::before{width:3px}.aa-heading .aa-scene{width:74px;height:84px}.workspace-header{padding-left:18px}#menuPageGrid>button{min-height:112px}.aa-heading.surface-heading{min-height:136px;grid-template-columns:minmax(0,1fr) 82px}}
+/* Replace the older segmented blue highlight and keep state text explicit. */
+#jobMetrics[data-selection=true]::before {background:#1a1c1e;border-radius:3px}
+#jobMetrics .metric-button.selected,#jobMetrics .metric-button.selected b {color:#ffde00}
+#jobMetrics .metric-button {border-radius:3px}
+:is(.guide-welcome,.guide-page-help,.guide-readiness,.scanpanel,.queue-toolbar,.source-diagnostic,.source-check,.worked-example,.beginner-guide,.example-preview,.coach-job,.coach-file-box,.history-content) {background:#f0f2ec;border-color:#c3c9bf;border-radius:5px}
+#guideView .guide-paths button,#guideView .guide-welcome [data-guide-target=guide],#guideView .beginner-guide .primary {background:#ffde00;color:#1a1c1e;border-color:#bba400}
+.workspace-header #workspaceMenuButton,#searchBtn,#qrSend {background-image:url('/static/artwork/endfield/texture.png');background-size:cover}
+body::before {background:#ffde00 url('/static/artwork/endfield/signal-strip.jpg') center/auto 100%}
+.wb-panel-head>span {border-color:#b9c1b5;color:#59624f}.wb-chart text{fill:#5d6266}.wb-chart .wb-gridline{stroke:#cdd2c8}.wb-chart rect{fill:#343b3f}.wb-chart rect:hover{fill:#a88d00}
+.wb-bar{background:#ecefe7;border-color:#c0c9ba}.wb-bar:hover{background:#f5edc6;border-color:#a59341}.wb-bar i{background:#353d40}
+.wb-next,.wb-metrics>button{border-color:#bfc7b8;border-radius:5px;background:#f1f3eb}.wb-next .wb-actions button{background:#f8faf3;border-color:#bfc7b8;color:#313b37}.wb-next .wb-actions .primary{background:#ffde00;color:#1a1c1e;border-color:#bba400}
+#mainMenuView .main-menu-heading input {background:#292e33;color:#f1f2ee;border:1px solid #596166;border-radius:3px}
+dialog .surface-heading.aa-heading {background:#1a1c1e;color:#f1f2ed;border:1px solid #343a3f;border-left:5px solid #ffde00;border-radius:4px;isolation:isolate;overflow:hidden}
+dialog .surface-heading.aa-heading:before {display:none}
+dialog .surface-heading.aa-heading:after {content:'';position:absolute;inset:0 0 0 48%;width:auto;height:auto;z-index:-1;opacity:1;transform:none;background:linear-gradient(90deg,#1a1c1e,#1a1c1e55),url('/static/artwork/endfield/keyvisual.jpg') center 55%/cover no-repeat}
+dialog .surface-heading.aa-heading h2 {color:#f1f2ed}
+/* Decorative art must never cover controls or escape a modal's own heading. */
+#qrApplicationDialog .qr-desk-heading {position:relative;min-height:96px}
+#qrApplicationDialog .qr-desk-heading h2 {color:#f1f2ed}
+#qrApplicationDialog .qr-desk-heading p {color:#c4c9c8}
+#qrApplicationDialog .qr-desk-heading .qr-kicker {color:#ffde00}
+:is(.aa-heading,.qr-desk-heading)::after {pointer-events:none}
+.qr-addbar {background:#e9ece4;border-color:#c3cabe;color:#303a32}
+#qrList li.selected {background:#f4edc5;border-color:#a38c00;box-shadow:inset 4px 0 0 #ffde00}
+.qr-block-title>span {background:#ebe7c9;color:#3c4140;border-radius:3px}
+#searchBtn:disabled,#qrSend:disabled {background:#e4e6e2;color:#747a7c;border-color:#d1d4ce;box-shadow:none}

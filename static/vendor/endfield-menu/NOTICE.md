@@ -9,3 +9,5 @@ The GPL menu component is retained as a separately served document with source i
 Changes: real page navigation; localized labels and candidate summary; existing local Angelina images; no external fonts or automatic external requests; explicit open/pause lifecycle; native host navigation on narrow screens; source arrays connected to the host page registry. Local clock and music playback are included. Only an explicit location request loads the OpenStreetMap embed; Google Maps is an optional outbound link. Music and coordinates are not uploaded to the application backend.
 
 Not imported: button-art.js, backdrop-field.js, card-contours.js, which upstream explicitly excludes from its license. Menu illustrations use the application's existing user-provided Angelina assets. No game currencies, UID, level, news or fake latency are displayed.
+
+2026-10-25 visual revision restores the upstream charcoal/yellow/orange palette and fits translated SVG labels to measured glyph bounds. Official Endfield background imagery is referenced from the host's artwork/endfield directory; it has its own source/rights notice there and is not licensed under this component's GPL.

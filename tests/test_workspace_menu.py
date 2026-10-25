@@ -143,3 +143,30 @@ class WorkspaceMenuTests(unittest.TestCase):
   self.page.reload();expect(self.page.locator('#menuPageGrid')).to_be_visible(timeout=8000)
   self.page.locator('[data-menu-page=jobs]').click();expect(self.page.locator('#jobsView')).to_be_visible()
   self.assertEqual(self.writes,[])
+ def test_original_palette_and_official_art_reach_menu_and_work_pages(self):
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('.ef-core')).to_be_visible()
+  self.assertEqual(frame.locator('html').evaluate('(e)=>getComputedStyle(e).getPropertyValue("--ef-yellow").trim()'),'#ffde00')
+  self.assertEqual(self.page.locator('#workspaceHeader').evaluate('(e)=>getComputedStyle(e).backgroundColor'),'rgb(25, 28, 31)')
+  from tests.ui_navigation import navigate
+  navigate(self.page,'jobs')
+  self.assertEqual(self.page.locator('#searchBtn').evaluate('(e)=>getComputedStyle(e).backgroundColor'),'rgb(255, 222, 0)')
+  self.assertIn('keyvisual.jpg',self.page.locator('#jobsView>header').evaluate('(e)=>getComputedStyle(e,"::after").backgroundImage'))
+  self.assertEqual(self.writes,[])
+ def test_menu_labels_fit_and_bottom_labels_are_centered_in_six_languages(self):
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('.ef-core')).to_be_visible()
+  self.page.wait_for_timeout(1100)
+  for language in ['zh','en','fr','de','es','pt']:
+   self.page.evaluate('(language)=>Locale.setLanguage(language)',language)
+   expect(frame.locator('html')).to_have_attribute('lang',language)
+   labels=frame.locator('.ef-rtile text[data-menu-label]').evaluate_all('(nodes)=>nodes.map(e=>({x:e.getBBox().x,w:e.getBBox().width,y:e.getBBox().y,h:e.getBBox().height,c:Number(e.getAttribute("x"))}))')
+   for label in labels:
+    self.assertLessEqual(label['w'],95.5,(language,label));self.assertLess(abs(label['x']+label['w']/2-label['c']),1.5,(language,label))
+    self.assertLessEqual(label['y']+label['h'],104.5,(language,label))
+   left=frame.locator('.ef-card text[data-menu-label]').evaluate_all('(nodes)=>nodes.map(e=>({x:e.getBBox().x,w:e.getBBox().width,y:e.getBBox().y,h:e.getBBox().height}))')
+   for label,(a,b) in zip(left,[(168.99,-.03362),(170.39,-.03319),(175.66,-.0329),(153.99,-.03242)]):
+    self.assertGreaterEqual(label['x'],149,(language,label));self.assertLessEqual(label['x']+label['w'],311,(language,label))
+    self.assertLess(label['y']+label['h'],a+b*(label['x']+label['w'])-1,(language,label))
+   for action,center in [('overview',826),('guide',1126)]:
+    label=frame.locator(f'[data-label-route={action}] text[data-menu-label]').last.evaluate('(e)=>({x:e.getBBox().x,w:e.getBBox().width})')
+    self.assertLess(abs(label['x']+label['w']/2-center),1.5,(language,action,label));self.assertLessEqual(label['w'],209)
+   if language in ['zh','fr']:self.page.screenshot(path=f'tmp/endfield-menu-aligned-{language}.png',full_page=True)
