@@ -916,5 +916,6 @@
   "menu.clearLocation": "Effacer la position",
   "menu.rotate": "Alterner",
   "menu.clock": "Heure locale",
-  "menu.audioError": "Lecture impossible. Essayez un autre fichier audio."
+  "menu.audioError": "Lecture impossible. Essayez un autre fichier audio.",
+  "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.": "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées."
 }

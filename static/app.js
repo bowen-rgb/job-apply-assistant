@@ -134,7 +134,7 @@ function showView(which,{resume=false}={}){
   if(which==='overview')Workbench.refresh();
   if(which==='pfe'&&!resume)PFE.open();
   if(which==='profile'&&!resume)return loadProfile();
-  if(which==='pipeline')loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);
+  if(which==='pipeline'){loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message);window.ApplicationInsights?.load();}
 }
 el('guideNav').onclick=()=>showView('guide');
 el('overviewNav').onclick=()=>showView('overview');
@@ -297,7 +297,8 @@ function reviewDetails(j){
       const reasons=(x.reasons||[]).map(v=>`<li>${esc(v)}</li>`).join('');
       const manual=(x.manual_questions||[]).map(v=>`<li>${esc(v)}</li>`).join('');
       const risks=(x.risks||[]).map(v=>`<li>${esc(v)}</li>`).join('');
-      if(reasons||manual||risks) extra=`<details><summary>${esc(tr('Détails du reviewer'))}</summary>${reasons?`<div class="detail-title">${esc(tr('Raisons'))}</div><ul>${reasons}</ul>`:''}${risks?`<div class="detail-title">${esc(tr('Risques'))}</div><ul>${risks}</ul>`:''}${manual?`<div class="detail-title">${esc(tr('À vérifier'))}</div><ul>${manual}</ul>`:''}</details>`;
+      if(x.rubric)extra+=`<p><strong>${esc(Locale.language==='zh'?'加权评分':'Score pondéré')} : ${esc(x.rubric.score)}/100</strong></p><ul>${(x.rubric.parts||[]).map(part=>`<li>${esc(part.label)} · ${esc(part.rating)}/5 · ${esc(Locale.language==='zh'?'权重':'Poids')} ${esc(part.weight)} — ${esc(part.reason)}</li>`).join('')}</ul>`;
+      if(reasons||manual||risks) extra+=`<details><summary>${esc(tr('Détails du reviewer'))}</summary>${reasons?`<div class="detail-title">${esc(tr('Raisons'))}</div><ul>${reasons}</ul>`:''}${risks?`<div class="detail-title">${esc(tr('Risques'))}</div><ul>${risks}</ul>`:''}${manual?`<div class="detail-title">${esc(tr('À vérifier'))}</div><ul>${manual}</ul>`:''}</details>`;
     }catch(e){}
   }
   return `<div class="review-summary">${esc(j.review_verdict==='ERROR'?errorMessage(j.review_summary):tr(j.review_summary||''))}${extra}</div>`;

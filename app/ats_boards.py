@@ -15,6 +15,7 @@ class BoardConfig:
 
 
 def parse_board_configs(rows) -> list[BoardConfig]:
+    from .portal_feeds import PROVIDERS, detect
     out: list[BoardConfig] = []
     for row in rows or []:
         if isinstance(row, dict):
@@ -22,11 +23,16 @@ def parse_board_configs(rows) -> list[BoardConfig]:
             board = str(row.get('board', '') or row.get('slug', '') or row.get('token', '')).strip()
             company = str(row.get('company', '')).strip()
         else:
+            if str(row).strip().startswith('https://'):
+                url = str(row).strip()
+                if detect(url):
+                    out.append(BoardConfig(detect(url), url))
+                continue
             parts = [x.strip() for x in str(row).split(':', 2)]
             ats = parts[0].lower() if parts else ''
             board = parts[1] if len(parts) > 1 else ''
             company = parts[2] if len(parts) > 2 else ''
-        if ats in {'greenhouse', 'ashby', 'lever'} and board:
+        if ats in PROVIDERS and board:
             out.append(BoardConfig(ats, board, company))
     return out[:200]
 
@@ -102,12 +108,25 @@ def discover_boards(rows, report=None) -> Iterable[dict]:
         emit(report, source, 'board', 'running', query=cfg.board)
         try:
             count = 0
-            if cfg.ats == 'greenhouse':
+            if cfg.board.startswith('https://'):
+                from .portal_feeds import collect
+                result = collect(cfg.ats, cfg.board, cfg.company)
+                found = [dict(url=row['url'], title=row['title'], snippet=row.get('location', ''),
+                              source=urllib.parse.urlparse(row['url']).hostname, provider_key=source,
+                              query='ats-board:'+cfg.ats,
+                              prefetched={'title':row['title'], 'company':cfg.company,
+                                          'location':row.get('location',''), 'body':row.get('body',''),
+                                          'date_posted':row.get('posted',''), 'fetch_mode':'public-ats'}) for row in result['rows']]
+                if result['capped']:
+                    emit(report, source, 'board', 'partial', error='Page budget reached; more listings may remain')
+            elif cfg.ats == 'greenhouse':
                 found = _gh(cfg)
             elif cfg.ats == 'ashby':
                 found = _ashby(cfg)
             elif cfg.ats == 'lever':
                 found = _lever(cfg)
+            else:
+                raise ValueError('This ATS requires its full HTTPS board URL')
             for row in found:
                 count += 1
                 yield row

@@ -532,6 +532,7 @@ def runtime_profile(raw: dict[str, Any] | None = None) -> dict[str, Any]:
         'salary_period': prefs.get('salary_period', 'hour'),
         'languages': prefs.get('languages', []),
         'review_rules': review.get('rules', []),
+        'scoring_dimensions': (p.get('insights') or {}).get('dimensions', []),
         'saved_answers': app.get('saved_answers', []),
         'custom_fields': app.get('custom_fields', []),
         'resume_path': str(resume) if resume else '',

@@ -159,6 +159,18 @@ def board_from_url(url):
  if host in {'boards.greenhouse.io','job-boards.greenhouse.io','boards.eu.greenhouse.io'} and parts:return ('greenhouse',parts[0])
  if host in {'jobs.lever.co','jobs.eu.lever.co'} and parts:return ('lever',parts[0])
  if host=='jobs.ashbyhq.com' and parts:return ('ashby',parts[0])
+ from .portal_feeds import detect
+ ats=detect(url)
+ if ats:
+  # Store the board, not each individual vacancy URL, for incremental polling.
+  if ats=='workday':
+   site=next((part for part in parts if not re.fullmatch(r'[a-z]{2}-[A-Za-z]{2}',part)),None)
+   if not site:return None
+   return (ats,f'https://{host}/{site}')
+  if ats in {'personio','teamtailor','recruitee','successfactors'}:return (ats,f'https://{host}')
+  if ats=='workable' and parts:return (ats,f'https://{host}/{parts[0]}')
+  if ats=='eightfold':return (ats,f'https://{host}/careers?'+p.query)
+  if ats=='smartrecruiters' and parts:return (ats,f'https://{host}/{parts[0]}')
  return None
 
 def remember_source(url):

@@ -218,6 +218,20 @@ def _ensure_columns(conn):
 def init_db():
     with connect() as c:
         c.executescript(SCHEMA)
+        c.execute('''CREATE TABLE IF NOT EXISTS application_activities (
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,job_id INTEGER NOT NULL,
+                     kind TEXT NOT NULL,note TEXT DEFAULT '',source TEXT DEFAULT 'manual',
+                     occurred_at TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS mail_outcomes (
+                     message_id TEXT PRIMARY KEY,thread_id TEXT DEFAULT '',job_id INTEGER,
+                     signal TEXT NOT NULL,evidence TEXT DEFAULT '',subject TEXT DEFAULT '',
+                     sender TEXT DEFAULT '',received_at TEXT NOT NULL,
+                     state TEXT DEFAULT 'pending',reason TEXT DEFAULT '',
+                     expected_stage TEXT DEFAULT '',expected_status TEXT DEFAULT '',
+                     created_at TEXT DEFAULT CURRENT_TIMESTAMP)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS mail_sync_cursor (
+                     id INTEGER PRIMARY KEY CHECK(id=1),query TEXT NOT NULL,mailbox TEXT NOT NULL,
+                     page_token TEXT NOT NULL)''')
         _ensure_columns(c)
         c.execute('''CREATE TABLE IF NOT EXISTS material_approvals (
                      job_id INTEGER NOT NULL,token TEXT NOT NULL,

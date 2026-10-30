@@ -139,6 +139,7 @@
         <div class="queue-actions"><button id="browserOpenChrome" class="primary compact">Ouvrir Chrome dédié</button><button id="browserCheckChrome" class="ghost compact">Vérifier la connexion Chrome</button></div>
       </section>
       <section id="analyticsCards" class="metric-grid"></section>
+      <section id="applicationInsights" class="settings-card topgap" aria-label="Retours et suivi des candidatures"></section>
       <section id="queueReviewPanel" class="settings-card topgap" aria-labelledby="queueReviewTitle">
         <h2 id="queueReviewTitle">Revue des offres par ChatGPT</h2>
         <p>Vérifiez les offres avant de préparer les candidatures. Cette action ne postule pas.</p>
@@ -319,7 +320,7 @@
 
           <div class="subsection topgap">
             <h3>Job boards ATS publics (optionnel)</h3>
-            <p class="small">Une ligne par board surveillé. Permet d’interroger directement les flux publics Greenhouse, Ashby et Lever avant le moteur de recherche général.</p>
+            <p class="small">Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.</p>
             <label>Boards configurés<textarea id="company_boards" rows="5" placeholder="greenhouse:company-token:Company Name&#10;ashby:company-slug:Company Name&#10;lever:company-site:Company Name"></textarea></label>
           </div>
         </section>
@@ -358,5 +359,6 @@
 <script src="/static/angelina-ui.js"></script>
 <script src="/static/workspace-menu.js"></script>
 <script src="/static/app.js"></script>
+<script src="/static/application-insights.js"></script>
 </body>
 </html>

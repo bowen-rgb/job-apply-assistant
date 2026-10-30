@@ -169,45 +169,53 @@ class JobRepository:
         if stage not in TRACK_STAGES:
             raise ValueError('invalid tracker stage')
         with connect() as conn:
-            if not self._exists_in(conn, job_id):
-                raise KeyError(job_id)
-            job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
-            if job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'}:
-                if stage in {'saved', 'queued', 'prepared'}:
-                    raise ValueError('A closed application cannot be reopened for preparation')
-                if stage == 'submitted':
-                    if job['application_status'] == 'withdrawn':
-                        raise ValueError('A withdrawn application cannot be reopened')
-                    return
-            external = stage in {'screening', 'interview', 'offer', 'rejected'}
-            if external:
-                if job['application_status'] not in {'submitted', 'submitted_verified'}:
-                    raise ValueError('Confirm submission before recording a recruiter response')
-                if source not in {'email', 'recruiter_portal', 'phone', 'manual'} or not note.strip():
-                    raise ValueError('A recruiter response requires its source and a confirmation note')
-            if stage == 'withdrawn' and job['application_status'] not in {'submitted', 'submitted_verified', 'withdrawn'}:
-                raise ValueError('Confirm submission before recording a withdrawal')
-            if stage == 'queued':
-                queue = conn.execute('SELECT status FROM application_queue WHERE job_id=?', (job_id,)).fetchone()
-                if not queue or queue['status'] not in {'queued', 'running', 'waiting_user'}:
-                    raise ValueError('Add the job to the preparation queue first')
-            if stage == 'prepared' and job['application_status'] not in {'prefilled', 'needs_human'}:
-                raise ValueError('Prepare the application before marking it prepared')
+            self.track_in(conn, job_id, stage, note, followup_at, source)
+
+    def track_in(self, conn, job_id, stage, note="", followup_at="", source=""):
+        """Apply a stage change inside an existing transaction (mail confirmation)."""
+        if stage not in TRACK_STAGES:
+            raise ValueError("invalid tracker stage")
+        if not self._exists_in(conn, job_id):
+            raise KeyError(job_id)
+        job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+        if job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'}:
+            if stage in {'saved', 'queued', 'prepared'}:
+                raise ValueError('A closed application cannot be reopened for preparation')
             if stage == 'submitted':
-                conn.execute("UPDATE jobs SET application_status='submitted',last_application_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
-                conn.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'submitted',?)", (job_id, 'Manual confirmation from pipeline'))
-            if stage == 'withdrawn':
-                conn.execute("UPDATE jobs SET application_status='withdrawn' WHERE id=?", (job_id,))
-            if stage in {'submitted', 'withdrawn', 'rejected'}:
-                conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (stage, job_id))
-            conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,tracker_source=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note.strip()[:4000], source, followup_at[:80], job_id))
-            conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at,source) VALUES(?,?,?,?,?)', (job_id, stage, note.strip()[:4000], followup_at[:80], source))
+                if job['application_status'] == 'withdrawn':
+                    raise ValueError('A withdrawn application cannot be reopened')
+                return
+        external = stage in {'screening', 'interview', 'offer', 'rejected'}
+        if external:
+            if job['application_status'] not in {'submitted', 'submitted_verified'}:
+                raise ValueError('Confirm submission before recording a recruiter response')
+            if source not in {'email', 'recruiter_portal', 'phone', 'manual'} or not note.strip():
+                raise ValueError('A recruiter response requires its source and a confirmation note')
+        if stage == 'withdrawn' and job['application_status'] not in {'submitted', 'submitted_verified', 'withdrawn'}:
+            raise ValueError('Confirm submission before recording a withdrawal')
+        if stage == 'queued':
+            queue = conn.execute('SELECT status FROM application_queue WHERE job_id=?', (job_id,)).fetchone()
+            if not queue or queue['status'] not in {'queued', 'running', 'waiting_user'}:
+                raise ValueError('Add the job to the preparation queue first')
+        if stage == 'prepared' and job['application_status'] not in {'prefilled', 'needs_human'}:
+            raise ValueError('Prepare the application before marking it prepared')
+        if stage == 'submitted':
+            conn.execute("UPDATE jobs SET application_status='submitted',last_application_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
+            conn.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'submitted',?)", (job_id, 'Manual confirmation from pipeline'))
+        if stage == 'withdrawn':
+            conn.execute("UPDATE jobs SET application_status='withdrawn' WHERE id=?", (job_id,))
+        if stage in {'submitted', 'withdrawn', 'rejected'}:
+            conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (stage, job_id))
+        conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,tracker_source=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note.strip()[:4000], source, followup_at[:80], job_id))
+        conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at,source) VALUES(?,?,?,?,?)', (job_id, stage, note.strip()[:4000], followup_at[:80], source))
 
     def assert_preparable(self, job_id: int) -> None:
         with connect() as conn:
             job = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
         if not job:
             raise KeyError(job_id)
+        if str(job['url'] or '').startswith('ledger:'):
+            raise ValueError('This imported record has no application URL. Add the real posting before preparing it.')
         if not can_prepare(dict(job)):
             raise ValueError('Confirm the AI review yourself before preparing this application')
         if (job['user_action'] == 'skipped' or job['decision'] == 'expired'
@@ -246,6 +254,9 @@ class JobRepository:
 
     def clear(self) -> None:
         with connect() as conn:
+            conn.execute('DELETE FROM mail_outcomes')
+            conn.execute('DELETE FROM mail_sync_cursor')
+            conn.execute('DELETE FROM application_activities')
             conn.execute('DELETE FROM human_review_events')
             conn.execute('DELETE FROM application_queue')
             conn.execute('DELETE FROM application_stage_events')

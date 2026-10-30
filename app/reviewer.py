@@ -74,12 +74,17 @@ def build_review_packet(job: dict[str, Any], profile: dict[str, Any], form_snaps
     }
     if form_snapshot:
         packet['application_form_snapshot'] = form_snapshot
+    if profile.get('scoring_dimensions'):
+        packet['scoring_dimensions'] = profile['scoring_dimensions']
     return packet
 
 
 def build_prompt(packet: dict[str, Any]) -> str:
     data = json.dumps(packet, ensure_ascii=False, indent=2)
-    return f'''You are the FINAL REVIEWER for a local job-application assistant used by the candidate.
+    rubric_instruction = ''
+    if packet.get('scoring_dimensions'):
+        rubric_instruction = 'Also return ratings: an object keyed by scoring dimension id, each with score (0–5) and reason grounded in candidate facts. Missing evidence is a gap, never a made-up strength.\n'
+    return rubric_instruction + f'''You are the FINAL REVIEWER for a local job-application assistant used by the candidate.
 
 Review ONE job only. The candidate makes the final decision and final submission.
 Skill records distinguish actual practice, self-assessed ability, unverified basics, team technology and learning targets. Never count a planned, team-only or unconfirmed skill as mastered. Preserve AI-assisted project boundaries. Request clarification for missing personal evidence.
@@ -231,6 +236,7 @@ def validate_review(obj: dict[str, Any]) -> dict[str, Any]:
         'manual_questions': obj.get('manual_questions', []) if isinstance(obj.get('manual_questions', []), list) else [],
         'facts': obj.get('facts', {}) if isinstance(obj.get('facts', {}), dict) else {},
         'guardrail_notes': [],
+        'ratings': obj.get('ratings', {}) if isinstance(obj.get('ratings'), dict) else {},
     }
 
 
@@ -305,6 +311,17 @@ def review_via_chatgpt_web(job_id: int, form_snapshot: dict[str, Any] | None = N
         context = browser.contexts[0] if browser.contexts else browser.new_context()
         raw = ask_chatgpt_json(context, prompt, cfg, purpose='final-review')
         result = validate_review(raw)
+        if profile.get('scoring_dimensions'):
+            from .application_intelligence import score_evaluation
+            try:
+                result['rubric'] = score_evaluation(profile['scoring_dimensions'], result['ratings'])
+                # A rubric cannot override a hard rejection or required human check.
+                if result['rubric']['decision'] != 'apply' and result['verdict'] == 'APPLY':
+                    result['verdict'] = 'HUMAN_REVIEW'
+            except ValueError:
+                result['rubric_error'] = 'Incomplete ratings; human review required'
+                if result['verdict'] == 'APPLY':
+                    result['verdict'] = 'HUMAN_REVIEW'
         result = apply_local_guardrails(result, job, profile, form_snapshot)
 
     with connect() as c:

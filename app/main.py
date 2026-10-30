@@ -96,6 +96,8 @@ from .qr_routes import router as qr_router
 app.include_router(qr_router)
 from .platform_login import router as platform_login_router
 app.include_router(platform_login_router)
+from .insights_routes import router as insights_router
+app.include_router(insights_router)
 
 
 job_repository = JobRepository()

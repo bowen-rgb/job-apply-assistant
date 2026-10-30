@@ -130,8 +130,9 @@ def _salary(v: Any) -> str:
 def _clean_html_text(v: str) -> str:
     if not v:
         return ''
-    soup = BeautifulSoup(html_lib.unescape(str(v)), 'lxml')
-    return re.sub(r'\s+', ' ', soup.get_text(' ', strip=True)).strip()
+    from .vendor.job_search.posting_guard import guard
+    text, _ = guard(html_lib.unescape(str(v)), 'html')
+    return re.sub(r'\s+', ' ', text).strip()
 
 
 def _normalize_date(v: Any) -> str:
@@ -226,7 +227,8 @@ def extract_job_document(html: str, url: str, fallback_title: str = '', fallback
     for tag in soup(['script', 'style', 'noscript', 'svg', 'nav', 'header', 'footer']):
         tag.decompose()
     content = soup.select_one('main, article, [role="main"]') or soup
-    text = re.sub(r'\n{3,}', '\n\n', content.get_text('\n', strip=True))
+    from .vendor.job_search.posting_guard import guard
+    text, integrity = guard(str(content), 'html')
     # JSON-LD describes this offer; page chrome and related offers are not evidence.
     combined = '\n'.join(x for x in [title, description or text, fallback_snippet] if x)
 
@@ -255,6 +257,7 @@ def extract_job_document(html: str, url: str, fallback_title: str = '', fallback
     fingerprint = hashlib.sha256(fp_seed.encode('utf-8', errors='ignore')).hexdigest()[:24]
 
     keep_json = {}
+    keep_json['integrity'] = {key: integrity.get(key) for key in ('verdict', 'invisible_flagged', 'invisible_chars')}
     for key in ('@type', 'title', 'name', 'hiringOrganization', 'jobLocation', 'employmentType', 'datePosted', 'validThrough', 'jobStartDate', 'jobEndDate', 'endDate', 'baseSalary'):
         if key in job:
             keep_json[key] = job[key]
