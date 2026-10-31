@@ -248,11 +248,16 @@ def _response_failure(page):
 
 
 def _wait_response(page,purpose,before,previous_json,timeout_s):
-    deadline = time.time() + timeout_s
+    started = time.monotonic()
+    # A reasoning response can legitimately outlive the initial response window.
+    # Visible generation/progress extends waiting, but never beyond three windows.
+    hard_deadline = started + timeout_s * 3
+    idle_deadline = started + timeout_s
     response = ''
     last = ''
     stable = 0
-    while time.time() < deadline:
+    generating = False
+    while time.monotonic() < hard_deadline:
         check_cancelled()
         page.wait_for_timeout(1000)
 
@@ -260,11 +265,15 @@ def _wait_response(page,purpose,before,previous_json,timeout_s):
         if failure:
             raise ChatGPTResponseError(failure)
 
+        generating = _is_generating(page)
+        if generating:
+            idle_deadline = min(hard_deadline, time.monotonic() + timeout_s)
+
         # ChatGPT web changes its message DOM periodically. Prefer a
         # complete typed JSON object visible anywhere in the recent
         # conversation over relying on one assistant selector.
         obj = _page_json(page, purpose, previous_json)
-        if obj is not None and not _is_generating(page):
+        if obj is not None and not generating:
             encoded = json.dumps(obj, sort_keys=True)
             stable = stable + 1 if encoded == last else 0
             last = encoded
@@ -277,7 +286,9 @@ def _wait_response(page,purpose,before,previous_json,timeout_s):
             response = msgs[-1]
         elif msgs and msgs[-1] not in before:
             response = msgs[-1]
-        if response and response == last and not _is_generating(page):
+        if response and response != last:
+            idle_deadline = min(hard_deadline, time.monotonic() + timeout_s)
+        if response and response == last and not generating:
             stable += 1
         else:
             stable = 0
@@ -286,13 +297,16 @@ def _wait_response(page,purpose,before,previous_json,timeout_s):
             obj = _extract_json_for_purpose(response, purpose)
             if obj is not None and obj not in previous_json:
                 return obj
+        if time.monotonic() >= idle_deadline:
+            break
 
     if response and not _is_generating(page):
         obj = _extract_json_for_purpose(response, purpose)
         if obj is not None and obj not in previous_json:
             return obj
     _diagnostic(page, purpose)
-    raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
+    detail = 'generation still active at bounded wait limit' if generating else 'no complete typed response before idle timeout'
+    raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}: {detail}')
 
 
 def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str = 'job-agent') -> dict[str, Any]:
@@ -338,7 +352,7 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
 
             try:
                 return _wait_response(page,purpose,before,previous_json,timeout_s)
-            except ChatGPTResponseError:
+            except (ChatGPTResponseError, PlaywrightTimeoutError):
                 _diagnostic(page,purpose)
                 if _find_prompt(page) is None:
                     raise
@@ -357,7 +371,7 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
                 previous_json=[obj for message in before if (obj := _extract_json_for_purpose(message,purpose)) is not None]
                 _set_prompt(box,prompt);box.press('Enter')
                 try:return _wait_response(page,purpose,before,previous_json,timeout_s)
-                except ChatGPTResponseError:
+                except (ChatGPTResponseError, PlaywrightTimeoutError):
                     _diagnostic(page,purpose)
                     raise
         except Cancelled:

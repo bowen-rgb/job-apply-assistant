@@ -1,19 +1,21 @@
 /* Clarify once, retain candidate facts, then resume the existing native workflow. */
 window.ReviewGaps=(()=>{
  const t=(zh,fr)=>Locale.language==='zh'?zh:fr;
- let dialog,timer,owner,signature='',epoch=0,inFlight=false,saving=0;
+ let dialog,timer,owner,signature='',epoch=0,inFlight=false,saving=0,filter='all';
  const drafts=new Map();
- async function open(){
+ async function open(nextFilter='all'){
+  if(filter!==nextFilter){filter=nextFilter;signature='';}
   if(!dialog){dialog=document.createElement('dialog');dialog.className='review-gaps-dialog';document.body.append(dialog);dialog.addEventListener('close',()=>{clearInterval(timer);timer=null;epoch++;owner=null;signature='';drafts.clear();dialog.replaceChildren();});}
   if(!dialog.open){epoch++;dialog.showModal();const loading=document.createElement('p');loading.textContent=t('正在读取最新复核结果…','Chargement des dernières revues…');dialog.append(loading);}
   await refresh();
   if(dialog.open&&!timer)timer=setInterval(refresh,3000);
  }
- async function refresh(){
+ async function refresh(snapshot){
   if(!dialog?.open||document.hidden||inFlight||saving)return;
+  if(!snapshot&&window.MatchAutomation?.hasLiveSnapshot())return MatchAutomation.refresh();
   inFlight=true;const requestEpoch=epoch;
   try{
-   const data=await requestJson('/api/matches/gaps');
+   const data=snapshot||await requestJson('/api/matches/gaps');
    if(!dialog.open||requestEpoch!==epoch)return;
    if(owner&&owner!==data.candidate_id){dialog.close();return;}
    owner=data.candidate_id;
@@ -45,13 +47,18 @@ window.ReviewGaps=(()=>{
   const close=document.createElement('button');close.textContent=t('关闭','Fermer');close.onclick=()=>dialog.close();
   const note=document.createElement('p');note.textContent=t('这里是 AI 审核提出的疑问，不代表招聘网站必填题或 HR 来信。系统先自动查证；可选疑问只作提醒。只有明确缺少的个人事实才需要你填写。','Ces questions proviennent de la revue IA, pas nécessairement du formulaire employeur ou des RH. Les points facultatifs restent des conseils ; seuls les faits personnels manquants demandent votre réponse.');
   dialog.append(heading,close,note);
-  const auto=document.createElement('button');auto.className='primary';auto.textContent=t('让 ChatGPT 自动补全并再审','Faire compléter et réévaluer par ChatGPT');
-  auto.onclick=async()=>{auto.disabled=true;try{await requestJson('/api/matches/automation?mode=clarify',{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){note.textContent=error.message;auto.disabled=false;}};dialog.append(auto);
+  const research=data.actions?.public_research?.count||0;
+  if(!data.actions||research){
+   const auto=document.createElement('button');auto.className='primary';auto.textContent=data.actions?t(`查证公开岗位信息并复核（${research}）`,`Rechercher les informations publiques et réévaluer (${research})`):t('让 ChatGPT 自动补全并再审','Faire compléter et réévaluer par ChatGPT');
+   auto.onclick=async()=>{auto.disabled=true;try{await requestJson(`/api/matches/automation?mode=${data.actions?'research':'clarify'}`,{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){note.textContent=error.message;auto.disabled=false;}};dialog.append(auto);
+  }
   try{
    const status=document.createElement('p');status.setAttribute('role','status');dialog.append(status);
    if(!data.items.length){status.textContent=t('当前没有待补全的复核结果。连接或回复异常请使用批量处理的重试按钮。','Aucune clarification en attente. Pour une erreur de connexion ou de réponse, reprenez le lot.');return;}
    const kinds={candidate:t('AI 复核：缺少个人事实','Revue IA : fait personnel manquant'),posting:t('AI 复核疑问：系统查证，无需在这里填写','Question IA : recherche automatique'),form:t('实际申请表单中需处理的问题','Question du formulaire réel'),evaluation:t('评分回复不完整，需系统重审','Évaluation incomplète : relancer la revue'),unknown:t('旧 AI 审核疑问（非网站必填，等待自动重审）','Ancienne question IA : réévaluation automatique')};
-   for(const job of data.items){
+   const visible=filter==='personal'&&data.actions?data.items.filter(job=>data.actions.personal_input.job_ids.includes(job.id)):data.items;
+   if(!visible.length)status.textContent=t('个人事实已补充完毕；可以重新审核已补充的岗位。','Les faits personnels sont complétés ; vous pouvez réévaluer les offres prêtes.');
+   for(const job of visible){
     const section=document.createElement('section');section.className='review-gap-job';section.dataset.jobId=String(job.id);
     const title=document.createElement('h3');title.textContent=`${job.company} · ${job.title}`;
     const summary=document.createElement('p');summary.textContent=job.review_summary;
@@ -80,13 +87,14 @@ window.ReviewGaps=(()=>{
       const previous=data.answers.find(a=>a.question===gap.question&&(a.job_id===job.id||a.reusable));
       const input=document.createElement('textarea');input.rows=3;input.maxLength=4000;input.value=previous?.answer||'';input.setAttribute('aria-label',gap.question);field.append(input);
       const label=document.createElement('label'),reuse=document.createElement('input');reuse.type='checkbox';reuse.checked=previous?.reusable===true;reuse.disabled=!['candidate','unknown'].includes(gap.kind);label.append(reuse,document.createTextNode(t('这是我的个人事实，保存到当前档案，今后同类审核可复用（不代表同意网站条款）','Fait personnel à conserver et réutiliser dans les revues (hors consentements)')));field.append(label);
-      const save=document.createElement('button');save.textContent=t('保存这条信息','Enregistrer cette réponse');save.onclick=async()=>{save.disabled=true;saving++;try{await requestJson('/api/matches/gaps/answers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:data.candidate_id,job_id:job.id,question:gap.question,answer:input.value,reusable:reuse.checked})});field.dataset.dirty='false';drafts.delete(JSON.stringify([String(job.id),gap.question]));loadedProfile=null;status.textContent=t('已保存到当前个人档案。补完后点击底部“继续批量复核”。','Enregistré dans le profil actuel. Reprenez la revue une fois les réponses complétées.');}catch(error){status.textContent=error.message;}finally{save.disabled=false;saving--;}};field.append(save);
+      const save=document.createElement('button');save.textContent=t('保存这条信息','Enregistrer cette réponse');save.onclick=async()=>{save.disabled=true;saving++;try{await requestJson('/api/matches/gaps/answers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:data.candidate_id,job_id:job.id,question:gap.question,answer:input.value,reusable:reuse.checked})});field.dataset.dirty='false';drafts.delete(JSON.stringify([String(job.id),gap.question]));loadedProfile=null;status.textContent=t('已保存到当前个人档案。补完后点击底部的重新审核按钮。','Enregistré dans le profil actuel. Réévaluez les offres une fois les réponses complétées.');}catch(error){status.textContent=error.message;}finally{save.disabled=false;saving--;await refresh();await window.MatchAutomation?.refresh();}};field.append(save);
      }
      section.append(field);
     }
     dialog.append(section);
    }
-   const resume=document.createElement('button');resume.className='primary';resume.textContent=t('继续批量复核','Reprendre la revue en lot');resume.onclick=async()=>{resume.disabled=true;try{await requestJson('/api/matches/automation',{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){status.textContent=error.message;resume.disabled=false;}};dialog.append(resume);
+   const ready=data.actions?.rereview?.count||0;
+   const resume=document.createElement('button');resume.className='primary';resume.textContent=data.actions?t(`重新审核已补充 / 待重审岗位（${ready}）`,`Réévaluer les offres complétées / prêtes (${ready})`):t('继续批量复核','Reprendre la revue en lot');resume.disabled=!!data.actions&&!ready;resume.onclick=async()=>{resume.disabled=true;try{await requestJson(data.actions?'/api/matches/automation?mode=rereview':'/api/matches/automation',{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){status.textContent=error.message;resume.disabled=false;}};dialog.append(resume);
   }catch(error){note.textContent=error.message;}
  }
  return {open,refresh};
