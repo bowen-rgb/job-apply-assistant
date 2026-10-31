@@ -10,6 +10,10 @@ NOTE = 'Automatic AI review pending'
 CONTENT = ('title', 'company', 'location', 'body', 'employment_type', 'start_date', 'end_date', 'valid_through')
 
 
+class ReviewNeedsInput(ValueError):
+    """This item needs candidate input; unrelated queue items can continue."""
+
+
 def prepare(job_id, stopped=lambda: False):
     profile = load_profile_raw()
     if profile.get('automation', {}).get('chatgpt_web_reviewer', {}).get('enabled') is False:
@@ -48,7 +52,7 @@ def prepare(job_id, stopped=lambda: False):
                          (result.get('summary') or 'AI review: do not prepare', job_id))
             return False
         if result['verdict'] != 'APPLY' or current['review_verdict'] != 'APPLY':
-            raise ValueError(result.get('summary') or 'AI review still needs missing information or your decision')
+            raise ReviewNeedsInput(result.get('summary') or 'AI review still needs missing information or your decision')
         conn.execute('UPDATE jobs SET automatic_review_token=? WHERE id=?', (automatic_token(current), job_id))
         conn.execute("UPDATE application_queue SET note='',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (job_id,))
     return True

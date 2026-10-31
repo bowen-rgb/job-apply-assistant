@@ -29,3 +29,11 @@
 ## 旧缺项的一键自动补全
 
 批量状态和补全窗口均提供“让 ChatGPT 自动补全并再审”。请求 /api/matches/automation?mode=clarify 固定本次仍符合资格的 HUMAN_REVIEW 岗位集合，走现有后台 worker 的查证、审核、通过后入队流程。失败重试保留原集合（包括刚因连接错误成为 ERROR 的当前项），不会混入全部未审核岗位；已投递、跳过、明确否决、失效及已入队仍受原筛选约束。后台运行期间重复点击不另开任务。资料或岗位变化仍需重新验证授权。
+
+## 可选提醒与真正阻塞分离
+
+审核输出 preparation_readiness（ready/blocked/unsuitable），blockers 必须区分 blocking。只有明确评为 ready 且无真实阻塞的当轮有效回复，才能把 HUMAN_REVIEW 规范为 APPLY；旧数据、未知字段、模型错误不会直接放行。可选问题转入 risks；本地硬约束和实际表单必填/声明检查在规范化之后执行。评分采用 Apply-Pilot 的 apply/consider/skip 分层：consider 仅提示，不伪装成资料缺失；skip 标记不适合；评分数据不完整仍需重新审核。
+
+队列中 ReviewNeedsInput 只把当前项置 waiting_user，批量模式继续处理下一份；连接错误、资料变化等异常仍暂停。单份模式行为保留。旧的 unknown 和 posting 疑问不提供手填框，只有 candidate 类型可以存入个人档案，避免将招聘方政策或 AI 猜测伪装为个人事实。
+
+58 项相关测试通过，覆盖评分分层、提醒转为风险、真实表单拦截、批次继续处理、授权失效及电脑端操作。没有发送真实申请。

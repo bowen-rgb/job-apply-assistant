@@ -118,7 +118,7 @@ def build_prompt(packet: dict[str, Any]) -> str:
             if packet.get('scoring_dimensions') else '')
     schema={'verdict':'APPLY|SKIP|HUMAN_REVIEW','confidence':0,'summary':'Short French summary',
             'reasons':[],'risks':[],'manual_questions':[],
-            'blockers':[],'research_findings':[],
+            'preparation_readiness':'ready|blocked|unsuitable','blockers':[],'research_findings':[],
             'facts':{key:'' for key in ('contract','start_date','end_date','location','schedule','salary')}}
     if packet.get('scoring_dimensions'):schema['ratings']={}
     return f"""Review ONE vacancy for a local preparation queue. Do not fill forms, send applications or make declarations.
@@ -142,7 +142,8 @@ Decision rules:
 - Never count a planned, team-only or unconfirmed skill as mastered. Preserve self-assessment and AI-assisted project boundaries. Current skill status and evidence override historical CV wording.
 - Distinguish a mandatory requirement from a preference. Do not demand proof of every advertised tool, exact street address/commute, pay, timetable, PhD funding or recruiter acceptance of an otherwise compatible school-authorized PFE merely because it is not published. Put non-blocking uncertainties in risks. Explicit eligibility contradictions still block.
 - Reuse confirmed_review_answers and saved_application_answers when relevant; do not ask the same answered question again. Answers are self-reported evidence, not proof of a higher skill level. Job-specific answers apply ONLY to this vacancy. Never reuse consent or legal declarations across applications.
-- For HUMAN_REVIEW return blockers (maximum 3), each with kind candidate|posting|form|evaluation, question (plain French), reason, and evidence (the exact relevant requirement or validation failure). Candidate = a fact the applicant can supply; posting = only employer/original posting can clarify; form = observed required field; evaluation = invalid/incomplete scoring. Ask only questions whose answers could change the decision. Do not put optional research questions here.
+- preparation_readiness: ready if suitable to prepare honestly despite learnable gaps; blocked only for a material unmet/unknown mandatory condition; unsuitable for an explicit incompatibility. Optional software experience, employer willingness to train, speculative recruiter acceptance and future PhD funding are not prerequisites unless explicitly mandatory in this posting or candidate constraints. No need to ask the employer for permission merely to apply honestly.
+- For HUMAN_REVIEW return blockers (maximum 3), each with kind candidate|posting|form|evaluation, blocking (true ONLY for an actual mandatory condition), question (plain French), reason, and evidence (the exact relevant mandatory requirement or validation failure). Candidate = a fact the applicant can supply; posting = only employer/original posting can clarify; form = observed required field; evaluation = invalid/incomplete scoring. With no observed form, do not invent form questions. Put optional questions in risks, not manual_questions or blockers. ready should produce APPLY, even with advisory risks.
 - Unknown dates remain unknown. Never infer protected attributes, work authorization, salary commitments or legal attestations.
 
 Return one JSON object only, without markdown. verdict must be exactly APPLY, SKIP or HUMAN_REVIEW; confidence is 0–100. summary: at most 400 characters in French. reasons/risks/manual_questions: at most 3 concise entries each. Unknown facts: empty string.{rubric}
@@ -278,12 +279,29 @@ def validate_review(obj: dict[str, Any]) -> dict[str, Any]:
         'reasons': obj.get('reasons', []) if isinstance(obj.get('reasons', []), list) else [],
         'risks': obj.get('risks', []) if isinstance(obj.get('risks', []), list) else [],
         'manual_questions': obj.get('manual_questions', []) if isinstance(obj.get('manual_questions', []), list) else [],
+        'preparation_readiness':obj.get('preparation_readiness') if obj.get('preparation_readiness') in {'ready','blocked','unsuitable'} else '',
         'research_findings':findings,
         'facts': obj.get('facts', {}) if isinstance(obj.get('facts', {}), dict) else {},
         'blockers': [b for b in obj.get('blockers', []) if isinstance(b, dict) and b.get('kind') in {'candidate','posting','form','evaluation'} and isinstance(b.get('question'), str)][:3] if isinstance(obj.get('blockers'), list) else [],
         'guardrail_notes': [],
         'ratings': obj.get('ratings', {}) if isinstance(obj.get('ratings'), dict) else {},
     }
+
+
+def normalize_preparation_review(result):
+    """Only an explicit preparation-ready assessment can dismiss advisory questions."""
+    blockers=result.get('blockers',[])
+    advice=[b for b in blockers if b.get('blocking') is False]
+    result['blockers']=[b for b in blockers if b.get('blocking') is not False]
+    for item in advice:
+        if item['question'] not in result['risks']:result['risks'].append(item['question'])
+    if (result['verdict']=='HUMAN_REVIEW' and result.get('preparation_readiness')=='ready'
+            and not result['blockers']):
+        # Never reinterpret a legacy or failed response as permission.
+        result['risks'].extend(q for q in result['manual_questions'] if q not in result['risks'])
+        result['manual_questions']=[]
+        result['verdict']='APPLY'
+    return result
 
 
 def _parse_iso(s: str) -> date | None:
@@ -364,16 +382,16 @@ def review_via_chatgpt_web(job_id: int, form_snapshot: dict[str, Any] | None = N
             context = browser.contexts[0] if browser.contexts else browser.new_context()
             raw = ask_chatgpt_json(context, prompt, cfg, purpose='final-review')
     result = validate_review(raw)
+    normalize_preparation_review(result)
     if profile.get('scoring_dimensions'):
         from .application_intelligence import score_evaluation
         try:
             result['rubric'] = score_evaluation(profile['scoring_dimensions'], result['ratings'])
-            # A rubric cannot override a hard rejection or required human check.
-            if result['rubric']['decision'] != 'apply' and result['verdict'] == 'APPLY':
-                result['verdict'] = 'HUMAN_REVIEW'
-                result['blockers'].append({'kind':'evaluation','question':'Le score pondéré reste sous le seuil de préparation.',
-                    'reason':'Le score doit être réévalué après clarification des faits, sans inventer de compétences.',
-                    'evidence':str(result['rubric'])})
+            # Apply-Pilot distinguishes consider from skip; neither is missing data.
+            if result['verdict']=='APPLY':
+                if result['rubric']['decision']=='skip':result['verdict']='SKIP'
+                elif result['rubric']['decision']=='consider':
+                    result['risks'].append('Score intermédiaire : candidature à considérer, avec les limites techniques déclarées.')
         except ValueError:
             result['rubric_error'] = 'Incomplete ratings; human review required'
             if result['verdict'] == 'APPLY':

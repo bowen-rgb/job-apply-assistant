@@ -148,7 +148,7 @@ def _worker(mode: str = 'one'):
         for pending_id in pending_ids:
             if _stop.is_set():
                 break
-            from .automatic_review import NOTE, prepare as review_before_prepare
+            from .automatic_review import NOTE, ReviewNeedsInput, prepare as review_before_prepare
             with connect() as c:
                 automatic = c.execute("SELECT note FROM application_queue WHERE job_id=? AND status='queued'", (pending_id,)).fetchone()
             if automatic and automatic['note'] == NOTE:
@@ -156,6 +156,14 @@ def _worker(mode: str = 'one'):
                 try:
                     if not review_before_prepare(pending_id, _stop.is_set):
                         continue
+                except ReviewNeedsInput as exc:
+                    with connect() as c:
+                        c.execute("UPDATE application_queue SET status='waiting_user',note=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='queued'", (str(exc)[:2000], pending_id))
+                    _set(current_job_id=None,message=str(exc)[:2000])
+                    if mode=='one':
+                        _set(paused=True,pause_reason='review_needs_information')
+                        break
+                    continue
                 except Exception as exc:
                     with connect() as c:
                         c.execute("UPDATE jobs SET review_verdict='ERROR',review_summary=? WHERE id=? AND review_verdict IN ('QUEUED','RUNNING')", (str(exc)[:2000], pending_id))

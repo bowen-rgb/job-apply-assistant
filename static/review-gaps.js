@@ -8,7 +8,7 @@ window.ReviewGaps=(()=>{
   dialog.replaceChildren();
   const heading=document.createElement('h2');heading.textContent=t('补全复核所需信息','Compléter les informations de revue');
   const close=document.createElement('button');close.textContent=t('关闭','Fermer');close.onclick=()=>dialog.close();
-  const note=document.createElement('p');note.textContent=t('先让 ChatGPT 自动查证下面的问题。只有系统仍无法确认、且你本人知道的事实，才需要手动补充。','Laissez d’abord ChatGPT rechercher les réponses. Complétez uniquement les faits personnels qui restent inconnus.');
+  const note=document.createElement('p');note.textContent=t('这里是 AI 审核提出的疑问，不代表招聘网站必填题或 HR 来信。系统先自动查证；可选疑问只作提醒。只有明确缺少的个人事实才需要你填写。','Ces questions proviennent de la revue IA, pas nécessairement du formulaire employeur ou des RH. Les points facultatifs restent des conseils ; seuls les faits personnels manquants demandent votre réponse.');
   dialog.append(heading,close,note);
   const auto=document.createElement('button');auto.className='primary';auto.textContent=t('让 ChatGPT 自动补全并再审','Faire compléter et réévaluer par ChatGPT');
   auto.onclick=async()=>{auto.disabled=true;try{await requestJson('/api/matches/automation?mode=clarify',{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){note.textContent=error.message;auto.disabled=false;}};dialog.append(auto);
@@ -16,7 +16,7 @@ window.ReviewGaps=(()=>{
    const data=await requestJson('/api/matches/gaps');
    const status=document.createElement('p');status.setAttribute('role','status');dialog.append(status);
    if(!data.items.length){status.textContent=t('当前没有待补全的复核结果。连接或回复异常请使用批量处理的重试按钮。','Aucune clarification en attente. Pour une erreur de connexion ou de réponse, reprenez le lot.');return;}
-   const kinds={candidate:t('你可以补充的个人信息','Information personnelle'),posting:t('需从岗位原页或招聘方确认','À vérifier auprès de l’employeur'),form:t('仅限本次表单的问题','Question propre au formulaire'),evaluation:t('评分回复不完整，需系统重审','Évaluation incomplète : relancer la revue'),unknown:t('旧结果：请先判断由谁确认','Ancien résultat : identifier qui peut répondre')};
+   const kinds={candidate:t('AI 复核：缺少个人事实','Revue IA : fait personnel manquant'),posting:t('AI 复核疑问：系统查证，无需在这里填写','Question IA : recherche automatique'),form:t('实际申请表单中需处理的问题','Question du formulaire réel'),evaluation:t('评分回复不完整，需系统重审','Évaluation incomplète : relancer la revue'),unknown:t('旧 AI 审核疑问（非网站必填，等待自动重审）','Ancienne question IA : réévaluation automatique')};
    for(const job of data.items){
     const section=document.createElement('section');section.className='review-gap-job';
     const title=document.createElement('h3');title.textContent=`${job.company} · ${job.title}`;
@@ -34,7 +34,7 @@ window.ReviewGaps=(()=>{
      const field=document.createElement('fieldset'),legend=document.createElement('legend');legend.textContent=kinds[gap.kind]||kinds.unknown;field.append(legend);
      const question=document.createElement('p');question.textContent=gap.question;field.append(question);
      for(const value of [gap.reason,gap.evidence])if(value){const p=document.createElement('p');p.className='small';p.textContent=value;field.append(p);}
-     if(gap.kind!=='evaluation'){
+     if(gap.kind==='candidate'){
       const previous=data.answers.find(a=>a.question===gap.question&&(a.job_id===job.id||a.reusable));
       const input=document.createElement('textarea');input.rows=3;input.maxLength=4000;input.value=previous?.answer||'';input.setAttribute('aria-label',gap.question);field.append(input);
       const label=document.createElement('label'),reuse=document.createElement('input');reuse.type='checkbox';reuse.checked=previous?.reusable===true;reuse.disabled=!['candidate','unknown'].includes(gap.kind);label.append(reuse,document.createTextNode(t('这是我的个人事实，保存到当前档案，今后同类审核可复用（不代表同意网站条款）','Fait personnel à conserver et réutiliser dans les revues (hors consentements)')));field.append(label);

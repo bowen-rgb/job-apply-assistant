@@ -42,8 +42,9 @@ def save_answer(payload):
         job=next((j for j in snapshot()['items'] if j['id']==job_id),None)
         gap=next((q for q in job['questions'] if q['question']==question),None) if job else None
         if not gap:raise ValueError('This question changed. Reopen the clarification window.')
+        if gap['kind']!='candidate':raise ValueError('Only personal facts can be entered here. Other questions are handled by automatic review.')
         reusable=payload.get('reusable') is True
-        if reusable and gap['kind'] not in {'candidate','unknown'}:
+        if reusable and gap['kind']!='candidate':
             raise ValueError('Posting details, form declarations and evaluation errors cannot be reused as personal facts.')
         profile=load_profile_raw();background=profile.setdefault('background',{})
         answers=background.setdefault('review_answers',[])

@@ -5,6 +5,21 @@ from app.reviewer import build_prompt, _prompt_packet, build_review_packet, vali
 
 
 class ReviewPromptTests(unittest.TestCase):
+    def test_optional_advice_does_not_block_preparation_but_real_unknowns_do(self):
+        from app.reviewer import normalize_preparation_review, apply_local_guardrails
+        result=validate_review({'verdict':'HUMAN_REVIEW','preparation_readiness':'ready',
+            'blockers':[{'kind':'posting','question':'Is there future PhD funding?','blocking':False}],
+            'manual_questions':['Is there future PhD funding?']})
+        normalize_preparation_review(result)
+        self.assertEqual(result['verdict'],'APPLY')
+        self.assertEqual(result['manual_questions'],[])
+        self.assertIn('Is there future PhD funding?',result['risks'])
+        hard=validate_review({'verdict':'HUMAN_REVIEW','preparation_readiness':'blocked',
+            'blockers':[{'kind':'candidate','question':'Required qualification?','blocking':True}]})
+        normalize_preparation_review(hard);self.assertEqual(hard['verdict'],'HUMAN_REVIEW')
+        # The real form preflight always runs after advisory normalization.
+        apply_local_guardrails(result,{}, {},{'fields':[{'required':True,'answered':False,'sensitive_or_legal':True}]})
+        self.assertEqual(result['verdict'],'HUMAN_REVIEW')
     def test_commute_origin_and_public_research_are_available_during_review(self):
         packet=build_review_packet({'id':7,'url':'https://employer.test/role'},
             {'address_line1':'12 Example Street','city':'Example City','postal_code':'75000',

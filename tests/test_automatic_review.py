@@ -70,6 +70,33 @@ class AutomaticReviewTests(unittest.TestCase):
         queue_manager.retry(1)
         self.assertEqual(queue_manager.status()['items'][0]['status'], 'queued')
 
+    def test_one_missing_candidate_fact_does_not_block_the_next_queue_item(self):
+        from app.automatic_review import ReviewNeedsInput
+        with db.connect() as c:
+            c.execute("INSERT INTO jobs(id,url,title,company,decision) VALUES(2,'https://lab.test/2','Other','Example','keep')")
+        queue_manager.enqueue([1,2],auto_review=True)
+        visited=[]
+        def review(identifier,stopped):
+            visited.append(identifier)
+            if identifier==1:raise ReviewNeedsInput('Missing personal qualification')
+            return False
+        with patch('app.automatic_review.prepare',side_effect=review),patch('app.queue_manager.launch_apply') as launch:
+            queue_manager._worker('batch');launch.assert_not_called()
+        self.assertEqual(visited,[1,2])
+        items={row['job_id']:row for row in queue_manager.status()['items']}
+        self.assertEqual(items[1]['status'],'waiting_user')
+        self.assertFalse(queue_manager.status()['paused'])
+
+    def test_intermediate_score_is_advice_not_missing_information(self):
+        from app.reviewer import review_via_chatgpt_web
+        profile={'chatgpt_web_reviewer':{'backend':'test'},'scoring_dimensions':[{'id':'fit','weight':1}]}
+        with patch('app.reviewer.load_profile',return_value=profile),patch('app.review_research.collect',return_value={'pages':[]}),patch('app.reviewer.ask_chatgpt_json') as ask:
+            for score,expected in [(3.5,'APPLY'),(2.5,'SKIP')]:
+                ask.return_value={'verdict':'APPLY','preparation_readiness':'ready','ratings':{'fit':{'score':score}}}
+                result=review_via_chatgpt_web(1)
+                self.assertEqual(result['verdict'],expected)
+                self.assertEqual(result['blockers'],[])
+
     def test_skip_cancel_and_changed_data_never_authorize_preparation(self):
         queue_manager.enqueue([1], auto_review=True)
         with patch('app.automatic_review.review_via_chatgpt_web', side_effect=lambda _: self.reviewer('SKIP')):
