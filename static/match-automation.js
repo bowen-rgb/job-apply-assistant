@@ -1,6 +1,6 @@
 /* One native workflow: strong matches -> ChatGPT -> approved preparation queue. */
 window.MatchAutomation=(()=>{
- let button,panel,state={},busy=false,stopRequested=false;
+ let button,panel,state={},busy=false,stopRequested=false,refreshing=false,recordsSignature=null;
  const text=(zh,fr)=>Locale.language==='zh'?zh:fr;
  function paint(){
   if(!panel)return;
@@ -32,9 +32,16 @@ window.MatchAutomation=(()=>{
   const queue=document.createElement('button');queue.type='button';queue.textContent=text('查看申请队列 →','Voir la file →');queue.onclick=()=>WorkspaceMenu.navigate('pipeline');panel.append(queue);
  }
  async function refresh(){
-  if(!panel||document.hidden)return;
-  try{state=await requestJson('/api/matches/automation');if(!['starting','running'].includes(state.phase))stopRequested=false;paint();}
+  if(!panel||document.hidden||refreshing)return;
+  refreshing=true;
+  try{state=await requestJson('/api/matches/automation');if(!['starting','running'].includes(state.phase))stopRequested=false;paint();
+   const next=JSON.stringify([state.phase,state.completed,state.enqueued,state.unresolved_available,state.error]);
+   const changed=recordsSignature!==null&&recordsSignature!==next;recordsSignature=next;
+   if(changed)await load();
+   await window.ReviewGaps?.refresh();
+  }
   catch{state={phase:'blocked',error:text('后台尚未更新：请关闭旧后台，再用 Dashboard 快捷方式启动。','Redémarrez l’ancien serveur avec le raccourci Dashboard pour charger ce flux.')};paint();}
+  finally{refreshing=false;}
  }
  function init(actions){
   button=document.createElement('button');button.type='button';button.className='primary';button.id='reviewMatchesBtn';actions.append(button);

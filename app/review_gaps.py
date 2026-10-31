@@ -8,15 +8,22 @@ from .profile_store import load_profile_raw, save_profile_raw
 def snapshot():
     items=[]
     with connect() as conn:
-        rows=conn.execute("""SELECT id,title,company,url,review_json,review_summary FROM jobs
-            WHERE review_verdict='HUMAN_REVIEW' AND decision='keep' AND user_action<>'skipped'
+        rows=conn.execute("""SELECT id,title,company,url,review_json,review_summary,review_verdict,review_revision,reviewed_at FROM jobs
+            WHERE review_verdict IN ('HUMAN_REVIEW','QUEUED','RUNNING','ERROR') AND decision='keep' AND user_action<>'skipped'
             AND application_status NOT IN ('submitted','submitted_verified','withdrawn')
+            AND human_review_status<>'declined' AND availability_status<>'expired'
+            AND tracker_stage NOT IN ('rejected','withdrawn','hired','offer_declined','no_response')
             ORDER BY reviewed_at DESC,id DESC""")
         for row in rows:
             job=dict(row)
             try:review=json.loads(job.pop('review_json') or '{}')
             except (ValueError,TypeError):review={}
             if not isinstance(review,dict):review={}
+            if job['review_verdict']!='HUMAN_REVIEW' and review.get('verdict')!='HUMAN_REVIEW':continue
+            job['processing']=job['review_verdict'] in {'QUEUED','RUNNING'}
+            job['legacy']=not bool(review.get('preparation_readiness'))
+            if job['processing']:
+                job['review_summary']=review.get('summary','')
             blockers=review.get('blockers') or []
             if not isinstance(blockers,list):blockers=[]
             questions=[b for b in blockers if isinstance(b,dict) and b.get('question')]
@@ -42,6 +49,7 @@ def save_answer(payload):
         job=next((j for j in snapshot()['items'] if j['id']==job_id),None)
         gap=next((q for q in job['questions'] if q['question']==question),None) if job else None
         if not gap:raise ValueError('This question changed. Reopen the clarification window.')
+        if job['processing']:raise ValueError('This posting is being reviewed. Wait for its updated questions.')
         if gap['kind']!='candidate':raise ValueError('Only personal facts can be entered here. Other questions are handled by automatic review.')
         reusable=payload.get('reusable') is True
         if reusable and gap['kind']!='candidate':

@@ -8,6 +8,30 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_open_gap_window_syncs_new_review_and_removes_resolved_items_without_losing_draft(self):
+        data={'candidate_id':'default','answers':[],'items':[{
+            'id':1,'company':'Example','title':'Simulation','url':'https://employer.test/1',
+            'review_revision':'old','review_summary':'Old summary','questions':[
+                {'kind':'candidate','question':'Python project?'}]},
+            {'id':2,'company':'Lab','title':'Other','review_summary':'Old commute question',
+             'questions':[{'kind':'unknown','question':'Where is the laboratory?'}]}]}
+        self.page.route('**/api/matches/gaps',lambda r:r.fulfill(json=data))
+        self.page.evaluate('ReviewGaps.open()')
+        dialog=self.page.locator('.review-gaps-dialog');expect(dialog).to_be_visible()
+        draft=dialog.locator('textarea');draft.fill('Unsaved personal evidence');draft.focus()
+        data['items'][0].update(review_revision='new',review_summary='New review summary')
+        data['items'].pop()
+        # The already-open window polls; no reopen or page refresh is needed.
+        expect(dialog).to_contain_text('New review summary')
+        expect(dialog).not_to_contain_text('Old summary')
+        expect(dialog).not_to_contain_text('Where is the laboratory?')
+        expect(dialog.locator('textarea')).to_have_value('Unsaved personal evidence')
+        expect(dialog.locator('textarea')).to_be_focused()
+        data['items']=[]
+        self.page.evaluate('ReviewGaps.refresh()')
+        expect(dialog.locator('.review-gap-job')).to_have_count(0)
+        expect(dialog).to_contain_text('当前没有待补全')
+
     def test_old_missing_results_can_be_sent_directly_to_chatgpt_without_manual_answers(self):
         writes=[]
         def respond(r):
