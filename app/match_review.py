@@ -2,6 +2,7 @@
 import json
 import hashlib
 import sys
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from filelock import FileLock, Timeout
 
@@ -15,8 +16,8 @@ from .reviewer import review_via_chatgpt_web
 MODULE = 'app.match_review'
 
 
-def candidates(include_skip=False):
-    with connect() as conn:
+def candidates(include_skip=False, *, connection=None):
+    with nullcontext(connection) if connection is not None else connect() as conn:
         return [dict(row) for row in conn.execute("""SELECT j.* FROM jobs j
             WHERE decision='keep' AND user_action<>'skipped' AND human_review_status<>'declined'
             AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter')
@@ -44,19 +45,42 @@ def scope_token():
     return hashlib.sha256(json.dumps(load_profile_raw(),sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 
+def action_candidates(mode, rows=None, *, actions=None):
+    rows = candidates() if rows is None else rows
+    if mode == 'clarify':  # Compatibility with a previous Dashboard still open.
+        return [row for row in rows if row['review_verdict'] == 'HUMAN_REVIEW']
+    from .review_gaps import snapshot
+    actions = snapshot()['actions'] if actions is None else actions
+    if mode in {'research', 'rereview'}:
+        key = 'public_research' if mode == 'research' else 'rereview'
+        ids = set(actions[key]['job_ids'])
+        return [row for row in rows if row['id'] in ids]
+    ready = set(actions['rereview']['job_ids'])
+    return [row for row in rows if row['review_verdict'] != 'HUMAN_REVIEW' or row['id'] in ready]
+
+
 def status():
     state=saved_state()
     from .worker_runtime import is_running
     if state['phase'] in {'running','starting'} and not is_running(MODULE,0):
         state={**state,'phase':'interrupted'}
-    rows=candidates()
     from .review_inventory import snapshot
-    inventory=snapshot()
+    from .review_gaps import snapshot as gap_snapshot
+    # Stage cards, lifetime totals, gap lists and action targets share one SQLite read snapshot.
+    with connect() as conn:
+        conn.execute('BEGIN')
+        rows=candidates(connection=conn)
+        inventory=snapshot(connection=conn)
+        gaps=gap_snapshot(connection=conn)
+    actions = gaps['actions']
+    snapshot_id=hashlib.sha256(json.dumps([inventory,gaps],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     return {**{k:v for k,v in state.items() if k not in {'processed','scope','targets'}},'eligible':len(rows),
-            'unresolved_available':inventory['counts']['needs_information'],'inventory':inventory}
+            'unresolved_available':inventory['counts']['needs_information'],'inventory':inventory,
+            'actions':actions,'gaps':gaps,'snapshot_id':snapshot_id,
+            'review_available':len(action_candidates('strong',rows,actions=actions))}
 
 
-def start(unresolved_only=False):
+def start(unresolved_only=False, *, mode=None):
     from .worker_runtime import launch, any_running, is_running
     from .browser_control import require_connection, status as browser_status, start as start_browser
     from .profile_store import runtime_profile
@@ -68,15 +92,23 @@ def start(unresolved_only=False):
             raise ValueError('Wait for the current scan to finish before reviewing matches')
         if any_running(include_handoffs=False):
             raise ValueError('Une tâche est déjà en cours. Attendez sa fin avant de lancer la revue.')
-        mode='clarify' if unresolved_only else 'strong'
+        mode=mode or ('clarify' if unresolved_only else 'strong')
+        if mode not in {'strong','clarify','research','rereview'}:
+            raise ValueError('Unknown review action')
         previous=saved_state()
+        # No worker owns this state (checked above). A host exit may leave RUNNING
+        # on disk after approval but before queue admission; preserve its targets.
+        if previous.get('phase') in {'running','starting'}:
+            previous={**previous,'phase':'interrupted'}
         resume=(previous.get('scope')==scope_token() and previous.get('mode','strong')==mode
                 and previous.get('phase') in {'blocked','stopped','interrupted'})
         rows=candidates()
-        if unresolved_only:
-            rows=[row for row in rows if row['id'] in previous.get('targets',[])] if resume else [row for row in rows if row['review_verdict']=='HUMAN_REVIEW']
+        if mode != 'strong' and resume:
+            rows=[row for row in rows if row['id'] in previous.get('targets',[])]
+        else:
+            rows=action_candidates(mode,rows)
         if not rows:
-            save({'phase':'done','total':0,'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
+            save({'phase':'done','mode':mode,'total':0,'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
             return status()
         profile=runtime_profile()
         if profile.get('chatgpt_web_reviewer',{}).get('enabled') is False:
@@ -87,7 +119,7 @@ def start(unresolved_only=False):
         if resume:
             previous.update(phase='starting');previous.pop('error',None);save(previous)
         else:
-            save({'phase':'starting','mode':mode,'targets':[row['id'] for row in rows] if unresolved_only else [],
+            save({'phase':'starting','mode':mode,'targets':[row['id'] for row in rows] if mode != 'strong' else [],
                   'total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
         launch(MODULE,0)
         return status()
@@ -107,6 +139,10 @@ def review_one(job):
             collect(job)
         result=review_via_chatgpt_web(job['id'])
         if result['verdict']!='HUMAN_REVIEW':break
+        blockers = result.get('blockers') or []
+        if blockers and all(b.get('kind') in {'candidate','form'} for b in blockers):
+            # Public research cannot invent a personal fact or legal declaration.
+            break
     check_cancelled()
     with connect() as conn:
         current=dict(conn.execute('SELECT * FROM jobs WHERE id=?',(job['id'],)).fetchone())
@@ -127,8 +163,12 @@ def run():
     scope=scope_token()
     resume=previous.get('scope')==scope and previous.get('phase') in {'starting','blocked','stopped','interrupted'}
     processed=previous.get('processed',{}) if resume else {}
+    mode=previous.get('mode','strong')
     rows=[job for job in candidates() if processed.get(str(job['id']))!=automatic_token(job)]
-    if previous.get('mode')=='clarify':rows=[job for job in rows if job['id'] in previous.get('targets',[])]
+    if mode in {'clarify','research','rereview'}:
+        rows=[job for job in rows if job['id'] in previous.get('targets',[])]
+    else:
+        rows=action_candidates(mode,rows)
     counts={key:previous.get(key,0) if resume else 0 for key in ['completed','enqueued','skipped','unresolved']}
     state={'phase':'running','mode':previous.get('mode','strong'),'targets':previous.get('targets',[]),
            'continued_from_clarify':previous.get('continued_from_clarify',False),

@@ -1,18 +1,45 @@
 """Candidate-owned clarification records; no fabricated answers or form consent reuse."""
 import json
+from contextlib import nullcontext
 from .db import connect
 from . import workspaces
 from .profile_store import load_profile_raw, save_profile_raw
 
 
-def snapshot():
+def action_sets(items, answers):
+    """Distinct actions, counted by jobs; mixed gaps may belong to two actions."""
+    groups = {key: [] for key in ('personal_input', 'public_research', 'rereview')}
+    for job in items:
+        if job['processing']:
+            continue
+        questions = [q for q in job['questions'] if q.get('blocking') is not False]
+        def answered(question):
+            return any(isinstance(a, dict) and str(a.get('answer', '')).strip()
+                       and a.get('question') == question
+                       and (a.get('job_id') == job['id'] or a.get('reusable') is True)
+                       for a in answers)
+        personal = [q for q in questions if q.get('kind') == 'candidate']
+        unanswered = [q for q in personal if not answered(q['question'])]
+        if unanswered:
+            groups['personal_input'].append(job['id'])
+        if any(q.get('kind') == 'posting' for q in questions):
+            groups['public_research'].append(job['id'])
+        if not unanswered and (any(answered(q['question']) for q in personal)
+                               or any(q.get('kind') in {'evaluation', 'unknown'} for q in questions)
+                               or not questions):
+            groups['rereview'].append(job['id'])
+    return {key: {'job_ids': sorted(set(ids)), 'count': len(set(ids))} for key, ids in groups.items()}
+
+
+def snapshot(connection=None):
     items=[]
-    with connect() as conn:
+    with nullcontext(connection) if connection is not None else connect() as conn:
         rows=conn.execute("""SELECT id,title,company,url,review_json,review_summary,review_verdict,review_revision,reviewed_at FROM jobs
             WHERE review_verdict IN ('HUMAN_REVIEW','QUEUED','RUNNING','ERROR') AND decision='keep' AND user_action<>'skipped'
-            AND application_status NOT IN ('submitted','submitted_verified','withdrawn')
+            AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter')
             AND human_review_status<>'declined' AND availability_status<>'expired'
             AND tracker_stage NOT IN ('rejected','withdrawn','hired','offer_declined','no_response')
+            AND NOT EXISTS (SELECT 1 FROM application_queue q WHERE q.job_id=jobs.id)
             ORDER BY reviewed_at DESC,id DESC""")
         for row in rows:
             job=dict(row)
@@ -35,8 +62,9 @@ def snapshot():
                 questions.append({'kind':'evaluation','question':review['rubric_error'],'reason':'','evidence':''})
             job.update(questions=questions,risks=review.get('risks',[]),reasons=review.get('reasons',[]),research_findings=review.get('research_findings',[]))
             items.append(job)
-    return {'candidate_id':workspaces.candidate_id(),'items':items,
-            'answers':load_profile_raw().get('background',{}).get('review_answers',[])}
+    answers = load_profile_raw().get('background',{}).get('review_answers',[])
+    return {'candidate_id':workspaces.candidate_id(),'items':items, 'answers':answers,
+            'actions':action_sets(items, answers)}
 
 
 def save_answer(payload):

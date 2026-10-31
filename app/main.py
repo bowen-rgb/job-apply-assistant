@@ -647,9 +647,9 @@ def save_review_answer(payload: dict):
 
 
 @app.post('/api/matches/automation')
-def start_match_automation(mode: Literal['strong','clarify']='strong'):
+def start_match_automation(mode: Literal['strong','clarify','research','rereview']='strong'):
     from .match_review import start
-    try:return start(unresolved_only=mode=='clarify')
+    try:return start(mode=mode)
     except ValueError as exc:raise HTTPException(409,str(exc))
 
 

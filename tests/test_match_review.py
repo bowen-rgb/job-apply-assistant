@@ -13,6 +13,24 @@ class MatchReviewTests(unittest.TestCase):
         research.start();self.addCleanup(research.stop)
     job=fixtures.AutomaticReviewTests.job
 
+    def test_interrupted_approval_resumes_queue_handoff_without_another_model_call(self):
+        from app.human_review import automatic_token
+        with patch.object(flow,'data_dir',return_value=Path(self.temp.name)),patch.object(flow,'load_profile_raw',return_value=self.profile),patch('app.worker_runtime.any_running',return_value=False),patch('app.worker_runtime.is_running',return_value=False),patch('app.worker_runtime.launch'),patch('app.scan_manager.status',return_value={'running':False}),patch('app.profile_store.runtime_profile',return_value={'chatgpt_web_reviewer':{'backend':'test'}}):
+            with db.connect() as c:
+                c.execute("UPDATE jobs SET review_verdict='APPLY',reviewed_at=CURRENT_TIMESTAMP WHERE id=1")
+                job=dict(c.execute('SELECT * FROM jobs WHERE id=1').fetchone())
+                c.execute('UPDATE jobs SET automatic_review_token=? WHERE id=1',(automatic_token(job),))
+            flow.save({'phase':'running','mode':'research','scope':flow.scope_token(),
+                       'targets':[1],'processed':{},'completed':0,'total':1})
+            flow.start(mode='research')
+            self.assertEqual(flow.saved_state()['phase'],'starting')
+            with patch.object(flow,'review_via_chatgpt_web') as reviewer:
+                flow.run()
+            reviewer.assert_not_called()
+            state=flow.status()
+            self.assertEqual(state['inventory']['job_ids']['queued'],[1])
+            self.assertEqual(state['inventory']['cumulative']['reviewed'],1)
+
     def test_clarification_batch_targets_old_unresolved_only_and_retries_its_failed_item(self):
         with db.connect() as c:
             c.execute("INSERT INTO jobs(id,url,title,company,decision) VALUES(2,'https://example.test/2','Unreviewed','Example','keep')")
@@ -43,6 +61,11 @@ class MatchReviewTests(unittest.TestCase):
             self.assertEqual(state['phase'],'done')
             self.assertEqual((state['completed'],state['enqueued'],state['skipped'],state['unresolved']),(3,1,1,1))
             self.assertEqual(reviewer.call_count,5);submit.assert_not_called()
+            self.assertEqual(state['inventory']['cumulative']['reviewed'],3)
+            self.assertEqual(state['inventory']['cumulative']['queued'],1)
+            self.assertEqual(state['inventory']['job_ids']['queued'],[1])
+            self.assertNotIn(1,[item['id'] for item in state['gaps']['items']])
+            self.assertEqual(state['actions'],state['gaps']['actions'])
             self.assertTrue(self.job()['automatic_review_token'])
             self.assertNotEqual(self.job()['human_review_status'],'approved')
             with db.connect() as conn:

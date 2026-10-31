@@ -8,6 +8,101 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_live_snapshot_links_cumulative_progress_gap_list_job_filter_and_queue(self):
+        actions={'personal_input':{'count':1,'job_ids':[1]},'public_research':{'count':0,'job_ids':[]},'rereview':{'count':0,'job_ids':[]}}
+        gaps={'candidate_id':'default','answers':[],'actions':actions,'items':[{
+            'id':1,'company':'Example','title':'Linked role','review_summary':'Needs evidence',
+            'questions':[{'kind':'candidate','question':'Your project?'}]}]}
+        state={'phase':'running','mode':'research','total':5,'completed':2,'snapshot_id':'first',
+               'gaps':gaps,'actions':actions,'inventory':{'total':18,
+                'counts':{'needs_information':1,'queued':0},'job_ids':{'needs_information':[1],'queued':[]},
+                'cumulative':{'reviewed':17,'reviewed_job_ids':[1],'queued':0,'not_suitable':0,'needs_information':1},'queue_total':0}}
+        queue={'running':False,'items':[],'counts':{}}
+        job={'id':1,'title':'Linked role','company':'Example','decision':'keep','score':90,'review_verdict':'HUMAN_REVIEW','url':'https://example.test/1'}
+        self.page.route('**/api/matches/automation',lambda r:r.fulfill(json=state))
+        self.page.route('**/api/matches/gaps',lambda r:r.fulfill(status=500,json={'detail':'Must use shared snapshot'}))
+        self.page.route('**/api/queue',lambda r:r.fulfill(json=queue))
+        self.page.route('**/api/jobs',lambda r:r.fulfill(json=[job]))
+        self.page.route('**/api/pipeline',lambda r:r.fulfill(json=[job]))
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        panel=self.page.locator('#matchAutomationStatus')
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('累计已复核 17')
+        expect(panel.locator('[data-review-batch]')).to_contain_text('本批已处理 2/5')
+        self.page.evaluate('ReviewGaps.open()')
+        dialog=self.page.locator('.review-gaps-dialog')
+        expect(dialog.locator('.review-gap-job')).to_have_count(1)
+        # Restarting a smaller batch cannot reset the global review count.
+        state.update(total=3,completed=0,snapshot_id='resumed')
+        self.page.evaluate('MatchAutomation.refresh()')
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('累计已复核 17')
+        expect(panel.locator('[data-review-batch]')).to_contain_text('本批已处理 0/3')
+        # A completed re-review moves the SAME job into the queue without double counting.
+        job['review_verdict']='APPLY';state.update(completed=1,snapshot_id='enqueued')
+        actions['personal_input']={'count':0,'job_ids':[]};gaps['items']=[]
+        state['inventory']['counts'].update(needs_information=0,queued=1)
+        state['inventory']['job_ids'].update(needs_information=[],queued=[1])
+        state['inventory']['cumulative'].update(queued=1,needs_information=0)
+        state['inventory']['queue_total']=1
+        queue.update(items=[dict(job,job_id=1,status='queued')],counts={'queued':1})
+        self.page.evaluate('MatchAutomation.refresh()')
+        expect(dialog.locator('.review-gap-job')).to_have_count(0)
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('累计已复核 17')
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('高度匹配已入队 1')
+        dialog.get_by_role('button',name='关闭',exact=True).click()
+        panel.locator('[data-review-group=queued]').click()
+        expect(self.page.locator('.card[data-record-id="1"]')).to_be_visible()
+        panel.get_by_role('button',name='全申请队列（1）',exact=True).click()
+        expect(self.page.locator('[data-queue-job="1"]')).to_be_visible()
+        # Queue changes in another client refresh this already-open pipeline.
+        queue.update(items=[],counts={});state['snapshot_id']='removed'
+        state['inventory']['counts']['queued']=0;state['inventory']['job_ids']['queued']=[]
+        state['inventory']['cumulative']['queued']=0;state['inventory']['queue_total']=0
+        self.page.evaluate('MatchAutomation.refresh()')
+        expect(self.page.locator('[data-queue-job="1"]')).to_have_count(0)
+        # A slow detail request cannot lock the live counters behind it.
+        self.page.evaluate('() => { load=()=>new Promise(resolve=>{window.releaseLiveTestLoad=resolve;}); }')
+        state['snapshot_id']='slow-details';state['inventory']['cumulative']['reviewed']=18
+        self.page.evaluate('void MatchAutomation.refresh()')
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('累计已复核 18')
+        state['snapshot_id']='newer-live-state';state['inventory']['cumulative']['reviewed']=19
+        self.page.evaluate('void MatchAutomation.refresh()')
+        expect(panel.locator('[data-review-cumulative]')).to_contain_text('累计已复核 19')
+        self.assertEqual(self.errors,[])
+
+    def test_distinct_actions_use_separate_counts_and_endpoints(self):
+        actions={'personal_input':{'count':2,'job_ids':[1,4]},
+                 'public_research':{'count':1,'job_ids':[2]},
+                 'rereview':{'count':3,'job_ids':[3,5,6]}}
+        writes=[]
+        def respond(route):
+            if route.request.method=='POST':writes.append(route.request.url)
+            route.fulfill(json={'phase':'stopped','review_available':7,'unresolved_available':6,
+                                'actions':actions})
+        self.page.route('**/api/matches/automation**',respond)
+        self.page.route('**/api/matches/gaps',lambda r:r.fulfill(json={
+            'candidate_id':'default','answers':[],'actions':actions,'items':[
+                {'id':1,'company':'Example','title':'Personal','review_summary':'Needs your fact',
+                 'questions':[{'kind':'candidate','question':'Your project?'}]},
+                {'id':2,'company':'Example','title':'Public','review_summary':'Research only',
+                 'questions':[{'kind':'posting','question':'Public date?'}]}]}))
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        panel=self.page.locator('#matchAutomationStatus')
+        expect(self.page.locator('#reviewMatchesBtn')).to_have_text('初审 / 重试可处理岗位（7）')
+        panel.get_by_role('button',name='查证公开岗位信息并复核（1）',exact=True).click()
+        expect(panel.get_by_role('button',name='需要你补充个人信息（2）',exact=True)).to_be_visible()
+        self.assertTrue(writes[-1].endswith('?mode=research'))
+        panel.get_by_role('button',name='重新审核已补充 / 待重审岗位（3）',exact=True).click()
+        self.assertTrue(writes[-1].endswith('?mode=rereview'))
+        panel.get_by_role('button',name='需要你补充个人信息（2）',exact=True).click()
+        dialog=self.page.locator('.review-gaps-dialog')
+        expect(dialog).to_contain_text('Needs your fact')
+        expect(dialog).not_to_contain_text('Research only')
+        expect(dialog.locator('textarea')).to_have_count(1)
+        self.assertEqual(len(writes),2)
+        dialog.get_by_role('button',name='重新审核已补充 / 待重审岗位（3）',exact=True).click()
+        self.assertTrue(writes[-1].endswith('?mode=rereview'))
+        self.assertEqual(self.errors,[])
+
     def test_global_inventory_is_distinct_from_clarification_subset_and_clicks_exact_records(self):
         self.page.route('**/api/matches/automation',lambda r:r.fulfill(json={
             'phase':'running','mode':'clarify','total':1,'completed':0,'unresolved_available':1,
