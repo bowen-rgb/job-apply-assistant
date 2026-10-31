@@ -633,6 +633,19 @@ def match_automation_status():
     return status()
 
 
+@app.get('/api/matches/gaps')
+def review_gaps():
+    from .review_gaps import snapshot
+    return snapshot()
+
+
+@app.post('/api/matches/gaps/answers')
+def save_review_answer(payload: dict):
+    from .review_gaps import save_answer
+    try:return save_answer(payload)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+
 @app.post('/api/matches/automation')
 def start_match_automation():
     from .match_review import start

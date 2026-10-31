@@ -21,6 +21,7 @@ window.MatchAutomation=(()=>{
    const progress=document.createElement('progress');progress.max=Math.max(1,state.total);progress.value=state.completed||0;progress.setAttribute('aria-label',text('复核进度','Avancement de la revue'));panel.append(progress);
    const counts=document.createElement('p');counts.textContent=text(`已复核 ${state.completed||0}/${state.total} · 已入队 ${state.enqueued||0} · 不适合 ${state.skipped||0} · 信息不足 ${state.unresolved||0}`,`Revues ${state.completed||0}/${state.total} · En file ${state.enqueued||0} · Écartées ${state.skipped||0} · Incomplètes ${state.unresolved||0}`);panel.append(counts);
   }
+  if(state.unresolved){const gaps=document.createElement('button');gaps.type='button';gaps.textContent=text(`查看缺少什么 / 补全信息（${state.unresolved}）`,`Voir les informations manquantes (${state.unresolved})`);gaps.onclick=()=>ReviewGaps.open();panel.append(gaps);}
   if(active){const stop=document.createElement('button');stop.type='button';stop.textContent=text('停止复核','Arrêter la revue');stop.disabled=stopRequested;stop.onclick=async()=>{stopRequested=true;paint();try{await requestJson('/api/matches/automation/stop',{method:'POST'});await refresh();}catch(error){stopRequested=false;note.textContent=error.message;}};panel.append(stop);}
   const queue=document.createElement('button');queue.type='button';queue.textContent=text('查看申请队列 →','Voir la file →');queue.onclick=()=>WorkspaceMenu.navigate('pipeline');panel.append(queue);
  }

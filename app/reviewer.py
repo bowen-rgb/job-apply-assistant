@@ -45,6 +45,7 @@ def build_review_packet(job: dict[str, Any], profile: dict[str, Any], form_snaps
             'availability_end_date': profile.get('max_end_date', ''),
             'availability_preferences': profile.get('availability', {}),
             'locations': profile.get('locations', []),
+            'languages': profile.get('languages', []),
             'contracts': profile.get('contracts', []),
             'preferred_roles': profile.get('preferred_roles', []),
             'industries': profile.get('industries', []),
@@ -54,6 +55,8 @@ def build_review_packet(job: dict[str, Any], profile: dict[str, Any], form_snaps
             'min_salary': profile.get('min_salary', ''),
             'salary_period': profile.get('salary_period', ''),
             'additional_review_rules': profile.get('review_rules', []),
+            'saved_application_answers': profile.get('saved_answers', []),
+            'confirmed_review_answers': [a for a in profile.get('review_answers', []) if a.get('reusable') or a.get('job_id') == job.get('id')],
         },
         'job': {
             'title': job.get('title', ''),
@@ -108,6 +111,7 @@ def build_prompt(packet: dict[str, Any]) -> str:
             if packet.get('scoring_dimensions') else '')
     schema={'verdict':'APPLY|SKIP|HUMAN_REVIEW','confidence':0,'summary':'Short French summary',
             'reasons':[],'risks':[],'manual_questions':[],
+            'blockers':[],
             'facts':{key:'' for key in ('contract','start_date','end_date','location','schedule','salary')}}
     if packet.get('scoring_dimensions'):schema['ratings']={}
     return f"""Review ONE vacancy for a local preparation queue. Do not browse, fill forms, send applications or make declarations.
@@ -121,6 +125,9 @@ Decision rules:
 - Duration limits come only from candidate constraints; no universal four-month maximum. Distinguish school authorization for a PFE from the expected graduation year and from the employer's stated eligibility requirements.
 - Weekends/night shifts marked yes or flexible do not exclude daytime or weekdays. Include terms are preferences, not required words.
 - Never count a planned, team-only or unconfirmed skill as mastered. Preserve self-assessment and AI-assisted project boundaries. Current skill status and evidence override historical CV wording.
+- Distinguish a mandatory requirement from a preference. Do not demand proof of every advertised tool, exact street address/commute, pay, timetable, PhD funding or recruiter acceptance of an otherwise compatible school-authorized PFE merely because it is not published. Put non-blocking uncertainties in risks. Explicit eligibility contradictions still block.
+- Reuse confirmed_review_answers and saved_application_answers when relevant; do not ask the same answered question again. Answers are self-reported evidence, not proof of a higher skill level. Job-specific answers apply ONLY to this vacancy. Never reuse consent or legal declarations across applications.
+- For HUMAN_REVIEW return blockers (maximum 3), each with kind candidate|posting|form|evaluation, question (plain French), reason, and evidence (the exact relevant requirement or validation failure). Candidate = a fact the applicant can supply; posting = only employer/original posting can clarify; form = observed required field; evaluation = invalid/incomplete scoring. Ask only questions whose answers could change the decision. Do not put optional research questions here.
 - Unknown dates remain unknown. Never infer protected attributes, work authorization, salary commitments or legal attestations.
 
 Return one JSON object only, without markdown. verdict must be exactly APPLY, SKIP or HUMAN_REVIEW; confidence is 0–100. summary: at most 400 characters in French. reasons/risks/manual_questions: at most 3 concise entries each. Unknown facts: empty string.{rubric}
@@ -241,6 +248,7 @@ def validate_review(obj: dict[str, Any]) -> dict[str, Any]:
         'risks': obj.get('risks', []) if isinstance(obj.get('risks', []), list) else [],
         'manual_questions': obj.get('manual_questions', []) if isinstance(obj.get('manual_questions', []), list) else [],
         'facts': obj.get('facts', {}) if isinstance(obj.get('facts', {}), dict) else {},
+        'blockers': [b for b in obj.get('blockers', []) if isinstance(b, dict) and b.get('kind') in {'candidate','posting','form','evaluation'} and isinstance(b.get('question'), str)][:3] if isinstance(obj.get('blockers'), list) else [],
         'guardrail_notes': [],
         'ratings': obj.get('ratings', {}) if isinstance(obj.get('ratings'), dict) else {},
     }
@@ -327,6 +335,9 @@ def review_via_chatgpt_web(job_id: int, form_snapshot: dict[str, Any] | None = N
             # A rubric cannot override a hard rejection or required human check.
             if result['rubric']['decision'] != 'apply' and result['verdict'] == 'APPLY':
                 result['verdict'] = 'HUMAN_REVIEW'
+                result['blockers'].append({'kind':'evaluation','question':'Le score pondéré reste sous le seuil de préparation.',
+                    'reason':'Le score doit être réévalué après clarification des faits, sans inventer de compétences.',
+                    'evidence':str(result['rubric'])})
         except ValueError:
             result['rubric_error'] = 'Incomplete ratings; human review required'
             if result['verdict'] == 'APPLY':

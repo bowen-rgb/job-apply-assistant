@@ -45,3 +45,11 @@ dialog .surface-heading{border-radius:8px 8px 0 0}.surface-jumps button{backgrou
 @container workspace-page (max-width:560px){.form-grid.cols2,.form-grid.cols3{grid-template-columns:minmax(0,1fr)}.toolbar{grid-template-columns:minmax(0,1fr)}.card .actions{display:flex;flex-wrap:wrap}.card .actions button{flex:1 1 120px}.export-controls{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:760px){main button,dialog button{min-height:44px}.card,.settings-card{padding:16px}dialog:not(.image-viewer){max-width:calc(100vw - 24px);padding:16px}#jobMetrics{gap:4px}}
 @media(prefers-reduced-motion:reduce){#jobMetrics::before,main button,dialog button,.card{transition:none}}
+
+.review-gaps-dialog{width:min(960px,85vw);max-height:85vh;overflow:auto;padding:28px;color:var(--text,#1a1c1e);background:var(--surface,#fff)}
+.review-gap-job{margin:24px 0;padding:20px;border:1px solid #b9bdba;border-radius:12px}
+.review-gap-job h3{font-size:20px;line-height:1.4;margin:0 0 12px}
+.review-gap-job p{max-width:75ch;line-height:1.6;overflow-wrap:anywhere}
+.review-gap-job fieldset{margin-top:18px;padding:16px;border:1px solid #b9bdba;border-radius:8px}
+.review-gap-job textarea{width:100%;box-sizing:border-box;margin-bottom:12px}
+.review-gap-job label{display:flex;gap:8px;align-items:start;margin-bottom:12px}

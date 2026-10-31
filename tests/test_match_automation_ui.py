@@ -8,6 +8,30 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_click_missing_information_save_candidate_fact_and_resume(self):
+        self.page.route('**/api/matches/automation',lambda r:r.fulfill(json={'phase':'blocked','unresolved':1,'total':18,'completed':18}))
+        self.page.route('**/api/matches/gaps',lambda r:r.fulfill(json={'candidate_id':'default','answers':[],'items':[{
+            'id':1,'company':'Example','title':'Simulation','url':'https://employer.test/1','review_summary':'Missing Python evidence',
+            'questions':[{'kind':'candidate','question':'Python project?','reason':'Required scripting','evidence':'Python required'},
+                         {'kind':'posting','question':'Exact start?'}]}]}))
+        writes=[]
+        def save(r):writes.append(r.request.post_data_json);r.fulfill(json={'ok':True})
+        self.page.route('**/api/matches/gaps/answers',save)
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        self.page.get_by_role('button',name='查看缺少什么 / 补全信息（1）').click()
+        dialog=self.page.locator('.review-gaps-dialog')
+        expect(dialog).to_be_visible();expect(dialog).to_contain_text('Python required')
+        dialog.locator('textarea').first.fill('Personal simulation script')
+        dialog.get_by_role('checkbox').first.check()
+        expect(dialog.get_by_role('checkbox').nth(1)).to_be_disabled()
+        dialog.get_by_role('button',name='保存这条信息').first.click()
+        expect(dialog).to_contain_text('已保存到当前个人档案')
+        self.assertEqual(writes[0]['candidate_id'],'default');self.assertTrue(writes[0]['reusable'])
+        self.page.screenshot(path='tmp/review-gaps-desktop.png')
+        dialog.get_by_role('button',name='继续批量复核',exact=True).click()
+        expect(dialog).not_to_be_visible()
+        self.assertEqual(self.errors,[])
+
     def test_blocked_batch_keeps_the_direct_retry_button_available(self):
         self.page.route('**/api/matches/automation',lambda route:route.fulfill(json={
             'phase':'blocked','total':116,'completed':16,'error':'No ChatGPT response detected for final-review'}))

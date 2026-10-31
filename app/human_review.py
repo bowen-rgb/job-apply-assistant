@@ -8,7 +8,7 @@ import hashlib
 import json
 
 REVIEWABLE = {'APPLY', 'HUMAN_REVIEW'}
-AUTOMATIC_REVIEW_POLICY_VERSION = '2026-10-31-compact-v1'
+AUTOMATIC_REVIEW_POLICY_VERSION = '2026-10-31-gaps-v2'
 
 
 def review_token(job: dict) -> str:
