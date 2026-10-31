@@ -8,8 +8,10 @@ window.ReviewGaps=(()=>{
   dialog.replaceChildren();
   const heading=document.createElement('h2');heading.textContent=t('补全复核所需信息','Compléter les informations de revue');
   const close=document.createElement('button');close.textContent=t('关闭','Fermer');close.onclick=()=>dialog.close();
-  const note=document.createElement('p');note.textContent=t('只补你知道的事实。不知道就留空。企业条件请查看原始岗位；不会把你的推测当成企业承诺。','Indiquez uniquement les faits connus. Laissez les inconnues vides. Vérifiez les conditions auprès de l’employeur.');
+  const note=document.createElement('p');note.textContent=t('先让 ChatGPT 自动查证下面的问题。只有系统仍无法确认、且你本人知道的事实，才需要手动补充。','Laissez d’abord ChatGPT rechercher les réponses. Complétez uniquement les faits personnels qui restent inconnus.');
   dialog.append(heading,close,note);
+  const auto=document.createElement('button');auto.className='primary';auto.textContent=t('让 ChatGPT 自动补全并再审','Faire compléter et réévaluer par ChatGPT');
+  auto.onclick=async()=>{auto.disabled=true;try{await requestJson('/api/matches/automation?mode=clarify',{method:'POST'});dialog.close();await MatchAutomation.refresh();}catch(error){note.textContent=error.message;auto.disabled=false;}};dialog.append(auto);
   try{
    const data=await requestJson('/api/matches/gaps');
    const status=document.createElement('p');status.setAttribute('role','status');dialog.append(status);

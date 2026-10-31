@@ -8,6 +8,18 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_old_missing_results_can_be_sent_directly_to_chatgpt_without_manual_answers(self):
+        writes=[]
+        def respond(r):
+            if r.request.method=='POST':writes.append(r.request.url)
+            r.fulfill(json={'phase':'running' if writes else 'blocked','unresolved_available':18,'total':18})
+        self.page.route('**/api/matches/automation**',respond)
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        self.page.get_by_role('button',name='让 ChatGPT 自动补全并再审（18）',exact=True).click()
+        self.assertTrue(writes[0].endswith('/api/matches/automation?mode=clarify'))
+        expect(self.page.locator('dialog[open]')).to_have_count(0)
+        expect(self.page.locator('#reviewMatchesBtn')).to_be_disabled()
+
     def test_click_missing_information_save_candidate_fact_and_resume(self):
         self.page.route('**/api/matches/automation',lambda r:r.fulfill(json={'phase':'blocked','unresolved':1,'total':18,'completed':18}))
         self.page.route('**/api/matches/gaps',lambda r:r.fulfill(json={'candidate_id':'default','answers':[],'items':[{

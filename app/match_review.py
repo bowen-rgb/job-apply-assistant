@@ -49,10 +49,12 @@ def status():
     from .worker_runtime import is_running
     if state['phase'] in {'running','starting'} and not is_running(MODULE,0):
         state={**state,'phase':'interrupted'}
-    return {**{k:v for k,v in state.items() if k not in {'processed','scope'}},'eligible':len(candidates())}
+    rows=candidates()
+    return {**{k:v for k,v in state.items() if k not in {'processed','scope','targets'}},'eligible':len(rows),
+            'unresolved_available':sum(row['review_verdict']=='HUMAN_REVIEW' for row in rows)}
 
 
-def start():
+def start(unresolved_only=False):
     from .worker_runtime import launch, any_running, is_running
     from .browser_control import require_connection, status as browser_status, start as start_browser
     from .profile_store import runtime_profile
@@ -64,7 +66,13 @@ def start():
             raise ValueError('Wait for the current scan to finish before reviewing matches')
         if any_running(include_handoffs=False):
             raise ValueError('Une tâche est déjà en cours. Attendez sa fin avant de lancer la revue.')
+        mode='clarify' if unresolved_only else 'strong'
+        previous=saved_state()
+        resume=(previous.get('scope')==scope_token() and previous.get('mode','strong')==mode
+                and previous.get('phase') in {'blocked','stopped','interrupted'})
         rows=candidates()
+        if unresolved_only:
+            rows=[row for row in rows if row['id'] in previous.get('targets',[])] if resume else [row for row in rows if row['review_verdict']=='HUMAN_REVIEW']
         if not rows:
             save({'phase':'done','total':0,'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
             return status()
@@ -74,11 +82,11 @@ def start():
         if profile.get('chatgpt_web_reviewer',{}).get('backend','chatgpt')=='chatgpt':
             if not browser_status(profile).get('ready'):start_browser(profile)
             require_connection(profile)
-        previous=saved_state()
-        if previous.get('scope')==scope_token() and previous.get('phase') in {'blocked','stopped','interrupted'}:
+        if resume:
             previous.update(phase='starting');previous.pop('error',None);save(previous)
         else:
-            save({'phase':'starting','total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
+            save({'phase':'starting','mode':mode,'targets':[row['id'] for row in rows] if unresolved_only else [],
+                  'total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
         launch(MODULE,0)
         return status()
 
@@ -118,8 +126,10 @@ def run():
     resume=previous.get('scope')==scope and previous.get('phase') in {'starting','blocked','stopped','interrupted'}
     processed=previous.get('processed',{}) if resume else {}
     rows=[job for job in candidates() if processed.get(str(job['id']))!=automatic_token(job)]
+    if previous.get('mode')=='clarify':rows=[job for job in rows if job['id'] in previous.get('targets',[])]
     counts={key:previous.get(key,0) if resume else 0 for key in ['completed','enqueued','skipped','unresolved']}
-    state={'phase':'running','total':counts['completed']+len(rows),**counts,'processed':processed,'scope':scope}
+    state={'phase':'running','mode':previous.get('mode','strong'),'targets':previous.get('targets',[]),
+           'total':counts['completed']+len(rows),**counts,'processed':processed,'scope':scope}
     save(state)
     try:
         for job in rows:

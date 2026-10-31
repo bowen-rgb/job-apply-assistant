@@ -13,6 +13,19 @@ class MatchReviewTests(unittest.TestCase):
         research.start();self.addCleanup(research.stop)
     job=fixtures.AutomaticReviewTests.job
 
+    def test_clarification_batch_targets_old_unresolved_only_and_retries_its_failed_item(self):
+        with db.connect() as c:
+            c.execute("INSERT INTO jobs(id,url,title,company,decision) VALUES(2,'https://example.test/2','Unreviewed','Example','keep')")
+        with patch.object(flow,'data_dir',return_value=Path(self.temp.name)),patch.object(flow,'load_profile_raw',return_value=self.profile),patch('app.worker_runtime.any_running',return_value=False),patch('app.worker_runtime.is_running',return_value=False),patch('app.worker_runtime.launch'),patch('app.scan_manager.status',return_value={'running':False}),patch('app.profile_store.runtime_profile',return_value={'chatgpt_web_reviewer':{'backend':'test'}}):
+            flow.start(unresolved_only=True)
+            self.assertEqual(flow.saved_state()['targets'],[1])
+            with db.connect() as c:c.execute("UPDATE jobs SET review_verdict='ERROR' WHERE id=1")
+            with patch.object(flow,'review_one',return_value='HUMAN_REVIEW') as review:
+                flow.run()
+                self.assertEqual(review.call_count,1)
+                self.assertEqual(review.call_args.args[0]['id'],1)
+            self.assertEqual(flow.status()['total'],1)
+
     def test_strong_matches_are_reviewed_before_queueing_and_not_submitted(self):
         with db.connect() as conn:
             for identifier,decision in [(2,'keep'),(3,'keep'),(4,'low'),(5,'keep')]:
