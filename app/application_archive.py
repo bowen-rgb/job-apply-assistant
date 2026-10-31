@@ -30,7 +30,7 @@ def archive_job(job_id):
 
 
 def calibration_context():
-    jobs=[job for job in JobRepository().pipeline() if job.get('tracker_stage') in {'rejected','withdrawn','offer','hired','offer_declined'}]
+    jobs=[job for job in JobRepository().pipeline() if job.get('tracker_stage') in {'rejected','withdrawn','offer','hired','offer_declined','no_response'}]
     return [{'company':j['company'],'title':j['title'],'stage':j['tracker_stage'],'note':j['tracker_note'],
              'review':j.get('review_json',''),'events':JobRepository().stage_events(j['id'])} for j in jobs]
 

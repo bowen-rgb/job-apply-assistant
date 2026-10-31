@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="/static/workspace-menu.css" />
   <link rel="stylesheet" href="/static/endfield-ui.css" />
   <link rel="stylesheet" href="/static/career-tools.css" />
+  <link rel="stylesheet" href="/static/workflow.css" />
 </head>
 <body>
 <a class="skip-link" href="#mainContent">Passer au contenu principal</a>
@@ -336,6 +337,17 @@
           </div>
         </section>
       </form>
+    </section>
+    <!-- Hierarchy: next action first; queue, feedback and preparation each have one job.
+         Existing Endfield tokens: text #1a1c1e, accent #ffde00, panel #fafaf7;
+         spacing 8/16/24, existing typography and Angelina assets retained. -->
+    <section id="trackingView" class="hidden">
+      <header><div><h1 data-workflow-title="tracking"></h1><p data-workflow-help="tracking"></p></div></header>
+      <div id="trackingContent"></div>
+    </section>
+    <section id="toolsView" class="hidden">
+      <header><div><h1 data-workflow-title="tools"></h1><p data-workflow-help="tools"></p></div></header>
+      <div id="toolsContent"></div>
     </section>
   </main>
 </div>

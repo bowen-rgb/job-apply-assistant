@@ -1,9 +1,8 @@
 /* Real manual-application journey. Submission stays on the recruiter's website. */
 window.Coach=(()=>{
-  let simple=true,state={step:0,id:null,index:0,opened:false},health=null,jobs=[],loaded=false,busy=false,signature='',message='',checked=false,autoResume=true,searching=false,searchRequested=false;
+  let state={step:0,id:null,index:0,opened:false},health=null,jobs=[],loaded=false,busy=false,signature='',message='',checked=false,autoResume=true,searching=false,searchRequested=false;
   const drafts={role:'',place:''};
   let automate=false,autoSubmit=false,autoStart=false;
-  try{simple=localStorage.getItem('jaa-ui-mode')!=='full';}catch{}
   const $=id=>document.getElementById(id);
   const text=k=>(CoachTexts[Locale.language]||CoachTexts.fr)[k];
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,9 +54,9 @@ window.Coach=(()=>{
     if(state.step===2)loadResumeLink();
   }
   async function loadResumeLink(){try{const rows=await requestJson('/api/resumes');const active=rows.find(r=>r.active);if(active&&$('coachResume'))$('coachResume').innerHTML=`<a href="/api/resumes/${encodeURIComponent(active.id)}/download" download>${esc(Guide.text('download'))}</a>`;}catch{}}
-  function mount(root,h,js){health=h;jobs=js;paint();document.body.classList.toggle('simple-mode',simple);if($('simpleModeToggle'))$('simpleModeToggle').textContent=text(simple?'full':'mode');if(simple){$('guideNav').textContent=text('nav');$('guideTitle').textContent=text('nav');$('guideTitle').nextElementSibling.textContent=text('intro');}}
-  function init(){try{const saved=JSON.parse(localStorage.getItem(Accounts.key('jaa-manual-flow'))||'null');if(saved&&Number.isInteger(saved.step)&&saved.step>=0&&saved.step<=4&&Number.isInteger(saved.index)&&saved.index>=0&&saved.index<100000&&(!saved.id||Number.isInteger(saved.id)))state={step:saved.step,id:saved.id,index:saved.index,opened:saved.opened===true};}catch{}const toggle=document.createElement('button');toggle.id='simpleModeToggle';toggle.type='button';document.querySelector('.language-control').after(toggle);toggle.onclick=()=>{simple=!simple;try{localStorage.setItem('jaa-ui-mode',simple?'simple':'full');}catch{}signature='';Guide.render();if(simple)showView('guide');};if(simple)showView('guide');else Guide.render();requestJson('/api/profile').then(p=>{automate=p.automation?.auto_submit===true||p.automation?.auto_start_queue===true;autoSubmit=p.automation?.auto_submit===true;autoStart=p.automation?.auto_start_queue===true;drafts.role||=p.preferences?.roles?.[0]||'';drafts.place||=p.preferences?.locations?.[0]||'';signature='';paint();}).catch(()=>{});}
+  function mount(root,h,js){health=h;jobs=js;paint();}
+  function init(){try{const saved=JSON.parse(localStorage.getItem(Accounts.key('jaa-manual-flow'))||'null');if(saved&&Number.isInteger(saved.step)&&saved.step>=0&&saved.step<=4&&Number.isInteger(saved.index)&&saved.index>=0&&saved.index<100000&&(!saved.id||Number.isInteger(saved.id)))state={step:saved.step,id:saved.id,index:saved.index,opened:saved.opened===true};}catch{}document.body.classList.remove('simple-mode');try{localStorage.removeItem('jaa-ui-mode');}catch{}Guide.render();requestJson('/api/profile').then(p=>{automate=p.automation?.auto_submit===true||p.automation?.auto_start_queue===true;autoSubmit=p.automation?.auto_submit===true;autoStart=p.automation?.auto_start_queue===true;drafts.role||=p.preferences?.roles?.[0]||'';drafts.place||=p.preferences?.locations?.[0]||'';signature='';paint();}).catch(()=>{});}
   function scan(s){searching=s?.running===true;if(state.step===1&&(searching||searchRequested)){message=!s?text('error'):searching?text('wait'):candidates().length?'':text('noResults');if(!searching)searchRequested=false;setMessage(message);}if($('coachSearch'))$('coachSearch').disabled=searching||busy;}
   function configure(p){automate=p.automation?.auto_submit===true||p.automation?.auto_start_queue===true;autoSubmit=p.automation?.auto_submit===true;autoStart=p.automation?.auto_start_queue===true;signature='';paint();}
-  return {configure,init,mount,jobsLoaded:()=>{loaded=true;},isSimple:()=>simple,text,scan};
+  return {configure,init,mount,jobsLoaded:()=>{loaded=true;},text,scan};
 })();

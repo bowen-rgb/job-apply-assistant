@@ -113,7 +113,7 @@ def send(token,acknowledged,read=request):
             read=partial(request,mailbox=record['from'])
         if record['state']!='draft':raise ValueError('Draft is not ready, or a previous send needs verification')
         job=c.execute('SELECT application_status,tracker_stage FROM jobs WHERE id=?',(record['job_id'],)).fetchone()
-        if not job or job['application_status'] not in {'submitted','submitted_verified'} or job['tracker_stage'] in {'rejected','withdrawn','offer','hired','offer_declined'}:
+        if not job or job['application_status'] not in {'submitted','submitted_verified'} or job['tracker_stage'] in {'rejected','withdrawn','offer','hired','offer_declined','no_response'}:
             raise ValueError('Application is no longer open for follow-up; the Gmail draft has not been sent')
         record['state']='sending'
         changed=c.execute('UPDATE capability_items SET metadata_json=? WHERE id=? AND metadata_json=?',

@@ -26,10 +26,6 @@
 .coach-file-box:focus-within{outline:3px solid #305f47;outline-offset:3px}
 .coach-file-box #coachFile{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
 #coachPractice,#guideMore{margin:20px 0;max-width:100%}#coachPractice>summary,#guideMore>summary{cursor:pointer;padding:12px;font-size:16px}
-body:not(.simple-mode) #beginnerGuide{display:none}
-.simple-mode aside>.hint,.simple-mode #welcomeGuide,.simple-mode #exampleCompanion{display:none}
-/* Simple mode changes guidance, never access to jobs, profile or queue tools. */
-#simpleModeToggle{margin:12px 0;border:1px solid #92a58b;font-size:14px;min-height:44px}
 @media(max-width:600px){.beginner-guide{padding:18px;font-size:17px}.beginner-guide h2{font-size:24px}.beginner-guide button,.coach-link{width:100%!important}}
 #guideView button,.guide-welcome button,.guide-page-help button{border:1px solid #92a58b;background:#fff;width:auto;text-align:left}
 #guideView button:hover,.guide-welcome button:hover,.guide-page-help button:hover{background:#e3ecdd}

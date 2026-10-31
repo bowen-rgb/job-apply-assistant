@@ -12,7 +12,7 @@ class WorkspaceMenuTests(unittest.TestCase):
   self.p=sync_playwright().start();self.browser=self.p.chromium.launch(headless=True,args=getattr(self,'browser_args',[]))
   self.page=self.browser.new_page(viewport={'width':1440,'height':1000});self.errors=[];self.writes=[];self.remote=[];self.queue_unavailable=False
   self.page.on('pageerror',lambda e:self.errors.append(str(e)))
-  self.page.add_init_script("window===window.top&&localStorage.setItem('jaa-ui-language','zh')")
+  self.page.add_init_script("if(window===window.top){localStorage.setItem('jaa-ui-language','zh');localStorage.setItem('jaa-ui-mode','simple');}")
   profile=default_profile();profile['identity'].update(first_name='Example',last_name='Candidate',email='private@example.test')
   job={'id':1,'title':'Example job','display_title':'Example job','company':'Example','decision':'keep','score':90,'review_verdict':'HUMAN_REVIEW','human_review_status':'pending','url':'https://employer.test/1'}
   def respond(r):
@@ -23,7 +23,9 @@ class WorkspaceMenuTests(unittest.TestCase):
     r.fulfill(status=response.status_code,body=response.content,headers=dict(response.headers));return
    if r.request.method!='GET':self.writes.append(path)
    data={}
-   if path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Example Candidate','identity':{},'active':True}]}
+   if path=='/api/capabilities':data={'sources':[],'models':{'configured':[],'agents':{}},'tasks':[],'templates':[],'documents':[],'portals':[],'salary':[],'notion':{},'gmail_compose':{},'selected_backend':'chatgpt'}
+   elif path=='/api/insights':data={'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'followups':[],'mail_proposals':[]}
+   elif path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Example Candidate','identity':{},'active':True}]}
    elif path=='/api/profile':data=profile
    elif path in ['/api/jobs','/api/pipeline']:data=[job,dict(job,id=2,review_verdict='',application_status='submitted',tracker_stage='submitted')]
    elif path=='/api/queue':
@@ -39,6 +41,32 @@ class WorkspaceMenuTests(unittest.TestCase):
   expect(self.page.locator('#workspaceMenuButton')).to_be_visible()
   expect(self.page.locator('#mainMenuView')).to_be_visible()
  def tearDown(self):self.browser.close();self.p.stop()
+ def test_focused_pages_and_tabs_preserve_features_without_simple_mode(self):
+  expect(self.page.locator('#simpleModeToggle')).to_have_count(0)
+  self.assertFalse(self.page.evaluate("document.body.classList.contains('simple-mode')"))
+  for width in [1280,375]:
+   self.page.set_viewport_size({'width':width,'height':900})
+   self.page.evaluate("WorkspaceMenu.navigate('tools')")
+   expect(self.page.locator('#toolsView')).to_be_visible()
+   expect(self.page.locator('[data-task-form]')).to_be_visible()
+   expect(self.page.locator('#pipelineView #careerTools')).to_have_count(0)
+   for category,selector in [('materials','[data-template-form]'),('connections','[data-choice-form]'),('data','[data-lint-form]'),('prepare','[data-task-form]')]:
+    self.page.locator('[data-tool-category='+category+']').click()
+    expect(self.page.locator(selector)).to_be_visible()
+   self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
+   self.page.evaluate('window.scrollTo(0,0)')
+   self.page.screenshot(path=f'tmp/workflow-tools-{width}.png',full_page=True)
+   self.page.locator('[data-workflow=tracking]').click()
+   expect(self.page.locator('#trackingView #applicationInsights')).to_be_visible()
+   self.page.screenshot(path=f'tmp/workflow-tracking-{width}.png',full_page=True)
+   self.page.locator('[data-workflow=pipeline]').click()
+   expect(self.page.locator('#queueReviewPanel')).to_be_visible()
+  self.page.evaluate("WorkspaceMenu.navigate('tools')")
+  self.page.locator('#languageSelect').select_option('fr')
+  expect(self.page.locator('#toolsView h1')).to_have_text('Documents et assistants')
+  expect(self.page.locator('[data-task-form]')).to_be_visible()
+  self.page.screenshot(path='tmp/workflow-tools-fr-375.png',full_page=True)
+  self.assertEqual(self.writes,[]);self.assertEqual(self.errors,[])
  def test_scene_and_mobile_menu_have_real_navigation_without_sidebar(self):
   for width in [1440,768,375]:
    self.page.set_viewport_size({'width':width,'height':1000})
@@ -50,13 +78,13 @@ class WorkspaceMenuTests(unittest.TestCase):
     expect(frame.locator('#sceneStats')).to_contain_text('待你确认')
     expect(frame.locator('body')).not_to_contain_text('private@example.test')
     self.page.wait_for_timeout(1100)
-   else:expect(self.page.locator('#menuPageGrid button')).to_have_count(18)
+   else:expect(self.page.locator('#menuPageGrid button')).to_have_count(20)
    self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
    self.page.screenshot(path=f'tmp/endfield-menu-{width}.png',full_page=True)
   self.assertEqual(self.remote,[]);self.assertEqual(self.writes,[]);self.assertEqual(self.errors,[])
  def test_every_menu_entry_routes_to_existing_function_without_writes(self):
   self.page.set_viewport_size({'width':768,'height':1000})
-  destinations={'jobs':'jobsView','pipeline':'pipelineView','profile':'profileView','qr':'qrApplicationDialog','overview':'overviewView','guide':'guideView','accounts':'accountsDialog','logins':'accountsDialog','pending':'pendingTasksDialog','pfe':'pfeView','liked':'jobsView','human':'jobsView','confirmed':'jobsView','submitted':'jobsView','export':'jobsView','sources':'profileView','resumes':'profileView','appearance':'profileView'}
+  destinations={'tools':'toolsView','tracking':'trackingView','jobs':'jobsView','pipeline':'pipelineView','profile':'profileView','qr':'qrApplicationDialog','overview':'overviewView','guide':'guideView','accounts':'accountsDialog','logins':'accountsDialog','pending':'pendingTasksDialog','pfe':'pfeView','liked':'jobsView','human':'jobsView','confirmed':'jobsView','submitted':'jobsView','export':'jobsView','sources':'toolsView','resumes':'profileView','appearance':'profileView'}
   for action,target in destinations.items():
    with self.subTest(action=action):
     self.page.locator('#workspaceMenuButton').click()
@@ -100,7 +128,8 @@ class WorkspaceMenuTests(unittest.TestCase):
   expect(self.page.locator('#profileView')).to_be_visible()
   self.page.evaluate('document.activeElement.blur()');self.page.keyboard.press('Tab')
   expect(self.page.locator('#mainMenuView')).to_be_visible()
-  frame=self.page.frame_locator('#menuScene');expect(frame.locator('.jaa-center-widget')).to_be_visible()
+  frame=self.page.frame_locator('#menuScene')
+  expect(frame.locator('.jaa-center-widget')).to_be_visible()
   self.page.wait_for_timeout(1000)
   world=frame.locator('#efWorld');before=world.evaluate('(e)=>getComputedStyle(e).transform')
   frame.locator('.jaa-menu-clock').hover(force=True);self.page.wait_for_timeout(300)

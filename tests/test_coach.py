@@ -1,4 +1,4 @@
-from tests.ui_navigation import navigate, set_appearance, toggle_guidance
+from tests.ui_navigation import navigate, set_appearance
 import json
 import unittest
 from pathlib import Path
@@ -46,7 +46,7 @@ class CoachTests(unittest.TestCase):
             return False
         def check(page,writes):
             expect(page.locator('#guideView')).to_be_visible()
-            expect(page.locator('body')).to_have_class('simple-mode')
+            expect(page.locator('#simpleModeToggle')).to_have_count(0)
             expect(page.locator('#coachPick')).to_be_visible()
             expect(page.locator('#coachPractice')).not_to_have_attribute('open','')
             page.locator('#coachPick').click()
@@ -90,9 +90,11 @@ class CoachTests(unittest.TestCase):
             page.locator('#coachUpload').click()
             expect(page.locator('#coachSearch')).to_be_visible()
             page.locator('#coachRole').fill('Receptionist');page.locator('#coachPlace').fill('Paris')
-            toggle_guidance(page)
+            navigate(page,'jobs')
+            navigate(page,'guide')
             expect(page.locator('body')).not_to_have_class('simple-mode')
-            toggle_guidance(page)
+            navigate(page,'jobs')
+            navigate(page,'guide')
             expect(page.locator('#coachRole')).to_have_value('Receptionist')
             expect(page.locator('#coachPlace')).to_have_value('Paris')
             self.assertEqual(len(uploads),2)
@@ -105,7 +107,7 @@ class CoachTests(unittest.TestCase):
             page.locator('#coachSearch').click()
             expect(page.locator('#coachStatus')).to_contain_text('Indiquez le poste et la ville')
             self.assertEqual(writes,[])
-            toggle_guidance(page);navigate(page,'jobsNav')
+            navigate(page,'jobsNav')
             expect(page.locator('#batchBtn')).to_be_visible()
             page.reload();navigate(page,'guide');expect(page.locator('body')).not_to_have_class('simple-mode')
         self.run_browser(check,dict(resume_ok=True),jobs)

@@ -8,7 +8,7 @@ STATIC = Path(__file__).resolve().parents[1] / 'static'
 
 
 class DiscoveryActionsUITests(unittest.TestCase):
-    def test_actions_remain_visible_in_simple_mode_and_call_existing_services(self):
+    def test_actions_remain_visible_after_mode_removal_and_call_existing_services(self):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             try:
@@ -50,7 +50,7 @@ class DiscoveryActionsUITests(unittest.TestCase):
                 context.route('**/*', respond)
                 page.goto('http://discovery-ui.test/');navigate(page,'jobs')
                 expect(page.locator('#batchBtn')).to_have_text('让 ChatGPT 复核岗位')
-                expect(page.locator('body')).to_have_class(__import__('re').compile('simple-mode'))
+                expect(page.locator('#simpleModeToggle')).to_have_count(0)
                 for view in ['overview', 'pfe', 'profile', 'pipeline', 'jobs']:
                     page.evaluate('(view)=>showView(view)', view)
                     expect(page.locator('#workspaceMenuButton')).to_be_visible()

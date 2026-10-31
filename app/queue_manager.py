@@ -65,7 +65,7 @@ def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
             job = c.execute('SELECT * FROM jobs WHERE id=?', (jid,)).fetchone()
             if not job or not can_prepare(dict(job)):
                 continue
-            if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped' AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter') AND tracker_stage NOT IN ('rejected','withdrawn','hired','offer_declined') AND decision<>'expired' AND availability_status<>'expired'", (jid,)).fetchone():
+            if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped' AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter') AND tracker_stage NOT IN ('rejected','withdrawn','hired','offer_declined','no_response') AND decision<>'expired' AND availability_status<>'expired'", (jid,)).fetchone():
                 continue
             c.execute('''INSERT INTO application_queue(job_id,status,priority,updated_at)
                          VALUES(?, 'queued', ?, CURRENT_TIMESTAMP)
@@ -88,7 +88,7 @@ def retry(job_id: int) -> dict[str, Any]:
             raise ValueError('Confirm the AI review yourself before preparing this application')
         if row['status'] not in {'error', 'cancelled', 'waiting_user'} or row['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'} or row['user_action'] == 'skipped':
             raise ValueError('Application cannot be retried in its current state')
-        if row['decision'] == 'expired' or row['availability_status'] == 'expired' or row['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined'}:
+        if row['decision'] == 'expired' or row['availability_status'] == 'expired' or row['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined', 'no_response'}:
             raise ValueError('Application cannot be retried in its current state')
         c.execute("UPDATE application_queue SET status='queued',note='',finished_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (job_id,))
         c.execute("UPDATE jobs SET application_status='',updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
@@ -145,7 +145,7 @@ def _worker(mode: str = 'one'):
                     continue
                 jid = int(row['job_id'])
                 job = c.execute('SELECT * FROM jobs WHERE id=?', (jid,)).fetchone()
-                if not job or job['user_action'] == 'skipped' or job['decision'] == 'expired' or job['availability_status'] == 'expired' or job['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined'}:
+                if not job or job['user_action'] == 'skipped' or job['decision'] == 'expired' or job['availability_status'] == 'expired' or job['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined', 'no_response'}:
                     c.execute("UPDATE application_queue SET status='cancelled',note='Ineligible for preparation',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (jid,))
                     continue
                 if not can_prepare(dict(job)):

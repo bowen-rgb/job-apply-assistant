@@ -2,14 +2,14 @@
 // Local adaptation of ccdr4gon/endfield_menu. See NOTICE.md.
 (()=>{
  const EF=window.EF;
- const actions=['overview','guide','accounts','logins','pending','pfe','liked','human','confirmed','submitted','export','sources','resumes','appearance','jobs','pipeline','profile','qr'];
+ const actions=['tools','tracking','overview','guide','accounts','logins','pending','pfe','liked','human','confirmed','submitted','export','sources','resumes','appearance','jobs','pipeline','profile','qr'];
  const scenes=['explore','send','read','photo'];
  EF.workspace={cards:['jobs','pipeline','profile','qr'].map((action,i)=>({action,label:action,art:'local-card-'+i,text:{size:25,anchor:'middle',x:[230],y:[136],width:160}})),
   tiles:actions.map((id,i)=>({id,label:id,art:'local-tile-'+i,text:{size:19,anchor:'middle',x:[53.5],y:[92],width:95}}))};
  const symbol=(id,content,box)=>`<symbol id="${id}" viewBox="${box}">${content}</symbol>`;
  let art=EF.workspace.cards.map((_,i)=>symbol('local-card-'+i,`<image href="/static/artwork/angelina/${scenes[i]}.png" x="185" y="18" width="90" height="90"/>`,'0 0 440 172')).join('');
  const icons=['ic-radar','ic-warn-f','ic-gear-f','ic-mail-f','ic-mail-f','ic-radar','ic-bolt','ic-warn-f','ic-signal','ic-mail-f','ic-mail-f','ic-gear-f','ic-mail-f','ic-gear-f','ic-radar','ic-signal','ic-gear-f','ic-radar'];
- art+=actions.map((_,i)=>symbol('local-tile-'+i,`<svg x="33" y="15" width="42" height="42"><use href="#${icons[i]}"/></svg>`,'0 0 107 104')).join('');
+ art+=actions.map((_,i)=>symbol('local-tile-'+i,`<svg x="33" y="15" width="42" height="42"><use href="#${icons[i%icons.length]}"/></svg>`,'0 0 107 104')).join('');
  // Existing upstream-owned geometry/sprite; excluded game art is not loaded.
  document.body.insertAdjacentHTML('beforeend',`<svg width="0" height="0" aria-hidden="true"><defs>${art}</defs></svg>`);
  EF.labelSVG=(label,t)=>{

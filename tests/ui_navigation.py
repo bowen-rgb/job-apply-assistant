@@ -19,9 +19,3 @@ def set_appearance(page, value):
     navigate(page,'appearance')
     page.locator('#angelinaMode').select_option(value)
     if previous and previous!='profile':navigate(page,previous)
-
-
-def toggle_guidance(page):
-    options=page.locator('#workspaceOptions')
-    if not options.evaluate('(e)=>e.open'):options.locator('summary').click()
-    page.locator('#simpleModeToggle').click()

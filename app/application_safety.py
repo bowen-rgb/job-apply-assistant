@@ -190,7 +190,7 @@ def record_verified(job_id, attempt, result):
         changed = conn.execute("""UPDATE jobs SET application_status='submitted_verified',application_step='completed',
                    tracker_stage='submitted',last_application_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
                    WHERE id=? AND application_status NOT IN ('submitted','submitted_verified','withdrawn')
-                   AND tracker_stage NOT IN ('screening','interview','offer','rejected','withdrawn','hired','offer_declined')""", (job_id,)).rowcount
+                   AND tracker_stage NOT IN ('screening','interview','offer','rejected','withdrawn','hired','offer_declined','no_response')""", (job_id,)).rowcount
         if changed:
             conn.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'submitted_verified',?)", (job_id, result['reason']))
             conn.execute("INSERT INTO application_stage_events(job_id,stage,note) VALUES(?,'submitted',?)", (job_id, 'Browser confirmation with a saved receipt'))

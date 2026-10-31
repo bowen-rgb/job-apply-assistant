@@ -10,7 +10,7 @@ window.Guide=(()=>{
     if($(`${target}View`).classList.contains('hidden'))await showView(target);
     if(filter){current=filter;document.querySelectorAll('.filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));render();}
     const node=$(id)||$(`${target}View`).querySelector('h1');
-    if(node){if(!node.matches('input,textarea,select,button,a'))node.tabIndex=-1;node.scrollIntoView({block:'center'});node.focus({preventScroll:true});}
+    if(node){for(let parent=node.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;if(!node.matches('input,textarea,select,button,a'))node.tabIndex=-1;node.scrollIntoView({block:'center'});node.focus({preventScroll:true});}
   }
   function button(key,target,id='',filter=''){
     return `<button type="button" data-guide-target="${target}" data-guide-id="${id}" data-guide-filter="${filter}">${t(key)}</button>`;
@@ -39,8 +39,8 @@ window.Guide=(()=>{
     $('guideView').querySelector('header').after(practice);Example.mount();
     if(troubleOpen)$('guideView').querySelector('.guide-trouble').open=true;
     const header=$('guideView').querySelector('header');
-    const more=document.createElement('details');more.id='guideMore';more.innerHTML=`<summary>${escape(Coach.text('guideMore'))}</summary>`;more.open=!Coach.isSimple()||moreOpen===true;
-    const practiceDetails=document.createElement('details');practiceDetails.id='coachPractice';practiceDetails.innerHTML=`<summary>${escape(Coach.text('practice'))}</summary>`;practiceDetails.open=!Coach.isSimple()||practiceOpen===true;practiceDetails.append(practice);
+    const more=document.createElement('details');more.id='guideMore';more.innerHTML=`<summary>${escape(Coach.text('guideMore'))}</summary>`;more.open=moreOpen===true;
+    const practiceDetails=document.createElement('details');practiceDetails.id='coachPractice';practiceDetails.innerHTML=`<summary>${escape(Coach.text('practice'))}</summary>`;practiceDetails.open=practiceOpen===true;practiceDetails.append(practice);
     while(header.nextElementSibling)more.append(header.nextElementSibling);
     const coach=existingCoach||document.createElement('section');coach.id='beginnerGuide';coach.className='beginner-guide';header.after(coach,practiceDetails,more);Coach.mount(coach,health,jobs);
     if(focused&&$(focused))$(focused).focus({preventScroll:true});

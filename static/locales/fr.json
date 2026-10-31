@@ -919,5 +919,10 @@
   "menu.audioError": "Lecture impossible. Essayez un autre fichier audio.",
   "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.": "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.",
   "Embauché": "Embauché",
-  "Offre déclinée": "Offre déclinée"
+  "Offre déclinée": "Offre déclinée",
+  "menu.tools": "Documents et assistants",
+  "menu.tracking": "Réponses et relances",
+  "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.": "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.",
+  "Clôturée sans réponse": "Clôturée sans réponse",
+  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire)."
 }

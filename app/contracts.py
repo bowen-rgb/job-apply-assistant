@@ -20,12 +20,12 @@ ApplicationStatusValue = Literal[
 ]
 TrackerStage = Literal[
     'saved', 'queued', 'prepared', 'submitted', 'screening', 'interview',
-    'offer', 'rejected', 'withdrawn', 'hired', 'offer_declined',
+    'offer', 'rejected', 'withdrawn', 'hired', 'offer_declined', 'no_response',
 ]
 
 TRACK_STAGES = frozenset({
     'saved', 'queued', 'prepared', 'submitted', 'screening', 'interview',
-    'offer', 'rejected', 'withdrawn', 'hired', 'offer_declined',
+    'offer', 'rejected', 'withdrawn', 'hired', 'offer_declined', 'no_response',
 })
 
 

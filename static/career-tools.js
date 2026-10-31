@@ -1,12 +1,12 @@
 /* Native career workflows. Shares candidate, backend, queue and design tokens. */
 window.CareerTools = (() => {
   const host=document.createElement('section');host.id='careerTools';host.className='settings-card topgap';
-  document.getElementById('applicationInsights')?.after(host);
+  document.getElementById('toolsContent').append(host);
   const t=(fr,zh)=>Locale.language==='zh'?zh:fr;
   const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const api=(path,body,method='POST')=>requestJson('/api/capabilities'+path,body===undefined?{}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const $=s=>host.querySelector(s);
-  let state={},jobs=[],current=null,timer=null,ledgerFiles=[],resetState=null,mailToken=null;
+  let category='prepare',state={},jobs=[],current=null,timer=null,ledgerFiles=[],resetState=null,mailToken=null;
   const kinds=()=>({linkedin_scan:t('Rechercher sur LinkedIn (offres et publications)','搜索 LinkedIn 岗位与帖子'),tailor_cv:t('Adapter le CV à une offre','定制该岗位简历'),research:t('Étudier l’entreprise','研究企业与原始来源'),interview:t('Préparer un entretien','准备面试'),upskill:t('Planifier les compétences à renforcer','分析技能缺口与学习计划'),followup_draft:t('Rédiger une relance','起草跟进邮件'),rank:t('Évaluer plusieurs offres','批量评分与筛选'),profile_expand:t('Extraire des faits des documents','从材料中提取个人事实'),search_plan:t('Développer le plan de recherche','扩展求职方向与搜索计划'),calibration:t('Analyser les résultats réels','从真实投递结果总结经验'),portal_analyze:t('Analyser une nouvelle source publique','分析新的公开招聘来源'),template_test:t('Tester un modèle de document','测试文档模板'),pdf_check:t('Vérifier un PDF','检查 PDF 文本与版面'),archive:t('Archiver le dossier','归档本次申请材料')});
   const states=()=>({queued:t('En attente','等待执行'),running:t('En cours','正在处理'),ready:t('Prêt à consulter','已完成，请查看'),error:t('Échec — voir le détail','失败，请看原因'),cancelled:t('Arrêté','已停止')});
   const button=(action,label,extra='')=>`<button type="button" class="ghost compact" data-tool="${action}" ${extra}>${e(label)}</button>`;
@@ -21,9 +21,8 @@ window.CareerTools = (() => {
     return `<dl>${Object.entries(value).filter(([key])=>!['fingerprint','profile_fingerprint','cv_sha256','cv'].includes(key)).map(([key,v])=>`<dt><b>${e(key.replaceAll('_',' '))}</b></dt><dd>${renderValue(v,depth+1)}</dd>`).join('')}</dl>`;
   }
   function shell(){
-    host.innerHTML=`<h2>${e(t('Outils de candidature','完整求职工具'))}</h2><p>${e(t('Choisissez une tâche. Les résultats sont conservés dans ce profil ; une proposition ne modifie ni votre CV ni vos candidatures sans confirmation.','选择要做的事。结果保存在当前档案里；生成建议不会自动改简历，也不会自动发送申请。'))}</p>
-      <div class="queue-actions">${button('load',t('Actualiser les outils','刷新工具状态'))}${button('toggle',t('Ouvrir les outils','展开完整工具'))}</div>
-      <p data-tool-status role="status" aria-live="polite"></p><div data-tool-body hidden>
+    host.innerHTML=`      <div class="queue-actions">${button('load',t('Actualiser','刷新状态'))}</div>
+      <p data-tool-status role="status" aria-live="polite"></p><div data-tool-body>
       <details open><summary>${e(t('1 · Préparer ou analyser','1 · 准备材料与分析岗位'))}</summary>
       <form data-task-form><div class="form-grid cols2">${select('kind',t('Que souhaitez-vous faire ?','你要做什么？'),Object.entries(kinds()))}
       ${select('job',t('Offre concernée','对应岗位'),[])}${select('backend',t('Modèle à utiliser','使用哪个模型'),['chatgpt','compatible','anthropic','ollama','claude','codex','opencode'].map(x=>[x,x]))}
@@ -44,7 +43,7 @@ window.CareerTools = (() => {
       <p class="small">${e(t('LaTeX/Typst : [NAME], [CONTACT], [BODY]. Un compilateur local est nécessaire. Un PDF importé est un document fixe, pas un CV réécrit. DOCX : éditez les paragraphes ci-dessous.','LaTeX／Typst 使用 [NAME]、[CONTACT]、[BODY] 占位符，需要本机编译器。PDF 模板是固定文件，不会被当作已重写的简历。DOCX 可在下面按段落编辑。'))}</p><div data-templates></div><div data-docx-editor></div></details>
       <details><summary>${e(t('3 · Modèles, agents et connexions','3 · 模型、来源与连接设置'))}</summary>
       <form data-choice-form>${select('backend',t('Modèle par défaut pour lettres et évaluations','动机信与复核的默认模型'),['chatgpt','compatible','anthropic','ollama','claude','codex','opencode'].map(x=>[x,x]))}<button class="ghost compact">${e(t('Utiliser ce modèle','使用该模型'))}</button></form>
-      <p class="small">${e(t('ChatGPT utilise le Chrome dédié existant. Les agents CLI doivent déjà être installés et connectés. Les clés restent chiffrées sur cette machine.','ChatGPT 继续使用平台专用 Chrome；本地 CLI 需要提前安装并登录。密钥仅加密保存在本机。'))}</p><div data-models></div><div data-sources></div>
+      <p class="small">${e(t('ChatGPT utilise le Chrome dédié existant. Les agents CLI doivent déjà être installés et connectés. Les clés restent chiffrées sur cette machine.','ChatGPT 继续使用平台专用 Chrome；本地 CLI 需要提前安装并登录。密钥仅加密保存在本机。'))}</p><div data-models></div>${button('search-settings',t('Régions, dates et options de recherche','地区、日期与扫描设置'))}<div data-sources></div>
       <details><summary>Notion</summary><form data-notion-form>${field('target_id',t('ID de destination','目标数据库或数据源 ID'))}${select('target_type',t('Type','类型'),[['data_source','Data source'],['database','Database']])}${field('token',t('Jeton d’intégration','集成密钥'),'password')}<button class="ghost compact">${e(t('Enregistrer','保存设置'))}</button></form>
       ${button('notion-check',t('Vérifier la connexion','检查 Notion 连接'))}<label class="check"><input data-notion-ack type="checkbox">${e(t('Copier le suivi de ce profil dans la destination affichée ci-dessus','将当前档案的申请记录写入上方目标'))}</label>${button('notion-sync',t('Synchroniser vers Notion','同步到 Notion'))}</details>
       <details><summary>${e(t('Envoi de relances Gmail (facultatif)','Gmail 跟进邮件（可选）'))}</summary><p>${e(t('La lecture des réponses reste distincte. Pour créer ou envoyer un brouillon, activez cette option puis reconnectez Gmail pour autoriser la rédaction.','读取招聘反馈与发信分开。若要创建或发送草稿，先启用此项，再重新连接 Gmail 授予撰写权限。'))}</p><label class="check"><input data-gmail-compose type="checkbox">${e(t('Autoriser la rédaction Gmail','启用 Gmail 撰写功能'))}</label>${button('gmail-config',t('Enregistrer ce choix','保存此选择'))}${button('gmail-connect',t('Reconnecter Gmail','重新连接 Gmail'))}<div data-gmail-auth></div></details>
@@ -55,9 +54,34 @@ window.CareerTools = (() => {
       <form data-lint-form><label>${e(t('Texte à relire','待检查的文本'))}<textarea name="text" rows="5" required></textarea></label>${field('banned',t('Expressions à éviter (une par ligne)','额外禁用套话（每行一个）'))}${field('claims',t('Compétences à ne pas revendiquer (une par ligne)','不得声称掌握的技能（每行一个）'))}<button class="ghost compact">${e(t('Vérifier le style','检查写作'))}</button></form><div data-lint-result></div>
       <label>${e(t('Importer plusieurs suivis','批量导入申请账本'))}<input data-ledger-files type="file" multiple accept=".csv,.json,.xlsx,.md,.tsv,.db,.sqlite,.sqlite3"></label><label>${e(t('Ou choisir un dossier de suivis','或选择账本文件夹'))}<input data-ledger-folder type="file" webkitdirectory multiple></label>${button('ledger-preview',t('Prévisualiser','预览导入'))}${button('ledger-write',t('Ajouter les nouvelles lignes','导入新增记录'),'disabled')}<div data-ledger-result></div>
       <details><summary>${e(t('Réinitialiser des données locales','重置本地数据'))}</summary>${select('reset-scope',t('Périmètre','范围'),[['profile',t('Profil uniquement','仅个人资料')],['documents',t('Copies de documents','本地材料副本')],['all',t('Profil, offres et documents','个人资料、岗位与材料')]])}<p class="small">${e(t('Le compte, les archives et l’historique des outils sont conservés. Seules les données indiquées dans l’aperçu sont réinitialisées.','账号、归档和工具历史会保留；只重置预览列出的资料、岗位和材料副本。'))}</p>${button('reset-preview',t('Voir l’impact et préparer la sauvegarde','查看影响范围'))}<div data-reset-result></div>${field('reset-confirm',t('Après vérification, saisir RESET','核对后输入 RESET'))}${button('reset',t('Sauvegarder puis réinitialiser','备份并重置'),'disabled')}</details></details></div>`;
-    updateParams();
+    organize();updateParams();
   }
-  function updateParams(){const kind=$('[name=kind]')?.value;host.querySelectorAll('[data-params]').forEach(node=>{node.hidden=!node.dataset.params.split(' ').includes(kind);node.querySelectorAll('input,select,textarea').forEach(input=>input.disabled=node.hidden);});}
+  function organize(){
+    const body=$('[data-tool-body]');
+    const sections=[...body.children];
+    const groups=[['prepare',t('Préparer une candidature','准备申请'),sections.slice(0,3)],['materials',t('Documents et CV','材料与简历'),sections.slice(3,4)],['connections',t('Sources et connexions','来源与连接'),sections.slice(4,5)],['data',t('Données et diagnostics','数据与检查'),sections.slice(5)]];
+    const tabs=document.createElement('div');tabs.className='tool-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label',t('Outils','工具分类'));
+    for(const [id,label,nodes] of groups){
+      const panel=document.createElement('section');panel.id='toolPanel-'+id;panel.dataset.toolPanel=id;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','toolTab-'+id);
+      const tab=document.createElement('button');tab.id='toolTab-'+id;tab.type='button';tab.dataset.toolCategory=id;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panel.id);tab.textContent=label;
+      tab.onclick=()=>chooseCategory(id);tab.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const buttons=[...tabs.children],i=buttons.indexOf(tab);const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(i+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;buttons[next].click();buttons[next].focus();};tabs.append(tab);
+      for(const node of nodes){if(node.tagName==='DETAILS'){const heading=document.createElement('h3');heading.textContent=node.querySelector(':scope > summary').textContent;node.querySelector(':scope > summary').remove();panel.append(heading,...node.childNodes);node.remove();}else panel.append(node);}
+      body.append(panel);
+    }
+    body.prepend(tabs);chooseCategory(category);
+    const shortcuts=document.createElement('div');shortcuts.className='tool-shortcuts';
+    for(const kind of ['research','tailor_cv','interview','rank']){const b=document.createElement('button');b.type='button';b.textContent=kinds()[kind];b.dataset.taskChoice=kind;b.onclick=()=>{$('[name=kind]').value=kind;updateParams();$('[name=job]').focus();};shortcuts.append(b);}
+    $('[data-task-form]').before(shortcuts);$('[name=kind]').value='research';
+    const advanced=document.createElement('details');advanced.className='task-options';
+    const caption=document.createElement('summary');caption.textContent=t('Modèle et mise en page (facultatif)','模型与排版（可选）');advanced.append(caption,$('[name=backend]').closest('label'),$('[name=template]').closest('label'));$('[data-task-form] .form-grid').after(advanced);
+
+  }
+  function chooseCategory(id){category=id;host.querySelectorAll('[data-tool-panel]').forEach(panel=>panel.hidden=panel.dataset.toolPanel!==id);host.querySelectorAll('[data-tool-category]').forEach(tab=>{const active=tab.dataset.toolCategory===id;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});}
+  function updateParams(){const kind=$('[name=kind]')?.value;
+    const guidance={research:t('Sélectionnez une offre. Vous obtiendrez les activités de l’entreprise et les sources à vérifier.','选择一个岗位，查看企业业务、岗位任务及原始来源。'),tailor_cv:t('Sélectionnez une offre. Téléchargez et vérifiez le CV proposé avant de l’adopter pour cette candidature.','选择岗位后生成专用简历。先下载核对，再决定是否用于这份申请；原简历保留。'),interview:t('Sélectionnez une offre et le type d’entretien. Préparez vos réponses, puis entraînez-vous dans le résultat.','选择岗位和面试环节，生成准备清单；完成后可继续模拟问答。'),rank:t('Cochez les offres à comparer ci-dessous. Vérifiez les résultats avant de les adopter.','勾选下方要比较的岗位。评分结果需核对后才能采用。'),profile_expand:t('Importez vos documents dans Documents et CV, puis cochez ceux à analyser ici.','先在“材料与简历”导入资料，再勾选本次要分析的材料。'),followup_draft:t('Choisissez une candidature envoyée. Le brouillon doit être vérifié avant tout envoi.','选择已投递的申请，生成跟进草稿。核对收件人和正文后才可发送。')};
+    let hint=$('[data-task-hint]');if(!hint){hint=document.createElement('p');hint.dataset.taskHint='';hint.className='task-guidance';$('[data-task-form]').prepend(hint);}hint.textContent=guidance[kind]||t('Complétez les champs ci-dessous, puis démarrez. Le résultat et les éventuelles erreurs apparaîtront sous le formulaire.','填写下方所需信息后开始。结果、进度或失败原因会显示在表单下方。');
+    host.querySelectorAll('[data-task-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.taskChoice===kind)));
+    host.querySelectorAll('[data-params]').forEach(node=>{node.hidden=!node.dataset.params.split(' ').includes(kind);node.querySelectorAll('input,select,textarea').forEach(input=>input.disabled=node.hidden);});}
   async function load(){
     [state,jobs]=await Promise.all([api(''),requestJson('/api/jobs')]);
     if(!Array.isArray(jobs))jobs=[];
@@ -122,8 +146,8 @@ window.CareerTools = (() => {
   host.addEventListener('click',async event=>{
     const b=event.target.closest('[data-tool]');if(!b)return;b.disabled=true;
     try{const action=b.dataset.tool,id=b.dataset.id;
-      if(action==='toggle'){$('[data-tool-body]').hidden=!$('[data-tool-body]').hidden;if(!$('[data-tool-body]').hidden)await load();}
       if(action==='load')await load();
+      if(action==='search-settings'){await showView('profile');document.getElementById('jobSourcesShortcut').click();}
       if(action==='task-open')await showTask(Number(id));if(action==='task-cancel'){await api('/tasks/'+id+'/cancel',{});await load();}
       if(action==='adopt-cv'){await api('/tasks/'+current.id+'/adopt-cv',{});await showTask(current.id);}
       if(action==='accept-result'){const suffix={profile_expand:'accept-facts',rank:'accept-rank',search_plan:'accept-plan',calibration:'accept-plan'}[current.kind];const indexes=[...host.querySelectorAll('[data-result-index]:checked')].map(x=>Number(x.value));if(!indexes.length)throw Error(t('Cochez les éléments à conserver.','请勾选要采用的结果。'));await api('/tasks/'+current.id+'/'+suffix,{indexes});if(window.loadPipeline)await loadPipeline();}
@@ -152,5 +176,5 @@ window.CareerTools = (() => {
     }catch(err){say(err.message);}finally{if(b.isConnected&&b.dataset.tool!=='ledger-write')b.disabled=b.dataset.tool==='mail-send'&&!mailToken;}
   });
   document.addEventListener('localechange',()=>{clearTimeout(timer);shell();load().catch(err=>say(err.message));});
-  shell();return {load:()=>load().catch(err=>say(err.message))};
+  shell();return {open:async id=>{chooseCategory(id);await load().catch(err=>say(err.message));},load:()=>load().catch(err=>say(err.message))};
 })();

@@ -40,9 +40,9 @@ class CareerToolsUITests(unittest.TestCase):
                     elif path.startswith('/api/capabilities/sources/'):
                         writes.append((path,r.request.post_data_json));data={'ok':True}
                     r.fulfill(json=data)
-                page.route('**/*',route);page.goto('http://career-tools.test/');navigate(page,'pipeline')
-                tools=page.locator('#careerTools');expect(tools).to_contain_text('完整求职工具')
-                tools.locator('[data-tool=toggle]').click();expect(tools.locator('[data-tool-body]')).to_be_visible()
+                page.route('**/*',route);page.goto('http://career-tools.test/');navigate(page,'tools')
+                tools=page.locator('#careerTools');expect(page.locator('#toolsView h1')).to_have_text('材料与助手')
+                expect(tools.locator('[data-tool-body]')).to_be_visible()
                 self.assertFalse(writes)
                 form=tools.locator('[data-task-form]');form.locator('[name=kind]').select_option('research');form.locator('[name=job]').select_option('1');form.locator('button[type=submit]').click()
                 expect(tools.locator('[data-task-result]')).to_contain_text('已完成，请查看')
@@ -59,8 +59,7 @@ class CareerToolsUITests(unittest.TestCase):
                     page.screenshot(path=f'tmp/career-tools-{width}.png')
                     self.assertTrue(tools.evaluate('(e)=>e.scrollWidth<=e.clientWidth+1'))
                 page.locator('#languageSelect').select_option('fr')
-                expect(tools).to_contain_text('Outils de candidature')
-                tools.locator('[data-tool=toggle]').click()
+                expect(page.locator('#toolsView h1')).to_have_text('Documents et assistants')
                 expect(tools.locator('[data-task-form]')).to_contain_text('Que souhaitez-vous faire ?')
                 page.screenshot(path='tmp/career-tools-fr-375.png')
                 self.assertFalse(errors,errors)

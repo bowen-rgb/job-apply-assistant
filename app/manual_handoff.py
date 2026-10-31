@@ -47,7 +47,7 @@ def take_over(job_id):
         queue = c.execute('SELECT status FROM application_queue WHERE job_id=?', (job_id,)).fetchone()
     if not row:
         raise KeyError(job_id)
-    if row['application_status'] in {'submitted','submitted_verified','withdrawn'} or row['tracker_stage'] in {'rejected','withdrawn','hired','offer_declined'}:
+    if row['application_status'] in {'submitted','submitted_verified','withdrawn'} or row['tracker_stage'] in {'rejected','withdrawn','hired','offer_declined','no_response'}:
         raise ValueError('Cette candidature est déjà envoyée ou clôturée. Consultez son historique plutôt que de la préparer à nouveau.')
     if is_running('app.apply_worker', job_id) or row['application_status'] in {'opening', 'preparing', 'preparing_letter'} or (queue and queue['status'] == 'running'):
         raise ValueError('Arrêtez la préparation et attendez sa fin avant de reprendre cet onglet.')

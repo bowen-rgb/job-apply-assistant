@@ -5,8 +5,9 @@
  */
 window.ApplicationInsights = (() => {
   const root = document.getElementById('applicationInsights');
+  document.getElementById('trackingContent').append(document.getElementById('analyticsCards'),root);
   const t = (fr, zh) => Locale.language === 'zh' ? zh : fr;
-  let state = null, jobs = [], importedFile = null, currentJob = null;
+  let state = null, jobs = [], importedFile = null, currentJob = null, resultFilter = 'all';
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const api = (path, body, method = 'POST') => requestJson('/api/insights'+path,
     body === undefined ? {} : {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
@@ -25,7 +26,7 @@ window.ApplicationInsights = (() => {
       <div class="queue-actions"><button type="button" class="secondary compact" data-insight="mail">${escape(t('Lire les retours Gmail','读取 Gmail 招聘反馈'))}</button>
       <button type="button" class="ghost compact" data-insight="refresh">${escape(t('Actualiser le suivi','更新跟踪信息'))}</button></div>
       <p class="small">${escape(t('Gmail reste facultatif et en lecture seule. Aucun statut ne change avant votre confirmation. Aucun message n’est envoyé.','Gmail 可选，仅用于读取。确认前不会改变投递状态，也不会发送邮件。'))}</p>
-      <p data-insight-status role="status" aria-live="polite"></p><div data-mail-proposals></div><div data-followups></div>
+      <p data-insight-status role="status" aria-live="polite"></p><div data-mail-proposals></div><div data-followups></div><section data-tracker-results></section>
       <details><summary>${escape(t('Préparer un entretien / vérifier le CV','准备面试／检查简历'))}</summary>
       <label>${escape(t('Candidature','选择申请'))}<select data-dossier-job></select></label>
       <button type="button" class="ghost compact" data-insight="dossier">${escape(t('Ouvrir le dossier','查看准备资料'))}</button><div data-dossier></div></details>
@@ -54,9 +55,14 @@ window.ApplicationInsights = (() => {
     const select = root.querySelector('[data-dossier-job]'), previous = select.value;
     select.innerHTML = `<option value="">${escape(t('Choisissez une candidature','请选择一份申请'))}</option>`+jobs.map(job=>`<option value="${job.id}">${escape(job.company)} · ${escape(job.title)}</option>`).join('');
     select.value = previous;
-    renderOutcomes(); renderFollowups();
+    renderOutcomes(); renderFollowups(); renderTracker();
   }
 
+  function renderTracker(){
+    const labels={all:t('Toutes les candidatures','全部申请'),submitted:t('Envoyées','已投递'),interview:t('Entretiens','面试'),rejected:t('Refus confirmés','明确被拒'),no_response:t('Clôturées sans réponse','未回复，已结束跟进'),offer:t('Propositions','录用意向')};
+    const rows=jobs.filter(job=>resultFilter==='all'||job.tracker_stage===resultFilter);
+    root.querySelector('[data-tracker-results]').innerHTML=`<h3>${escape(t('Résultats des candidatures','申请结果'))}</h3><div class="queue-actions">${Object.entries(labels).map(([id,label])=>`<button type="button" class="ghost compact" data-result-filter="${id}" aria-pressed="${id===resultFilter}">${escape(label)} · ${jobs.filter(j=>id==='all'||j.tracker_stage===id).length}</button>`).join('')}</div><div class="tracker-result-list">${rows.length?rows.map(job=>`<article><h4>${escape(job.company)} · ${escape(job.display_title||job.title)}</h4><p><strong>${escape(tr(stageLabels[job.tracker_stage]||job.tracker_stage||'Sauvegardée'))}</strong></p><p>${escape(job.tracker_note||t('Aucun retour enregistré.','尚无已记录的招聘反馈。'))}</p><button type="button" class="ghost compact" data-insight="record" data-id="${job.id}">${escape(t('Voir ou mettre à jour le suivi','查看／更新这份申请'))}</button></article>`).join(''):`<p>${escape(t('Aucune candidature dans cette catégorie.','这个分类还没有申请记录。'))}</p>`}</div>`;
+  }
   function renderOutcomes() {
     const rows = state.mail_proposals;
     root.querySelector('[data-mail-proposals]').innerHTML = `<h3>${escape(t('Retours à confirmer','待确认的招聘反馈'))} · ${rows.length}</h3>`+
@@ -114,11 +120,13 @@ window.ApplicationInsights = (() => {
 
   root.addEventListener('change',event=>{if(event.target.matches('[data-ledger-file]')){importedFile=null;root.querySelector('[data-insight="import"]').disabled=true;}});
   root.addEventListener('click',async event=>{
+    const filter=event.target.closest('[data-result-filter]');if(filter){resultFilter=filter.dataset.resultFilter;renderTracker();return;}
     const button=event.target.closest('[data-insight]'); if(!button)return;
     button.disabled=true;
     try {
       const action=button.dataset.insight;
       if(action==='refresh')await load();
+      if(action==='record'){showView('pipeline');await loadPipeline();const card=document.querySelector(`[data-record-id="${Number(button.dataset.id)}"]`);if(card){card.scrollIntoView({block:'center',behavior:'smooth'});card.tabIndex=-1;card.focus({preventScroll:true});}}
       if(action==='mail'){
         message(t('Lecture des messages récents… Les résultats seront à confirmer.','正在读取近期邮件……识别结果会先让你确认。'));
         const result=await api('/gmail-sync',{days:30});await load();

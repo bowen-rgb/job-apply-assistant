@@ -117,7 +117,7 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
             _update_status(job_id,'error')
             _record(job_id,'apply_error',str(exc))
             raise
-    if job.get('application_status') in {'submitted','submitted_verified','withdrawn'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'}:
+    if job.get('application_status') in {'submitted','submitted_verified','withdrawn'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined','no_response'}:
         return
 
     # Recheck in the worker as well: a new AI review may have started after

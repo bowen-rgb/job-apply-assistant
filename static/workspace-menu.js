@@ -2,7 +2,7 @@
    Every entry opens an existing page/editor; no application or scan is started. */
 window.WorkspaceMenu=(()=>{
  const routes=[
-  ['jobs','jobsNav'],['pipeline','pipelineNav'],['profile','profileNav'],['qr','qrNav'],
+  ['jobs','jobsNav'],['pipeline','pipelineNav'],['profile','profileNav'],['qr','qrNav'],['tools','toolsView'],['tracking','trackingView'],
   ['overview','overviewNav'],['guide','guideNav'],['accounts','accountsNav'],['logins','platformLoginNav'],
   ['pending','pendingTasksNav'],['pfe','pfeNav'],['liked','liked'],['human','human'],['confirmed','confirmed'],['submitted','submitted'],
   ['export','jobExportShortcut'],['sources','jobSourcesShortcut'],['resumes','resumeFile'],['appearance','appearanceSettings']
@@ -24,6 +24,10 @@ window.WorkspaceMenu=(()=>{
   $('workspaceMenuButton').textContent=t('back')+' · Tab';$('mainMenuTitle').textContent=t('title');
   $('mainMenuHint').textContent=t('hint');$('menuSearch').placeholder=t('search');$('menuSearch').setAttribute('aria-label',t('search'));
   $('workspaceTitle').textContent=view==='menu'?t('title'):(t(view));
+  document.querySelectorAll('[data-workflow]').forEach(button=>{button.textContent=t(button.dataset.workflow);if(button.dataset.workflow===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
+  document.querySelectorAll('[data-workflow-title]').forEach(node=>node.textContent=t(node.dataset.workflowTitle));
+  const help=Locale.language==='zh'?{tracking:'查看真实招聘反馈、确认结果、跟进未回复的申请。未回复不等于被拒。',tools:'选一项任务，准备申请材料或研究岗位。不会自动发送申请。'}:{tracking:'Consultez les réponses, confirmez les résultats et relancez les candidatures sans réponse. Le silence ne signifie pas un refus.',tools:'Préparez vos documents ou étudiez une offre. Aucune candidature n’est envoyée ici.'};
+  document.querySelectorAll('[data-workflow-help]').forEach(node=>node.textContent=help[node.dataset.workflowHelp]);
   const query=$('menuSearch').value.trim().toLocaleLowerCase();
   $('mainMenuView').classList.toggle('menu-searching',!!query);
   $('menuPageGrid').replaceChildren();
@@ -55,13 +59,17 @@ window.WorkspaceMenu=(()=>{
  async function navigate(id){
   const route=routes.find(row=>row[0]===id);if(!route)return;
   $('menuSearch').value='';
+  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+  if(['jobs','pipeline','profile','overview','guide','pfe','tools','tracking'].includes(id)){await showView(id);return;}
   if(['liked','human','confirmed','submitted'].includes(id)){
-   showView('jobs');qInput.value='';sourceSelect.value='';document.querySelector(`#jobSidebar [data-filter="${id}"]`).click();
-  }else if(['export','sources'].includes(id)){
+   await showView('jobs');qInput.value='';sourceSelect.value='';document.querySelector(`#jobSidebar [data-filter="${id}"]`).click();
+  }else if(id==='sources'){
+   await showView('tools');await CareerTools.open('connections');
+  }else if(id==='export'){
    if(id==='export')showView('jobs');else await showView('profile');
    $(route[1]).click();
   }else if(['resumes','appearance'].includes(id)){
-   await showView('profile');const target=$(route[1]);target.scrollIntoView({block:'center',behavior:'smooth'});target.focus({preventScroll:true});
+   await showView('profile');const target=$(route[1]);for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;target.scrollIntoView({block:'center',behavior:'smooth'});target.focus({preventScroll:true});
   }else {
    // Dialog pages return to the exact underlying page, including unsaved inputs.
    if(['qr','accounts','logins','pending'].includes(id)&&shown())showView(previous,{resume:true});
@@ -86,10 +94,13 @@ window.WorkspaceMenu=(()=>{
   document.querySelector('aside').hidden=true;
   const actionBar=document.createElement('div');actionBar.className='workspace-page-actions';
   actionBar.append($('searchBtn'),$('batchBtn'));$('jobsView').querySelector('header').after(actionBar);
-  const options=document.createElement('details');options.id='workspaceOptions';
-  const optionsLabel=document.createElement('summary');optionsLabel.textContent='⋯';optionsLabel.setAttribute('aria-label',t('appearance'));
-  options.append(optionsLabel,$('simpleModeToggle'));header.insertBefore(options,title);
-  options.addEventListener('click',event=>{if(event.target.closest('button'))options.open=false;});
+  const workflow=document.createElement('nav');workflow.id='workflowNav';workflow.className='workflow-nav';
+  workflow.setAttribute('aria-label','Workflow');
+  for(const id of ['jobs','pipeline','tracking','tools']){
+   const button=document.createElement('button');button.type='button';button.dataset.workflow=id;
+   button.onclick=()=>navigate(id).catch(error=>{title.textContent=error.message;});workflow.append(button);
+  }
+  header.after(workflow);
   const appearance=document.createElement('section');appearance.id='appearanceSettings';appearance.className='settings-card';appearance.tabIndex=-1;
   const heading=document.createElement('h2');heading.textContent=t('appearance');appearance.append(heading,document.querySelector('.angelina-preferences'));
   $('profileForm').insertBefore(appearance,$('profileForm').lastElementChild);

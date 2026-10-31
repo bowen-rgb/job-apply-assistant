@@ -89,6 +89,8 @@ def read_xlsx(content):
 
 def stage(raw):
     text = fold(raw).strip()
+    if text in {'no_response','no response','sans reponse','无回复','未回复','长期未回复'}:
+        return 'no_response'
     if re.search(r'reject|refus|non retenu|pas retenu|未录用|拒绝|not selected', text):
         return 'rejected'
     if re.search(r'offer.declined|offre.decline|婉拒录用', text):

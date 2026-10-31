@@ -145,11 +145,11 @@ def start_review_export(payload: ReviewExport):
     if payload.scope=='pending':
         rows=[j for j in rows if j['human_review_status']=='pending' and j['user_action']!='skipped'
               and j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
-              and j['tracker_stage'] not in {'rejected','withdrawn','hired','offer_declined'}
+              and j['tracker_stage'] not in {'rejected','withdrawn','hired','offer_declined','no_response'}
               and j['decision']!='expired' and j['availability_status']!='expired']
     elif payload.scope=='unsubmitted':
         rows=[j for j in rows if j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
-              and j['tracker_stage'] not in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'}
+              and j['tracker_stage'] not in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined','no_response'}
               and j['user_action']!='skipped' and j['human_review_status']!='declined'
               and j['review_verdict']!='SKIP' and j['decision'] not in {'reject','expired'} and j['availability_status']!='expired']
     else:
@@ -730,7 +730,7 @@ def track(job_id: int, payload: TrackPatch):
         raise HTTPException(404, 'job not found')
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    if payload.stage in {'submitted','withdrawn','rejected','hired','offer_declined'}:
+    if payload.stage in {'submitted','withdrawn','rejected','hired','offer_declined','no_response'}:
         cancel_worker('app.apply_worker', job_id)
     return {'ok': True}
 

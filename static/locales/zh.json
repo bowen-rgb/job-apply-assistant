@@ -919,5 +919,10 @@
   "menu.audioError": "这首歌无法播放，换一个音频文件试试。",
   "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.": "每行一个招聘站点：填写完整 HTTPS 网址，或保留原来的 greenhouse:代号:企业 格式。支持 12 类招聘系统的公开岗位接口；搜索时识别出的站点也会自动记住。",
   "Embauché": "已入职",
-  "Offre déclinée": "已婉拒录用"
+  "Offre déclinée": "已婉拒录用",
+  "menu.tools": "材料与助手",
+  "menu.tracking": "反馈与跟进",
+  "Clôturée sans réponse": "未回复，已结束跟进",
+  "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.": "确认将这份未回复的申请结束跟进？这不代表招聘方拒绝。",
+  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "填写最后联系日期及结束跟进的原因（必填）。"
 }

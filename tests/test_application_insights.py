@@ -31,6 +31,22 @@ class ApplicationInsightsTests(unittest.TestCase):
     def message(self, identifier='m1', text='Example Lab: Your application was not selected.'):
         return {'id': identifier, 'text': text, 'sender': 'hr@lab.test', 'subject': 'Application response', 'received_at': '2026-10-01T12:00:00+00:00'}
 
+    def test_no_response_is_explicit_and_distinct_from_rejection(self):
+        from app.tracker_exchange import stage
+        for value in ['no_response', 'no response', 'Sans réponse', '未回复']:
+            self.assertEqual(stage(value), 'no_response')
+        self.assertEqual(classify_response('No response to my application')['signal'], 'unknown')
+        with self.assertRaises(ValueError):
+            self.jobs.track(1, 'no_response', '', source='manual')
+        self.jobs.track(1, 'no_response', 'No reply since September; manually closed', source='manual')
+        self.assertEqual(self.jobs.list()[0]['tracker_stage'], 'no_response')
+        self.assertIsNone(followup_status(self.jobs.list()[0], []))
+        with self.assertRaises(ValueError):self.jobs.assert_preparable(1)
+        import_rows([{'company':'Silent Company','title':'Internship','stage':'no response','date':'2026-09-01','url':'https://silent.test/job'}])
+        self.assertEqual(next(j for j in self.jobs.list() if j['company']=='Silent Company')['tracker_stage'],'no_response')
+        records.ingest_message(self.message(), self.jobs.list())
+        self.assertEqual(records.proposals()[0]['reason'], 'conflicting_signal')
+
     def test_rejection_is_proposal_then_confirmed_once_with_evidence(self):
         self.assertEqual(records.ingest_message(self.message(), self.jobs.list()), 'proposed')
         self.assertEqual(self.jobs.list()[0]['tracker_stage'], 'submitted')

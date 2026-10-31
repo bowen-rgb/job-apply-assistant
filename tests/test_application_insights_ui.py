@@ -23,7 +23,8 @@ class ApplicationInsightsUITests(unittest.TestCase):
                     data={}
                     if path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Test profile','identity':{}}]}
                     elif path=='/api/profile':data={'automation':{}}
-                    elif path in {'/api/jobs','/api/sources','/api/resumes','/api/pipeline'}:data=[]
+                    elif path=='/api/pipeline':data=[dict(id=1,company='Rejected Lab',title='Simulation',tracker_stage='rejected',application_status='submitted',tracker_note='HR: not selected'),dict(id=2,company='Silent Lab',title='Control',tracker_stage='no_response',application_status='submitted',tracker_note='Manually closed after no reply')]
+                    elif path in {'/api/jobs','/api/sources','/api/resumes'}:data=[]
                     elif path=='/api/queue':data={'counts':{},'items':[]}
                     elif path=='/api/insights':data={'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'followups':[],'mail_proposals':pending}
                     elif path=='/api/insights/gmail-sync':mutations.append(path);data={'read':1,'proposed':1}
@@ -31,10 +32,16 @@ class ApplicationInsightsUITests(unittest.TestCase):
                         mutations.append((path,route.request.post_data_json));pending.clear();data={'ok':True}
                     route.fulfill(json=data)
                 page.route('**/*',respond);page.goto('http://insights.test/')
-                navigate(page,'pipeline')
+                navigate(page,'tracking')
                 expect(page.locator('#applicationInsights')).to_contain_text('招聘反馈与下一步')
                 expect(page.locator('[data-mail-proposals]')).to_contain_text('not selected')
                 self.assertFalse(mutations)
+                page.locator('[data-result-filter=rejected]').click()
+                expect(page.locator('.tracker-result-list')).to_contain_text('Rejected Lab')
+                expect(page.locator('.tracker-result-list')).not_to_contain_text('Silent Lab')
+                page.locator('[data-result-filter=no_response]').click()
+                expect(page.locator('.tracker-result-list')).to_contain_text('Silent Lab')
+                expect(page.locator('.tracker-result-list')).not_to_contain_text('Rejected Lab')
                 page.locator('[data-insight="confirm"]').click()
                 expect(page.locator('[data-insight-status]')).to_contain_text('请先核对')
                 self.assertFalse(mutations)

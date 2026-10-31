@@ -1,0 +1,40 @@
+/* Existing Endfield palette and controls; hierarchy precedes decoration.
+   Persistent navigation, one focused workspace per task, 8/16/24 spacing. */
+.workflow-nav { display:flex; gap:8px; padding:8px 24px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.workflow-nav button { width:auto; margin:0; background:transparent; color:var(--text); border:0; padding:12px 16px; }
+.workflow-nav button[aria-current=page] { background:var(--text); color:var(--accent); }
+body[data-workspace-view=menu] .workflow-nav { display:none; }
+#trackingView,#toolsView { min-width:0; }
+#trackingView > header p,#toolsView > header p { max-width:65ch; }
+#careerTools { margin-top:0; padding:24px; }
+.tool-tabs { display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:24px; }
+#careerTools .tool-tabs button { margin:0; width:auto; background:var(--panel2); color:var(--text); }
+#careerTools .tool-tabs button[aria-selected=true] { background:var(--accent); color:var(--text); }
+#careerTools [data-tool-panel] > h3 { font-size:18px; margin:0 0 16px; }
+#careerTools [data-tool-panel] > h3:not(:first-child) { margin-top:24px; }
+.tool-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+#careerTools .task-guidance { max-width:65ch; padding:16px; border-left:3px solid var(--accent); background:var(--panel2); line-height:1.7; margin-bottom:24px; }
+#careerTools [data-task-choice][aria-pressed=true] { box-shadow:inset 0 -3px var(--accent); }
+#careerTools .task-options { margin-block:16px 24px; }
+#careerTools .tool-shortcuts button { margin:0; min-width:0; text-align:left; min-height:64px; background:var(--panel2); color:var(--text); }
+#careerTools [data-task-form] { max-width:800px; }
+#careerTools [data-tool-panel] > form + form { border-top:1px solid var(--line); padding-top:24px; margin-top:24px; }
+#trackingContent { display:grid; gap:24px; }
+#trackingContent #applicationInsights { margin-top:0; }
+#trackingContent .metric-grid { margin:0; }
+.tracker-result-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px; }
+.tracker-result-list article { padding:16px; background:var(--panel2); min-width:0; overflow-wrap:anywhere; }
+.tracker-result-list h4 { margin:0 0 8px; font-size:16px; }
+.tracker-result-list p { white-space:pre-wrap; max-width:65ch; }
+[data-result-filter][aria-pressed=true] { background:var(--text); color:var(--accent); }
+@media(max-width:600px) {
+ .workflow-nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:8px; }
+ .workflow-nav button { padding:12px 8px; }
+ #careerTools { padding:16px; }
+ .tracker-result-list { grid-template-columns:minmax(0,1fr); }
+ .tool-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .tool-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #careerTools .tool-tabs button { padding:12px 8px; }
+}
+
+#careerTools [data-tool-status]:empty { display:none; }

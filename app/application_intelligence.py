@@ -67,7 +67,7 @@ def followup_status(job, events, rules=None, today=None):
     today = today or date.today()
     if job.get('application_status') not in {'submitted', 'submitted_verified'}:
         return None
-    if job.get('tracker_stage') in {'rejected', 'withdrawn', 'offer', 'interview', 'hired', 'offer_declined'}:
+    if job.get('tracker_stage') in {'rejected', 'withdrawn', 'offer', 'interview', 'hired', 'offer_declined', 'no_response'}:
         return None
     sent = sum(event.get('kind') == 'followup_sent' for event in events)
     dates = [parsed_date(job.get('last_application_at'))]
