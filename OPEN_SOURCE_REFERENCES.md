@@ -111,3 +111,7 @@ Patterns: multi-source discovery, substantially-identical-job deduplication, app
 - Recruiter outcomes are confirmed local records with provenance and timestamped history, not inferred from AI recommendations or failed discovery requests.
 - [Prefect interactive workflows](https://docs.prefect.io/v3/advanced/interactive): pause automated preparation until explicit human input; implemented independently with the existing SQLite queue.
 - [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches): bind confirmation to reviewed content and dismiss stale decisions after changes; no GitHub code is copied.
+
+## 2026-10-31 native JobSpy integration
+
+MIT scraper primitives from python-jobspy 1.4.1 are vendored in `app/vendor/jobspy`, with the full license, upstream metadata and original file hashes. Imports are namespaced locally. The upstream pandas facade, CLI and MCP server are excluded. Native workers invoke concrete scrapers and feed the existing discovery pipeline. Apply-Pilot `src/ui/index.html` was inspected for application outcome summaries and timeline navigation; its app/server was not embedded.

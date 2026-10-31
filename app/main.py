@@ -131,7 +131,8 @@ def local_runtime():
     import os
     from .workspaces import storage_root
     return {'application': 'job-apply-assistant', 'workspace': str(storage_root()),
-            'pid': os.getpid(), 'desktop_owned': bool(os.environ.get('JAA_DESKTOP_INSTANCE'))}
+            'dashboard_owned':bool(os.environ.get('JAA_DASHBOARD_INSTANCE')),'host_instance':os.environ.get('JAA_DASHBOARD_INSTANCE',''),
+            'pid': os.getpid()}
 
 
 @app.post('/api/jobs/translate-titles')

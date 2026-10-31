@@ -108,7 +108,7 @@ class CoachTests(unittest.TestCase):
             expect(page.locator('#coachStatus')).to_contain_text('Indiquez le poste et la ville')
             self.assertEqual(writes,[])
             navigate(page,'jobsNav')
-            expect(page.locator('#batchBtn')).to_be_visible()
+            expect(page.locator('#batchBtn')).to_have_count(0)
             page.reload();navigate(page,'guide');expect(page.locator('body')).not_to_have_class('simple-mode')
         self.run_browser(check,dict(resume_ok=True),jobs)
 

@@ -62,22 +62,11 @@ if errorlevel 1 (
 echo [8/8] Preparing profile and starting...
 if not exist "profile.json" copy /Y "profile.example.json" "profile.json" >nul
 
-call start_chrome_debug.bat
-if errorlevel 1 (
-  echo WARNING: Dedicated Chrome debug browser did not start. The local dashboard can still start.
-)
-timeout /t 2 /nobreak >nul
-"%VENV_PY%" -m app.server_launcher
-if errorlevel 1 (
-  echo Server startup failed. Logs: %~dp0data\server-logs
-  pause
-  exit /b 1
-)
-start "" "http://127.0.0.1:8765"
+call setup_dashboard.bat
+call start.bat
 
-echo.
-echo Setup complete. Dashboard: http://127.0.0.1:8765
-echo For later launches, use start.bat.
+echo Setup complete. Next time, double-click the Dashboard shortcut.
+
 exit /b 0
 
 :no_python

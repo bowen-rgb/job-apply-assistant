@@ -87,7 +87,7 @@ class WorkflowParityTests(unittest.TestCase):
         expect(self.page.locator('#profileView')).to_be_visible()
         expect(self.page.locator('#search_queries_per_run')).to_be_focused()
         self.page.evaluate("showView('pipeline')")
-        for identifier in ['queueReviewScope','queueReviewBtn','queueBatchBtn','queueRunBtn','queueStopBtn','queueClearBtn','queueAddMatchesBtn','queueFilter']:
+        for identifier in ['queueBatchBtn','queueRunBtn','queueStopBtn','queueClearBtn','queueAddMatchesBtn','queueFilter']:
             expect(self.page.locator('#'+identifier)).to_be_visible()
         self.page.evaluate("showView('jobs')")
         self.page.locator('#jobHealthShortcut').click()

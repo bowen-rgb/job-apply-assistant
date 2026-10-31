@@ -55,7 +55,7 @@ class SurfaceTests(unittest.TestCase):
                             expect(menu).to_be_visible()
                             menu.click()
                             expect(page.locator('#mainMenuView')).to_be_visible()
-                            expect(page.locator('#menuPageGrid button')).to_have_count(20)
+                            expect(page.locator('#menuPageGrid button')).to_have_count(24)
                             expect(page.locator('aside')).to_be_hidden()
                             page.keyboard.press('Escape')
                             expect(page.locator('#'+view)).to_be_visible()

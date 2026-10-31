@@ -60,7 +60,7 @@ class WorkspaceMenuTests(unittest.TestCase):
    expect(self.page.locator('#trackingView #applicationInsights')).to_be_visible()
    self.page.screenshot(path=f'tmp/workflow-tracking-{width}.png',full_page=True)
    self.page.locator('[data-workflow=pipeline]').click()
-   expect(self.page.locator('#queueReviewPanel')).to_be_visible()
+   expect(self.page.locator('#queueControls')).to_be_visible()
   self.page.evaluate("WorkspaceMenu.navigate('tools')")
   self.page.locator('#languageSelect').select_option('fr')
   expect(self.page.locator('#toolsView h1')).to_have_text('Documents et assistants')
@@ -75,16 +75,16 @@ class WorkspaceMenuTests(unittest.TestCase):
    if width>1100:
     frame=self.page.frame_locator('#menuScene')
     expect(frame.locator('.ef-core')).to_be_visible()
-    expect(frame.locator('#sceneStats')).to_contain_text('待你确认')
+    expect(frame.locator('#sceneStats')).to_contain_text('被拒')
     expect(frame.locator('body')).not_to_contain_text('private@example.test')
     self.page.wait_for_timeout(1100)
-   else:expect(self.page.locator('#menuPageGrid button')).to_have_count(20)
+   else:expect(self.page.locator('#menuPageGrid button')).to_have_count(24)
    self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
    self.page.screenshot(path=f'tmp/endfield-menu-{width}.png',full_page=True)
   self.assertEqual(self.remote,[]);self.assertEqual(self.writes,[]);self.assertEqual(self.errors,[])
  def test_every_menu_entry_routes_to_existing_function_without_writes(self):
   self.page.set_viewport_size({'width':768,'height':1000})
-  destinations={'tools':'toolsView','tracking':'trackingView','jobs':'jobsView','pipeline':'pipelineView','profile':'profileView','qr':'qrApplicationDialog','overview':'overviewView','guide':'guideView','accounts':'accountsDialog','logins':'accountsDialog','pending':'pendingTasksDialog','pfe':'pfeView','liked':'jobsView','human':'jobsView','confirmed':'jobsView','submitted':'jobsView','export':'jobsView','sources':'toolsView','resumes':'profileView','appearance':'profileView'}
+  destinations={'tools':'toolsView','tracking':'trackingView','jobs':'jobsView','pipeline':'pipelineView','profile':'profileView','qr':'qrApplicationDialog','overview':'overviewView','guide':'guideView','accounts':'accountsDialog','logins':'accountsDialog','pending':'pendingTasksDialog','pfe':'pfeView','liked':'jobsView',**{k:'jobsView' for k in ['waiting','responses','followups','decide','rejected']},'activity':'overviewView','submitted':'jobsView','export':'jobsView','sources':'toolsView','resumes':'profileView','appearance':'profileView'}
   for action,target in destinations.items():
    with self.subTest(action=action):
     self.page.locator('#workspaceMenuButton').click()
@@ -149,24 +149,13 @@ class WorkspaceMenuTests(unittest.TestCase):
   frame.locator('#widgetMusicFiles').set_input_files([{'name':'Test track.wav','mimeType':'audio/wav','buffer':output.getvalue()},{'name':'Next track.wav','mimeType':'audio/wav','buffer':output.getvalue()}])
   expect(frame.locator('#widgetTrack')).to_have_text('Test track.wav');frame.locator('#widgetNext').click();expect(frame.locator('#widgetTrack')).to_have_text('Next track.wav')
   self.assertTrue(frame.locator('#widgetAudio').evaluate('(e)=>e.src.startsWith("blob:")'))
-  frame.locator('[data-widget=map]').click();expect(frame.locator('#widgetLocate')).to_be_visible()
-  expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(0)
+  expect(frame.locator('[data-widget=map], #widgetLocate, #widgetMapCanvas')).to_have_count(0)
   self.assertEqual(self.remote,[]);self.assertEqual(self.writes,[])
- def test_map_requests_location_only_after_click_and_can_clear_it(self):
-  frame=self.page.frame_locator('#menuScene');expect(frame.locator('[data-widget=map]')).to_be_visible();self.page.wait_for_timeout(1000)
-  self.page.evaluate("Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:ok=>{window.geoCalls=(window.geoCalls||0)+1;ok({coords:{latitude:48.85,longitude:2.35}})}}})")
-  frame.locator('[data-widget=map]').click();self.assertEqual(self.page.evaluate('window.geoCalls||0'),0)
-  frame.locator('#widgetLocate').click();expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(1)
-  self.assertEqual(self.page.evaluate('window.geoCalls'),1)
-  expect(frame.locator('#widgetGoogleMap')).to_have_attribute('href',__import__('re').compile(r'https://www.google.com/maps/search/\?api=1&query=48.85'))
-  frame.locator('#widgetClearLocation').click();expect(frame.locator('#widgetMapCanvas iframe')).to_have_count(0)
-  expect(frame.locator('#widgetGoogleMap')).to_be_hidden()
-  self.page.evaluate("()=>{navigator.geolocation.getCurrentPosition=(ok,fail)=>fail({code:1});}")
-  frame.locator('#widgetLocate').click();expect(frame.locator('#widgetLocationStatus')).to_contain_text('无法定位')
-  frame.locator('#widgetRotate').check()
-  frame.locator('body').evaluate('()=>{const original=Date.now;Date.now=()=>original()+31000;}')
-  expect(frame.locator('#musicWidget')).to_be_visible(timeout=3000)
-  self.assertEqual(self.writes,[])
+ def test_removed_map_never_requests_location(self):
+  frame=self.page.frame_locator('#menuScene');expect(frame.locator('#musicWidget')).to_be_visible()
+  self.assertNotIn('geolocation',(STATIC/'workspace-menu.js').read_text(encoding='utf-8'))
+  expect(frame.locator('#widgetLocate, [data-widget=map]')).to_have_count(0)
+  self.assertEqual(self.remote,[]);self.assertEqual(self.writes,[])
  def test_blocked_scene_falls_back_to_working_page_cards(self):
   self.page.route('**/static/vendor/endfield-menu/index.html*',lambda r:r.abort())
   self.page.reload();expect(self.page.locator('#menuPageGrid')).to_be_visible(timeout=8000)
@@ -187,7 +176,7 @@ class WorkspaceMenuTests(unittest.TestCase):
   for language in ['zh','fr']:
    self.page.evaluate('(language)=>Locale.setLanguage(language)',language)
    expect(frame.locator('html')).to_have_attribute('lang',language)
-   labels=frame.locator('.ef-rtile text[data-menu-label]').evaluate_all('(nodes)=>nodes.map(e=>({x:e.getBBox().x,w:e.getBBox().width,y:e.getBBox().y,h:e.getBBox().height,c:Number(e.getAttribute("x"))}))')
+   labels=frame.locator('.ef-rtile text[data-menu-label]').evaluate_all('(nodes)=>nodes.map(e=>({x:e.getBBox().x+(e.transform.baseVal.consolidate()?.matrix.e||0),w:e.getBBox().width,y:e.getBBox().y+(e.transform.baseVal.consolidate()?.matrix.f||0),h:e.getBBox().height,c:Number(e.getAttribute("x"))}))')
    for label in labels:
     self.assertLessEqual(label['w'],95.5,(language,label));self.assertLess(abs(label['x']+label['w']/2-label['c']),1.5,(language,label))
     self.assertLessEqual(label['y']+label['h'],104.5,(language,label))

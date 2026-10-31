@@ -1,4 +1,5 @@
 let allJobs=[];
+let applicationSummary=null;
 let visibleJobIds=[];
 let reviewExportId=null,reviewExportTimer=null,reviewExportBusy=false;
 let current='all';
@@ -188,11 +189,15 @@ async function load(){
     const r=await fetch(`/api/jobs?language=${language}`);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const jobs=await r.json();
+    const insights=await requestJson('/api/insights').catch(()=>null);
+    const nextSummary=insights?.summary||null;
+    const summaryChanged=JSON.stringify(nextSummary)!==JSON.stringify(applicationSummary);
+    applicationSummary=nextSummary;
     if(Locale.language!==language)return;
     jobs.filter(job=>job.display_title).forEach(job=>titleTranslations.set(titleKey(job,language),{title:job.display_title,status:'ready',method:'glossary'}));
     const changed=JSON.stringify(jobs)!==JSON.stringify(allJobs);
     allJobs=jobs;
-    if(changed || !cards.children.length)render();
+    if(changed || summaryChanged || !cards.children.length)render();
     const running=allJobs.some(j=>['QUEUED','RUNNING'].includes(j.review_verdict)||['opening','preparing','preparing_letter'].includes(j.application_status)||j.queue_status==='running');
     if(running && !pollTimer) pollTimer=setInterval(load,3500);
     if(!running && pollTimer){clearInterval(pollTimer);pollTimer=null;}
@@ -202,13 +207,23 @@ async function load(){
   }finally{cards.setAttribute('aria-busy','false');}
 }
 
+function selectApplicationView(filter){
+  current=filter;qInput.value='';sourceSelect.value='';
+  document.querySelectorAll('.filter').forEach(button=>button.classList.toggle('active',button.dataset.filter===filter));
+  render();cards.tabIndex=-1;cards.scrollIntoView({block:'start',behavior:'smooth'});cards.focus({preventScroll:true});
+}
 function matchFilter(j,filter=current){
   // Explicit field/value filters, like GitHub Projects single-select views:
   // suitability, AI recommendation, listing availability and recruiter outcome
   // have separate meanings and must never be merged into one rejection state.
+  if(applicationSummary?.job_ids?.[filter])return applicationSummary.job_ids[filter].includes(j.id);
+  if(filter==='waiting')return hasSubmitted(j)&&!['screening','interview','offer','rejected','withdrawn','hired','offer_declined','no_response'].includes(j.tracker_stage);
+  if(filter==='responses')return hasSubmitted(j)&&['screening','interview','offer'].includes(j.tracker_stage);
+  if(filter==='followups')return hasSubmitted(j)&&!['interview','offer','rejected','withdrawn','hired','offer_declined','no_response'].includes(j.tracker_stage)&&!!j.next_followup_at&&new Date(j.next_followup_at)<=new Date();
+  if(filter==='decide')return queueEligible(j)&&(j.user_action==='liked'||['keep','review'].includes(j.decision)||['APPLY','HUMAN_REVIEW'].includes(j.review_verdict));
   if(filter==='skipped') return j.user_action==='skipped';
   if(filter==='expired') return j.decision==='expired' || j.availability_status==='expired';
-  if(filter==='rejected') return j.tracker_stage==='rejected';
+  if(filter==='rejected') return hasSubmitted(j)&&j.tracker_stage==='rejected';
   if(filter==='withdrawn') return j.application_status==='withdrawn' || j.tracker_stage==='withdrawn';
   if(filter==='submitted') return ['submitted','submitted_verified'].includes(j.application_status);
   if(j.user_action==='skipped') return false;
@@ -267,18 +282,6 @@ async function loadHistory(id,panel){
 }
 window.loadHistory=loadHistory;
 
-function humanReviewMarkup(j){
-  if(j.automatic_review_ready||!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict))return '';
-  const state=humanStatus(j), labels={pending:'À confirmer par vous',approved:'Confirmée par vous',declined:'Écartée par vous'};
-  return `<section class="human-review-panel ${esc(state)}" data-human-review="${j.id}"><strong>${esc(tr(labels[state]||labels.pending))}</strong>${state==='pending'?`<p>${esc(tr('La file vérifie automatiquement ce résultat. Vous pouvez aussi décider manuellement ici.'))}</p>`:''}${state!=='pending'&&j.human_reviewed_at?`<p class="small">${esc(j.human_reviewed_at)}</p>`:''}${reviewActionable(j)?`<div class="queue-actions">${state!=='approved'?`<button class="primary compact" onclick="confirmHumanReview(${j.id},'approved')">${esc(tr('J’ai vérifié : autoriser la préparation'))}</button>`:''}${state!=='declined'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'declined')">${esc(tr('Ne pas préparer ce poste'))}</button>`:''}${state!=='pending'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'pending')">${esc(tr('Revenir à vérifier'))}</button>`:''}</div>`:''}</section>`;
-}
-async function confirmHumanReview(id,state){
-  const job=allJobs.find(j=>j.id===id);if(!job)return;
-  try{await requestJson(`/api/jobs/${id}/human-review`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status:state,review_token:job.human_review_token})});await load();}
-  catch(error){statusEl.textContent=error.message;await load();}
-}
-window.confirmHumanReview=confirmHumanReview;
-
 function reviewBadge(j){
   const v=j.review_verdict||'';
   if(!v) return `<span class="review none">${esc(tr('Pas relu'))}</span>`;
@@ -329,14 +332,11 @@ function render(){
   const jobs=scopedJobs.filter(j=>matchFilter(j));
   visibleJobIds=jobs.map(j=>j.id);
   updateExportCount();
-  const liked=scopedJobs.filter(j=>matchFilter(j,'liked')).length;
-  const keep=scopedJobs.filter(j=>matchFilter(j,'keep')).length;
-  const human=scopedJobs.filter(j=>matchFilter(j,'human')).length;
-  const submitted=scopedJobs.filter(j=>matchFilter(j,'submitted')).length;
   el('filterHelp').textContent=tr(filterHelp[current]||'');
   summary.textContent=`${jobs.length} ${tr('offres affichées')} · ${allJobs.length} ${tr('offres enregistrées')}`;
-  el('jobMetrics').innerHTML=[[tr('Offres'),scopedJobs.filter(j=>matchFilter(j,'all')).length,'all'],[tr('Match fort'),keep,'keep'],[tr('Aimées'),liked,'liked'],[tr('Reviewer: humain'),human,'human'],[tr('Envoyées'),submitted,'submitted']].map(([label,count,filter])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${count}</b></button>`).join('');
-  el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>{current=button.dataset.metricFilter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();});
+  const outcomeLabels=Object.fromEntries(['waiting','responses','followups','decide','rejected'].map(key=>[key,Locale.t('menu.'+key)]));
+  el('jobMetrics').innerHTML=Object.entries(outcomeLabels).map(([filter,label])=>`<button type="button" class="metric metric-button ${current===filter?'selected':''}" data-metric-filter="${filter}"><span>${esc(label)}</span><b>${applicationSummary?.counts?.[filter]??(filter==='followups'?'—':allJobs.filter(j=>matchFilter(j,filter)).length)}</b></button>`).join('');
+  el('jobMetrics').querySelectorAll('[data-metric-filter]').forEach(button=>button.onclick=()=>selectApplicationView(button.dataset.metricFilter));
   if(!jobs.length){cards.innerHTML=`<div class="empty"><strong>${esc(tr('Aucune offre dans cette vue.'))}</strong><span>${esc(tr('Modifiez les filtres ou lancez un scan pour trouver des offres.'))}</span></div>`;return;}
   const restoreDetails=rememberDetails(cards);
   cards.innerHTML=jobs.map(j=>`<article class="card" data-record-id="${j.id}">
@@ -348,7 +348,7 @@ function render(){
     ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
     ${j.last_workflow_event==='privacy_consent_required'?`<div class="application-error" role="status">${esc(tr('Accord à la charte de données requis.'))} <button onclick="approvePrivacy(${j.id})">${esc(tr('Accepter pour cette candidature et continuer'))}</button></div>`:''}
     ${reviewDetails(j)}
-    ${humanStatus(j)==='pending'?`<details class="optional-review"><summary>${esc(tr("Questions à clarifier"))}</summary>${humanReviewMarkup(j)}</details>`:humanReviewMarkup(j)}
+
     ${evidenceMarkup(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow">${safeJobUrl(j.url)?`<a href="${esc(safeJobUrl(j.url))}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a>`:''}</div>
@@ -356,7 +356,6 @@ function render(){
       <button class="primary letter-action" onclick="openLetter(${j.id})">${esc(tr("Rédiger la lettre"))}</button>
       <button class="skip" onclick="decide(${j.id},'${j.user_action==='skipped'?'clear_user_action':'skipped'}')">${esc(tr(j.user_action==='skipped'?'Restaurer':'Passer'))}</button>
       <button class="like" onclick="decide(${j.id},'${j.user_action==='liked'?'clear_user_action':'liked'}')">${esc(tr(j.user_action==='liked'?'Ne plus garder':'Garder'))}</button>
-      <button class="reviewbtn" onclick="reviewJob(${j.id})">${esc(tr("Évaluer le poste"))}</button>
       ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" ${preparable(j)&&!['queued','running','waiting_user'].includes(j.queue_status)?'':'disabled'} onclick="applyJob(${j.id})">${esc(tr('Pré-remplir'))}</button>`}
       <button class="ghost" ${queueEligible(j)&&!j.queue_status?'':'disabled'} onclick="queueJob(${j.id})">${esc(tr(j.queue_status?'File:':'+ File'))}${j.queue_status?` ${esc(statusLabel(j.queue_status))}`:''}</button>
     </div>
@@ -368,11 +367,6 @@ function render(){
 
 async function decide(id,d){
   try{await requestJson(`/api/jobs/${id}/decision`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:d})});await load();}
-  catch(error){statusEl.textContent=error.message;}
-}
-async function reviewJob(id){
-  statusEl.textContent=tr('Évaluation du poste en cours…');
-  try{await requestJson(`/api/jobs/${id}/review`,{method:'POST'});await load();}
   catch(error){statusEl.textContent=error.message;}
 }
 async function applyJob(id, verdict){
@@ -434,7 +428,7 @@ async function generateLetter(id){
   catch(error){if(el(`letter-${id}`))el(`letter-${id}`).textContent=error.message;}
 }
 window.loadLetter=loadLetter;window.generateLetter=generateLetter;
-window.decide=decide; window.reviewJob=reviewJob; window.applyJob=applyJob; window.markApplication=markApplication; window.queueJob=queueJob;
+window.decide=decide; window.applyJob=applyJob; window.markApplication=markApplication; window.queueJob=queueJob;
 
 async function pollScan(){
   try{
@@ -485,16 +479,6 @@ el('searchBtn').onclick=async()=>{
   catch(error){statusEl.textContent=error.message;el('discoveryActionStatus').textContent=error.message;el('searchBtn').disabled=false;}
 };
 el('rescoreBtn').onclick=async()=>{try{el('rescoreBtn').disabled=true;await requestJson('/api/jobs/rescore',{method:'POST'});await load();statusEl.textContent=tr('Correspondances recalculées.');}catch(error){statusEl.textContent=error.message;}finally{el('rescoreBtn').disabled=false;}};
-el('batchBtn').onclick=async()=>{
-  showView('pipeline');el('queueReviewPanel').scrollIntoView({behavior:'smooth',block:'center'});el('queueReviewScope').focus();
-};
-el('queueReviewBtn').onclick=async()=>{
-  if(!confirm(tr('Revoir les offres non encore relues du périmètre choisi avec ChatGPT ? Aucun envoi de candidature.')))return;
-  el('queueReviewBtn').disabled=true;
-  try{await requestJson('/api/review/batch?mode='+encodeURIComponent(el('queueReviewScope').value),{method:'POST'});el('queueReviewStatus').textContent=tr('Batch review lancé');setTimeout(loadPipeline,1000);}
-  catch(error){el('queueReviewStatus').textContent=error.message;}
-  finally{el('queueReviewBtn').disabled=false;}
-};
 async function refreshAutomationStatus(){
   try{const h=await requestJson('/api/health');Guide.health(h);ChromeControl.refresh(h.browser_control);el('automationStatus').textContent=[tr(h.resume_ok?'CV prêt':'Sélectionnez un CV dans le profil'),tr(h.cdp_ok?'Navigateur prêt : vérifiez votre connexion à ChatGPT.':'Navigateur dédié non détecté. Ouvrez start.bat pour l’assistance ; la candidature manuelle reste possible.')].join(' · ');}
   catch(error){Guide.health(null);el('automationStatus').textContent=error.message;}
@@ -712,7 +696,7 @@ function queueItemMarkup(x){
   const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
   const url=safeUrl(p.form_url)||safeUrl(x.url);
   const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
-  const guidance=x.automatic_review_requested&&!x.application_status?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.automatic_review_requested?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('Cette préparation attend votre confirmation du résultat IA.'))} <button class="ghost compact" onclick="openHumanConfirmation()">${esc(tr('Voir les postes à confirmer'))}</button></p>`:'';
+  const guidance=x.automatic_review_requested&&!x.application_status?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.automatic_review_requested?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('La revue IA est intégrée à cette préparation.'))}</p>`:'';
   return `<div class="queue-item ${esc(x.status)}" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">#${x.job_id} · ${esc(tr('Tentatives'))} ${x.attempts||0}${x.status!=='queued'&&x.application_step?` · ${esc(tr(stepLabels[x.application_step]||'Étape inconnue'))}`:''}${(x.application_step_at||x.updated_at)?` · ${esc(tr('Dernière mise à jour'))}: ${esc(x.application_step_at||x.updated_at)} UTC`:''}</div>${failureMarkup(x)}${checks}${guidance}${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${handoffActionsMarkup(x)}<div class="queue-actions">${!hasSubmitted(x)&&['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Remettre en file pour préparer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
 }
 async function loadPipeline(){
@@ -730,10 +714,6 @@ async function loadPipeline(){
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
   const restoreDetails=rememberDetails(el('pipelineView'));
   latestQueueItems=q.items||[];renderQueueItems();
-  const reviewing=latestQueueItems.find(x=>['RUNNING','QUEUED'].includes(x.review_verdict));
-  const reviewed=latestQueueItems.filter(x=>['APPLY','SKIP','HUMAN_REVIEW'].includes(x.review_verdict)).length;
-  if(reviewing)el('queueReviewStatus').textContent=`ChatGPT · ${reviewing.title||''} · ${tr(reviewing.review_verdict==='RUNNING'?'En cours':'En attente')}`;
-  else if(reviewed)el('queueReviewStatus').textContent=`ChatGPT · ${reviewed} / ${latestQueueItems.length} · ${tr('Revue terminée')}`;
   el('queueCounts').textContent=[['queued','En file'],['running','En cours'],['waiting_user','À reprendre par vous'],['error','Préparation échouée'],['done','Terminée'],['cancelled','Annulée']].map(([key,label])=>`${tr(label)} ${q.counts?.[key]||0}`).join(' · ');
   const active=latestQueueItems.find(x=>!hasSubmitted(x)&&x.job_id===q.current_job_id&&x.status==='running')||latestQueueItems.find(x=>!hasSubmitted(x)&&x.status==='running')||jobs.find(j=>['opening','preparing','preparing_letter'].includes(j.application_status));
   const actionableItems=latestQueueItems.filter(x=>!hasSubmitted(x)&&x.application_status!=='withdrawn');
@@ -756,11 +736,9 @@ el('queueAddMatchesBtn').onclick=async()=>{
     const ids=allJobs.filter(j=>queueEligible(j)&&!j.queue_status&&(['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||j.user_action==='liked'||j.decision==='keep')).map(j=>j.id);
     for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100),auto_review:true})});
     await loadPipeline();
-    if(!ids.length)el('pipelineStatus').textContent=tr('Aucun poste confirmé à ajouter. Vérifiez les recommandations IA dans la vue de confirmation humaine.');
+    if(!ids.length)el('pipelineStatus').textContent=tr('Aucune nouvelle offre pertinente à ajouter.');
   }catch(error){el('pipelineStatus').textContent=error.message;}
 };
-function openHumanConfirmation(){showView('jobs');current='human';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===current));render();}
-window.openHumanConfirmation=openHumanConfirmation;
 function updateExportCount(){
   const scope=el('reviewExportScope').value;
   const count=scope==='visible'?visibleJobIds.length:allJobs.filter(j=>{

@@ -1,13 +1,10 @@
-"""Desktop-owned backend: one process, graceful stop, bounded worker cleanup.
+"""Windows process ownership shared by the browser Dashboard and its workers.
 
 Windows job ownership ensures even a forced host termination reaps its workers.
 Chrome is deliberately outside this job: closing the desk must not destroy login.
 """
 import ctypes
-import json
 import os
-import sys
-import threading
 from ctypes import wintypes
 
 
@@ -47,42 +44,3 @@ def own_process_tree():
         raise ctypes.WinError(ctypes.get_last_error())
     # Non-inheritable handle retained until this host exits. Never close it early.
     return handle
-
-
-def main():
-    job_handle = own_process_tree()
-    import uvicorn
-    from .main import app
-    instance = os.environ['JAA_DESKTOP_INSTANCE']
-
-    @app.get('/api/desktop/ready', include_in_schema=False)
-    def desktop_ready():
-        # Startup probe must not depend on external sites or Chrome health checks.
-        return {'ready': True, 'pid': os.getpid()}
-
-    @app.middleware('http')
-    async def desktop_instance(request, call_next):
-        response = await call_next(request)
-        response.headers['X-JAA-Desktop-Instance'] = instance
-        return response
-
-    server = uvicorn.Server(uvicorn.Config(app, host='127.0.0.1',
-        port=int(os.environ.get('JAA_DESKTOP_PORT', '18765')), log_level='warning',
-        access_log=False, timeout_graceful_shutdown=4))
-
-    def control():
-        for line in sys.stdin:
-            if line.strip() == 'shutdown':
-                break
-        server.should_exit = True  # EOF also means the desktop owner disappeared.
-
-    threading.Thread(target=control, daemon=True, name='desktop-control').start()
-    print(json.dumps({'event': 'starting', 'pid': os.getpid()}), flush=True)
-    server.run()
-    from .worker_runtime import terminate_all
-    terminate_all(timeout=3)
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())

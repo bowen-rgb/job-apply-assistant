@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Optional JobSpy-backed discovery provider.
+"""Native job-board discovery using the reviewed MIT scraper source.
 
 The subprocess isolation/retry pattern is adapted from QuickApply (MIT).  JobSpy
 itself is MIT-licensed.  Keeping it in a subprocess prevents one scraper crash
@@ -16,27 +16,6 @@ from typing import Any, Iterable
 from .discovery_diagnostics import emit
 
 
-RUNNER = r'''
-import json, sys
-from jobspy import scrape_jobs
-p = json.loads(sys.argv[1])
-frame = scrape_jobs(
-    site_name=p["sites"],
-    search_term=p["search_term"],
-    google_search_term=p.get("google_search_term") or None,
-    location=p["location"],
-    results_wanted=p["results_wanted"],
-    hours_old=p.get("hours_old") or None,
-    country_indeed=p.get("country_indeed") or "worldwide",
-    linkedin_fetch_description=bool(p.get("linkedin_fetch_description", False)),
-    job_type=p.get("job_type") or None,
-    verbose=0,
-)
-rows = [] if frame is None else frame.to_dict(orient="records")
-json.dump(rows, sys.stdout, default=str)
-'''
-
-
 @dataclass
 class JobSpyResult:
     url: str
@@ -49,29 +28,13 @@ class JobSpyResult:
 
 
 def available() -> bool:
-    try:
-        import importlib.util
-        return importlib.util.find_spec('jobspy') is not None
-    except Exception:
-        return False
+    from importlib.util import find_spec
+    return all(find_spec(name) is not None for name in ('requests','curl_cffi','bs4','markdownify'))
 
 
 def supported_sites() -> set[str]:
-    # Importing jobspy.model executes jobspy.__init__, loading pandas/numpy DLLs.
-    # Keep those native dependencies in the scraper subprocess, never web threads.
-    try:
-        import ast
-        import importlib.util
-        from pathlib import Path
-        spec = importlib.util.find_spec('jobspy')
-        if not spec or not spec.submodule_search_locations:return set()
-        model = Path(next(iter(spec.submodule_search_locations))) / 'model.py'
-        tree = ast.parse(model.read_text(encoding='utf-8'))
-        enum = next(node for node in tree.body if isinstance(node,ast.ClassDef) and node.name=='Site')
-        return {node.value.value for node in enum.body if isinstance(node,ast.Assign)
-                and isinstance(node.value,ast.Constant) and isinstance(node.value.value,str)}
-    except Exception:
-        return set()
+    from .job_board_worker import SITES
+    return set(SITES)
 
 
 def _text(v: Any) -> str:
@@ -83,7 +46,8 @@ def _text(v: Any) -> str:
 
 def _invoke(payload: dict[str, Any], timeout: int) -> list[dict[str, Any]]:
     p = subprocess.run(
-        [sys.executable, '-c', RUNNER, json.dumps(payload, ensure_ascii=False)],
+        [sys.executable, '-m', 'app.job_board_worker', json.dumps(payload, ensure_ascii=False)],
+        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -128,7 +92,7 @@ def discover(profile: dict[str, Any], report=None) -> Iterable[JobSpyResult]:
     supported = supported_sites()
     for site in sites:
         if site not in supported:
-            emit(report,'jobspy_'+site,'jobspy','unavailable',error='Installed JobSpy does not support '+site)
+            emit(report,'jobspy_'+site,'jobspy','unavailable',error='Native adapters do not support '+site)
     sites = [site for site in sites if site in supported]
     if not sites:return
     roles = [str(x).strip() for x in profile.get('preferred_roles', []) if str(x).strip()]

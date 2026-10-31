@@ -4,7 +4,8 @@ window.WorkspaceMenu=(()=>{
  const routes=[
   ['jobs','jobsNav'],['pipeline','pipelineNav'],['profile','profileNav'],['qr','qrNav'],['tools','toolsView'],['tracking','trackingView'],
   ['overview','overviewNav'],['guide','guideNav'],['accounts','accountsNav'],['logins','platformLoginNav'],
-  ['pending','pendingTasksNav'],['pfe','pfeNav'],['liked','liked'],['human','human'],['confirmed','confirmed'],['submitted','submitted'],
+  ['pending','pendingTasksNav'],['pfe','pfeNav'],['liked','liked'],['submitted','submitted'],
+  ...['waiting','responses','followups','decide','rejected','activity'].map(id=>[id,id]),
   ['export','jobExportShortcut'],['sources','jobSourcesShortcut'],['resumes','resumeFile'],['appearance','appearanceSettings']
  ];
  const $=id=>document.getElementById(id),t=key=>Locale.t('menu.'+key);
@@ -15,9 +16,9 @@ window.WorkspaceMenu=(()=>{
   const owner=$('candidateSelect')?.selectedOptions[0]?.textContent||'';
   return {type:'jaa-menu:state',token,active:shown()&&!document.hidden,language:Locale.language,
    quiet:document.documentElement.dataset.angelinaMode==='quiet',owner,profileLabel:t('profile'),hint:t('hint'),
-   widget:Object.fromEntries(['music','map','chooseMusic','noTrack','localMusic','locate','locating','locationHint','locationError','openMap','clearLocation','rotate','clock','audioError'].map(key=>[key,t(key)])),
+   widget:Object.fromEntries(['music','chooseMusic','noTrack','localMusic','clock','audioError'].map(key=>[key,t(key)])),
    sync:loading?t('loading'):summary?.error?t('unavailable'):summary?t('updated'):'',entries:entries(),
-   metrics:['jobs','pipeline','human','submitted'].map(id=>({label:t(id),value:summary?.counts?.[id]??'—'}))};
+   metrics:['waiting','responses','followups','decide','rejected'].map(id=>({label:t(id),value:summary?.counts?.[id]??'—'}))};
  }
  function notify(){if(ready)frame.contentWindow.postMessage(state(),'*');}
  function render(){
@@ -34,7 +35,7 @@ window.WorkspaceMenu=(()=>{
   for(const item of entries().filter(item=>!query||item.label.toLocaleLowerCase().includes(query)||item.id.includes(query))){
    const button=document.createElement('button');button.type='button';button.dataset.menuPage=item.id;
    const icon=document.createElement('span');icon.className='menu-page-icon';icon.setAttribute('aria-hidden','true');
-   icon.textContent=({jobs:'⌕',pipeline:'⇢',profile:'▤',qr:'▦',overview:'◴',guide:'?',accounts:'◎',logins:'⌘',pending:'✓',pfe:'◇',liked:'♡',human:'◌',confirmed:'✓',submitted:'↗',export:'↓',sources:'⌕',resumes:'▤',appearance:'✧'})[item.id];
+   icon.textContent=({jobs:'⌕',pipeline:'⇢',profile:'▤',qr:'▦',overview:'◴',guide:'?',accounts:'◎',logins:'⌘',pending:'✓',pfe:'◇',liked:'♡',waiting:'◷',responses:'↔',followups:'◴',decide:'◇',rejected:'×',activity:'≋',tools:'⚒',tracking:'⇄',submitted:'↗',export:'↓',sources:'⌕',resumes:'▤',appearance:'✧'})[item.id];
    const label=document.createElement('strong');label.textContent=item.label;
    const arrow=document.createElement('span');arrow.textContent='↗';arrow.className='menu-page-arrow';arrow.setAttribute('aria-hidden','true');
    button.append(icon,label,arrow);button.onclick=()=>navigate(item.id);$('menuPageGrid').append(button);
@@ -48,11 +49,11 @@ window.WorkspaceMenu=(()=>{
   if(loading)return;
   loading=true;const request=++serial;render();
   try{
-   const [jobs,queue]=await Promise.all([requestJson('/api/jobs'),requestJson('/api/queue')]);
+   const [jobs,queue,insights]=await Promise.all([requestJson('/api/jobs'),requestJson('/api/queue'),requestJson('/api/insights')]);
    if(!Array.isArray(jobs)||!Array.isArray(queue.items))throw Error('Menu data unavailable');
    if(request!==serial)return;
    summary={counts:{jobs:jobs.filter(j=>matchFilter(j,'all')).length,pipeline:queue.items.filter(j=>!['done','cancelled'].includes(j.status)).length,
-    human:jobs.filter(j=>matchFilter(j,'human')).length,submitted:jobs.filter(j=>matchFilter(j,'submitted')).length}};
+    ...insights.summary?.counts,submitted:jobs.filter(j=>matchFilter(j,'submitted')).length}};
   }catch{if(request===serial)summary={error:true};}
   finally{if(request===serial){loading=false;render();}}
  }
@@ -60,13 +61,16 @@ window.WorkspaceMenu=(()=>{
   const route=routes.find(row=>row[0]===id);if(!route)return;
   $('menuSearch').value='';
   for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+  if(id==='tools'){await showView('tools');await CareerTools.open('prepare');return;}
   if(['jobs','pipeline','profile','overview','guide','pfe','tools','tracking'].includes(id)){await showView(id);return;}
-  if(['liked','human','confirmed','submitted'].includes(id)){
-   await showView('jobs');qInput.value='';sourceSelect.value='';document.querySelector(`#jobSidebar [data-filter="${id}"]`).click();
+  if(['liked','submitted','waiting','responses','followups','decide','rejected'].includes(id)){
+   await showView('jobs');await load();selectApplicationView(id);
+  }else if(id==='activity'){
+   await showView('overview');await Workbench.refresh();const target=document.querySelector('.wb-outcome-panels > section:last-child');target.tabIndex=-1;target.scrollIntoView({block:'start',behavior:'smooth'});target.focus({preventScroll:true});
   }else if(id==='sources'){
-   await showView('tools');await CareerTools.open('connections');
+   await showView('tools');await CareerTools.open('connections','sources');
   }else if(id==='export'){
-   if(id==='export')showView('jobs');else await showView('profile');
+   await showView('jobs');
    $(route[1]).click();
   }else if(['resumes','appearance'].includes(id)){
    await showView('profile');const target=$(route[1]);for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;target.scrollIntoView({block:'center',behavior:'smooth'});target.focus({preventScroll:true});
@@ -93,7 +97,7 @@ window.WorkspaceMenu=(()=>{
   header.append(brand,menu,title,controls);document.querySelector('.shell').before(header);
   document.querySelector('aside').hidden=true;
   const actionBar=document.createElement('div');actionBar.className='workspace-page-actions';
-  actionBar.append($('searchBtn'),$('batchBtn'));$('jobsView').querySelector('header').after(actionBar);
+  actionBar.append($('searchBtn'));$('jobsView').querySelector('header').after(actionBar);
   const workflow=document.createElement('nav');workflow.id='workflowNav';workflow.className='workflow-nav';
   workflow.setAttribute('aria-label','Workflow');
   for(const id of ['overview','jobs','pipeline','tracking','tools']){
@@ -115,11 +119,7 @@ window.WorkspaceMenu=(()=>{
    if(event.data.type==='jaa-menu:ready'){ready=true;clearTimeout(frameDeadline);$('mainMenuView').classList.remove('menu-fallback');notify();}
    if(event.data.type==='jaa-menu:navigate')navigate(event.data.action);
    if(event.data.type==='jaa-menu:back')showView(previous,{resume:true});
-   if(event.data.type==='jaa-menu:locate'&&shown()){
-    const reply=value=>frame.contentWindow.postMessage({type:'jaa-menu:location',token,...value},'*');
-    if(!navigator.geolocation){reply({error:true});return;}
-    navigator.geolocation.getCurrentPosition(position=>reply({latitude:position.coords.latitude,longitude:position.coords.longitude}),()=>reply({error:true}),{timeout:12000,maximumAge:60000,enableHighAccuracy:false});
-   }
+
   });
   document.addEventListener('localechange',()=>{heading.textContent=t('appearance');caption.textContent=t('data');render();});
   document.addEventListener('visibilitychange',()=>{notify();if(shown()&&!document.hidden)refresh();});

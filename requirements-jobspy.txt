@@ -1,1 +1,4 @@
-python-jobspy==1.4.1
+# Native vendored job-board adapters; no upstream CLI, MCP or pandas facade.
+requests==2.34.2
+curl_cffi==0.16.3
+markdownify==1.2.3

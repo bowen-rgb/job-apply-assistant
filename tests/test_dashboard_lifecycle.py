@@ -12,22 +12,21 @@ import urllib.request
 import json
 
 
-class DesktopTests(unittest.TestCase):
-    def test_real_backend_has_fast_probe_and_stops_on_owner_eof(self):
+class DashboardLifecycleTests(unittest.TestCase):
+    def test_real_backend_has_fast_probe_and_stops_on_owned_control_file(self):
         with tempfile.TemporaryDirectory() as folder:
             with socket.socket() as sock:
                 sock.bind(('127.0.0.1', 0));port = sock.getsockname()[1]
-            env = {**os.environ, 'JAA_WORKSPACE_HOME': folder, 'JAA_DESKTOP_INSTANCE': 'test-instance',
-                   'JAA_DESKTOP_PORT': str(port)}
-            process = subprocess.Popen([sys.executable, '-m', 'app.desktop_host'], env=env,
+            env = {**os.environ, 'JAA_WORKSPACE_HOME': folder, 'JAA_DASHBOARD_INSTANCE': 'test-instance',
+                   'JAA_DASHBOARD_PORT': str(port), 'JAA_DASHBOARD_CONTROL':str(Path(folder)/'stop')}
+            process = subprocess.Popen([sys.executable, '-m', 'app.dashboard_host'], env=env,
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                 creationflags=subprocess.CREATE_NO_WINDOW)
             try:
                 deadline = time.monotonic()+25
                 while True:
                     try:
-                        with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/desktop/ready', timeout=.8) as response:
-                            self.assertEqual(response.headers['X-JAA-Desktop-Instance'], 'test-instance')
+                        with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/runtime', timeout=.8) as response:
                             # A Windows venv executable may redirect to its base interpreter.
                             self.assertGreater(json.load(response)['pid'], 0)
                         break
@@ -36,7 +35,7 @@ class DesktopTests(unittest.TestCase):
                             if process.poll() is None:process.kill();process.wait()
                             self.fail('Backend failed startup: '+process.stderr.read().decode('utf-8',errors='replace'))
                         time.sleep(.2)
-                process.stdin.close()
+                process.stdin.close();(Path(folder)/'stop').touch()
                 self.assertEqual(process.wait(timeout=12), 0)
                 with socket.socket() as sock:self.assertNotEqual(sock.connect_ex(('127.0.0.1',port)), 0)
             finally:
@@ -45,7 +44,7 @@ class DesktopTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'nt', 'Windows process job test')
     def test_forced_host_exit_reaps_descendant(self):
-        script = ('from app.desktop_host import own_process_tree; import subprocess,sys; '
+        script = ('from app.process_ownership import own_process_tree; import subprocess,sys; '
                   'handle=own_process_tree(); '
                   'child=subprocess.Popen([sys.executable,"-c","import time; time.sleep(60)"]); '
                   'print(child.pid,flush=True); sys.stdin.read()')

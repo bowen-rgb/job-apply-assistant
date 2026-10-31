@@ -21,7 +21,7 @@ English · [简体中文](README.zh-CN.md)
 
 Keep job discovery, CVs, application preparation and follow-up records in one local workspace. Start with a guided manual application, then enable browser assistance when you need it. Your profile and application history are stored on your computer.
 
-**Windows desktop:** a self-contained Electron/NSIS installer now provides a desktop shortcut, automatic backend startup and owned-process cleanup on exit. Build instructions and existing-data setup: [Desktop guide](docs/DESKTOP_APP.md).
+**Windows Dashboard:** double-click `start.bat` to open the browser with a hidden backend. `setup_dashboard.bat` creates shortcuts; `stop_dashboard.bat` stops owned workers; `uninstall_dashboard.bat` removes shortcuts while preserving candidate data. [Dashboard guide](docs/DASHBOARD.md).
 
 ## A clearer application process
 

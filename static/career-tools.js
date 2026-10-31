@@ -176,5 +176,5 @@ window.CareerTools = (() => {
     }catch(err){say(err.message);}finally{if(b.isConnected&&b.dataset.tool!=='ledger-write')b.disabled=b.dataset.tool==='mail-send'&&!mailToken;}
   });
   document.addEventListener('localechange',()=>{clearTimeout(timer);shell();load().catch(err=>say(err.message));});
-  shell();return {open:async id=>{chooseCategory(id);await load().catch(err=>say(err.message));},load:()=>load().catch(err=>say(err.message))};
+  shell();return {open:async (id,target)=>{chooseCategory(id);await load().catch(err=>say(err.message));if(target==='sources'){const section=$('[data-sources]');section.tabIndex=-1;section.scrollIntoView({block:'start',behavior:'smooth'});section.focus({preventScroll:true});}},load:()=>load().catch(err=>say(err.message))};
 })();

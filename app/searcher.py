@@ -453,4 +453,4 @@ def discover(profile: dict, report=None) -> Iterable[Hit]:
             # rate-limited or temporarily unavailable.
             emit(report, 'jobspy', 'jobspy', 'failed', error=str(exc))
     elif profile.get('jobspy_enabled', True):
-        emit(report, 'jobspy', 'jobspy', 'unavailable', error='python-jobspy is not installed')
+        emit(report, 'jobspy', 'jobspy', 'unavailable', error='Native job-board dependencies are not installed')

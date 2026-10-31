@@ -7,11 +7,9 @@
  document.addEventListener('ef-action',event=>tell('jaa-menu:navigate',{action:event.detail.action}));
  document.addEventListener('click',event=>{if(event.target.id==='efMenu'||event.target.closest('[data-action="close"]'))tell('jaa-menu:back');});
  document.addEventListener('keydown',event=>{if((event.key==='Escape'||event.key==='Tab'&&!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey)&&!event.repeat&&!event.target.closest('input,textarea,select,audio,[contenteditable=true]')){event.preventDefault();event.stopImmediatePropagation();tell('jaa-menu:back');}},true);
- document.addEventListener('jaa-widget:locate',()=>tell('jaa-menu:locate'));
  window.addEventListener('message',event=>{
   const data=event.data;
   if(event.source!==parent||!data||data.token!==token)return;
-  if(data.type==='jaa-menu:location'){EF.widgets.location(data);return;}
   if(data.type!=='jaa-menu:state')return;
   document.documentElement.lang=data.language;
   document.body.classList.toggle('jaa-quiet',!!data.quiet);
@@ -29,7 +27,7 @@
     if((button.dataset.action||button.dataset.labelRoute)!==item.id)continue;
     button.setAttribute('aria-label',item.label);button.title=item.label;
     for(const text of button.querySelectorAll('text[data-menu-label]')){
-     text.textContent=item.short;
+     text.removeAttribute('transform');text.textContent=item.short;
      // Fit the rendered glyphs, not an estimated character count; French and
      // Chinese labels must both stay inside their own card.
      text.setAttribute('font-size',text.dataset.labelSize);
@@ -47,6 +45,7 @@
      // Ink bounds may extend beyond advance width for bold CJK glyphs.
      const ink=text.getBBox().width;
      if(ink>limit)text.setAttribute('font-size',+text.getAttribute('font-size')*(limit/ink)*.99);
+     if(text.closest('.ef-rtile')){const box=text.getBBox();text.setAttribute('transform',`translate(${53.5-box.x-box.width/2} ${78-box.y-box.height/2})`);}
     }
    }
   }

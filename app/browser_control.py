@@ -88,8 +88,8 @@ def start(profile=None):
                      f'--remote-debugging-port={urlparse(endpoint).port}',
                      f'--user-data-dir={directory}', '--new-window', 'https://chatgpt.com/']
         subprocess.Popen(arguments, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         # Chrome must survive closing the desktop host's process job.
-                         creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.CREATE_BREAKAWAY_FROM_JOB) if os.name == 'nt' and os.environ.get('JAA_DESKTOP_INSTANCE') else subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                         # Chrome must survive closing the Dashboard host's process job.
+                         creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.CREATE_BREAKAWAY_FROM_JOB) if os.name == 'nt' and os.environ.get('JAA_DASHBOARD_INSTANCE') else subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         for _ in range(20):
             result = status(profile)
             if result['ready']:

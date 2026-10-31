@@ -34,7 +34,7 @@ fr:['Tableau de bord','Votre prochaine action, puis votre progression.','Actuali
     const focusTable=focused?.matches('summary')?focused.closest('details')?.dataset.table:null;
     document.getElementById('overviewNav').textContent=t(0);
     const s=snapshot,jobs=s?.jobs||[],queue=s?.queue||{},tasks=s?.tasks||[];
-    const outcomeLabels=Locale.language==='zh'?{waiting:'已投递，等待中',responses:'有回复／面试',followups:'待跟进',decide:'待决定',rejected:'被拒'}:{waiting:'Envoyées, en attente',responses:'Réponses / entretiens',followups:'À relancer',decide:'À décider',rejected:'Refusées'};
+    const outcomeLabels=Object.fromEntries(['waiting','responses','followups','decide','rejected'].map(key=>[key,Locale.t('menu.'+key)]));
     const counts=Object.entries(outcomeLabels).map(([key,label])=>({key,label,n:s?.summary.counts[key]||0}));
     const needs=[...new Set([...(s?.summary.job_ids.responses||[]),...(s?.summary.job_ids.followups||[])])].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).slice(0,5);
     const activity=s?.summary.recent||[];

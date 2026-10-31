@@ -1,0 +1,42 @@
+{
+  "project": "https://github.com/speedyapply/JobSpy",
+  "distribution": "python-jobspy",
+  "version": "1.4.1",
+  "changes": [
+    "Package imports scoped to app.vendor.jobspy",
+    "CLI, MCP, pandas facade and DataFrame records excluded"
+  ],
+  "original_sha256": {
+    "exception.py": "68246914431c38aab43870eb95eb9e7031272a2380ffc881a862ed342f1644fc",
+    "model.py": "873ed6f6f115f19ae8de40074f090edeb2e35d855271c7b8707024dc8b8b223c",
+    "util.py": "7b167043c2c670b5b2d1b4c6fde10735ccccc834a107b138cb73444c4d89c70f",
+    "bayt/constant.py": "34eecef6408f829f1beb37bd647c9fd3177e89cc47dfa30d2bb9c884e4d4a2d1",
+    "bayt/__init__.py": "acd0372dec21885968dd4be17433462eddba29ee3bb9270ab4081b60584b9026",
+    "bdjobs/constant.py": "4f030d420b9ecfa8b2834c487aa45142b7d62639d805ad7ec1c70b1281f34e55",
+    "bdjobs/model.py": "3b9017d4d1ae83c6195d26055669717eab77c736904e38d6a3c06bb24e2945e0",
+    "bdjobs/__init__.py": "3ac4b043d720655bc582094881b8f26b3fa523803439ec58458f423f0a4ad79f",
+    "glassdoor/constant.py": "3c2da2eadb409bd024842b937990eba212490bee77ce4ef4946e1c1d017c08f7",
+    "glassdoor/model.py": "24fd1cbb311cc0b41167b009919ca812b84cd891efb08e82205fe9cda84952b1",
+    "glassdoor/__init__.py": "b3e38b7d503527e1a9f10d9aa6f9958a6ad5286a58b582f60250d5a169b7581d",
+    "google/constant.py": "7f520beab4b912f2e8723d09f727590410c8d05fad5eda24fa23e01341a29742",
+    "google/util.py": "d1c86092ba305e7936329e9d3aa6c441710accc916bb850d443ff1cf17ee1146",
+    "google/__init__.py": "dabcc2413fd646d33aa0c61658b1d2a95e4a094045cf65ac55640f9f29ff2e4c",
+    "hellowork/constant.py": "3d6562f68cedadd3caa4adedf1de20c8c5e76dfaa7b1cc037d3d487a6b966eee",
+    "hellowork/__init__.py": "b4e480f5110012ac367b6f7e152b9a5895eb41e4449a99d20721c7a4400fe1e4",
+    "indeed/constant.py": "5b54041647fe084009335a19065400483d9afc9f467e66d15eb46134f8fabc5f",
+    "indeed/model.py": "156754b7c6676735291fc80b7709195c59b88abc6522831b662563c136944fd9",
+    "indeed/util.py": "ed5f4b025893c5e8dabef48635234b17114faf6bb2e888451e38b8c2a4d5a757",
+    "indeed/__init__.py": "fe90eddefcb58f28597351ceb2e1259fe2dbac5e7ee4de037e72962d0dc36c42",
+    "linkedin/constant.py": "e808567f9ee0b67f5ad422384d7598edff5f9fe8c8d33cea6ce4a3278be7ab06",
+    "linkedin/util.py": "df9a206d47f419b09fbe2fac18a13fb15334a560c786801175f39563f177f125",
+    "linkedin/__init__.py": "039f70eba26cdce757081aead9540b54890823cf56ae669f7fb346e99a6e0f38",
+    "naukri/constant.py": "bb66424159757b5f0e74f0e515c4d7e5f7fa66b4e0c9c995ca1f2613dda90f7f",
+    "naukri/model.py": "bbba3f99d493164ba5604f5e99179129958b70ae2bc3591384ad2b9edd89e6db",
+    "naukri/util.py": "32501d0611a71d28ffd7e23abe02443bdc382dbeaf4b3f1ea3e670d6e47e821d",
+    "naukri/__init__.py": "93b8f4844bfc18d15e2c3957cd1e785d2b4cbbcbc7edba481331149c45626df7",
+    "ziprecruiter/constant.py": "bbbca3a0806ba8220e9684072f29b0547890409ec3e695c477bb02d7e9a606dd",
+    "ziprecruiter/model.py": "62731dffc452b44fd71aaf002468bdb36b7b505a21a513df585667e96306e553",
+    "ziprecruiter/util.py": "a75b4a40a07c8c5b4d7d8a867eb0cfb7e37c88442262b6a4346cecef71155278",
+    "ziprecruiter/__init__.py": "9067ec08daf663023a0304f347d1479ebd3a3ae528cb61ea664859842d5ff31c"
+  }
+}
