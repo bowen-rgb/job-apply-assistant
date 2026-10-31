@@ -119,7 +119,7 @@ class GuideTests(unittest.TestCase):
                 expect(page.locator('#guideNav')).to_have_attribute('aria-current', 'page')
                 expect(page.locator('#jobsNav')).not_to_have_class('navmain active')
                 expect(page.locator('#guideView')).to_contain_text('manuellement sans ChatGPT')
-                expect(page.locator('#guideView')).to_contain_text('Navigateur dédié non détecté')
+                expect(page.locator('#guideView')).to_contain_text('Chrome dédié non détecté')
                 page.locator('#guideMore > summary').click()
                 page.locator('#guideView [data-guide-id="resumeFile"]').first.click()
                 expect(page.locator('#resumeFile')).to_be_focused()
@@ -168,7 +168,7 @@ class GuideTests(unittest.TestCase):
                 expect(page.locator('#guideView')).to_contain_text('État non vérifié')
                 page.locator('#guideMore > summary').click()
                 page.locator('#guideView .guide-trouble summary').click()
-                expect(page.locator('#guideView .guide-trouble')).to_contain_text('vérifiez que start.bat reste ouvert')
+                expect(page.locator('#guideView .guide-trouble')).to_contain_text('ouvrez le raccourci Dashboard')
                 page.locator('#guideRetry').click()
                 expect(page.locator('#guideView .guide-trouble')).to_have_attribute('open', '')
             finally:

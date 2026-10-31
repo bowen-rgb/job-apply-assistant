@@ -202,7 +202,7 @@
   function labelsMarkup() {
     return '<defs><filter id="dcIconBlur" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="1.15"></feGaussianBlur></filter></defs>' +
       BUTTONS.map(function (b) {
-        return tabGroup(b, '<g data-label-route="' + b.action + '">' + shadowGroup("ef-discicon-sh", b.shadow.art, '<use href="#' + b.art + '" filter="url(#dcIconBlur)"></use>') +
+        return tabGroup(b, '<g data-label-route="' + b.action + '" transform="rotate(' + DCBTN.rot + ' ' + DCBTN.cx + ' ' + DCBTN.cy + ')">' + shadowGroup("ef-discicon-sh", b.shadow.art, '<use href="#' + b.art + '" filter="url(#dcIconBlur)"></use>') +
           shadowGroup("ef-disclab-sh", b.shadow.text, EF.labelSVG(b.label, b.text)) +
           '<g class="ef-disclab"><use href="#' + b.art + '"></use>' + EF.labelSVG(b.label, b.text) + "</g></g>");
       }).join("");

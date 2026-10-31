@@ -19,7 +19,7 @@
 .ef-right { position: absolute; inset: 0; pointer-events: none; }
 .ef-right__viewport {
   position: absolute; left: 1290px; top: 200px; width: 512px; height: 805px;
-  overflow: hidden; touch-action: none; cursor: grab; pointer-events: auto;
+  overflow: clip; touch-action: none; cursor: grab; pointer-events: auto;
   -webkit-mask-image: linear-gradient(177deg, transparent 58px, #000 78px, #000 calc(100% - 82px), transparent calc(100% - 38px));
   mask-image: linear-gradient(177deg, transparent 58px, #000 78px, #000 calc(100% - 82px), transparent calc(100% - 38px));
 }
@@ -497,13 +497,14 @@ body:not(.ef-out) .ef-rtile:is(:hover, :focus-visible, [data-ef-press]) .ef-rtil
       velocity = 0;
       stageScale = EF.stageScale || 1;   // set by app.js fit(); 1 until the window has a size
       vp.classList.add("is-drag");
-      vp.setPointerCapture(e.pointerId);
+      // Ordinary clicks must keep their tile target. Capture only an actual drag.
     });
 
     vp.addEventListener("pointermove", function (e) {
       if (!dragging) return;
       const dy = e.clientY - dragStartY;
       if (Math.abs(dy) > 6) {
+        if(!dragged)vp.setPointerCapture(e.pointerId);
         dragged = true;
         press(null);
       }

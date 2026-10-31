@@ -48,3 +48,6 @@ button:focus-visible {outline:3px solid var(--ef-yellow);outline-offset:5px}
 .ef-disclab {fill:#1a1c1e}.ef-disclab-sh {fill:#ffed76;opacity:.5}
 
 .jaa-player-actions {display:flex;align-items:center;justify-content:center;gap:10px}
+
+.ef-rtile__face{transition:filter 160ms ease,box-shadow 160ms ease}
+.ef-rtile:hover .ef-rtile__face,.ef-rtile:focus-visible .ef-rtile__face{filter:brightness(1.12);box-shadow:0 0 18px #ffde004d}

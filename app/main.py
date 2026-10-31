@@ -397,8 +397,10 @@ def stats():
 
 
 @app.post('/api/search')
-def search():
-    state = start_scan(runtime_profile())
+def search(review_matches: bool = True):
+    profile = runtime_profile()
+    profile['review_and_queue_strong'] = review_matches
+    state = start_scan(profile)
     return state
 
 
@@ -623,6 +625,26 @@ def review(job_id: int):
         raise HTTPException(404, 'job not found')
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+
+
+@app.get('/api/matches/automation')
+def match_automation_status():
+    from .match_review import status
+    return status()
+
+
+@app.post('/api/matches/automation')
+def start_match_automation():
+    from .match_review import start
+    try:return start()
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+
+@app.post('/api/matches/automation/stop')
+def stop_match_automation():
+    from .worker_runtime import cancel
+    cancel('app.match_review',0)
+    return {'ok':True}
 
 
 @app.post('/api/review/batch')

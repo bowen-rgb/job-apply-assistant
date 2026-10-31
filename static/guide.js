@@ -25,14 +25,13 @@ window.Guide=(()=>{
     const moreOpen=$('guideMore')?.open;
     const focused=document.activeElement?.id;
     $('guideNav').textContent=text('nav');
-    const pending=jobs.filter(j=>['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)&&j.human_review_status!=='approved'&&j.human_review_status!=='declined'&&!['submitted','submitted_verified','withdrawn'].includes(j.application_status));
     const resume=health?.resume_ok===true?'ready':health?.resume_ok===false?'cv':'unknown';
     const connection=health?.cdp_ok===true?'browser':health?.cdp_ok===false?'notConnected':'unknown';
     $('guideView').innerHTML=`<header><div><h1 id="guideTitle">${t('nav')}</h1><p>${t('intro')}</p></div></header>
       <div class="guide-readiness" role="status"><p>${t(resume)}</p><p>${t(connection)}</p>${button('cv','profile','resumeFile')}<button type="button" id="guideRetry">${t('retry')}</button></div>
       <div class="guide-paths">${[['manual','manualHelp','jobs','q'],['assisted','assistedHelp','profile','resumeFile'],['sent','sentHelp','pipeline','pipelineBoard']].map(([key,help,target,id])=>`<article><h2>${t(key)}</h2><p>${t(help)}</p>${button(key,target,id)}</article>`).join('')}</div>
       <ol class="guide-tasks">${[['profile','profileHelp','profile','first_name'],['cv','cvHelp','profile','resumeFile'],['jobs','jobsHelp','jobs','q'],['pipeline','pipelineHelp','pipeline','queueFocus']].map(([key,help,target,id])=>`<li><h2>${t(key)}</h2><p>${t(help)}</p>${button(key,target,id)}</li>`).join('')}</ol>
-      ${pending.length?`<p>${button('pending','jobs','cards','human')} <strong>${pending.length}</strong></p>`:''}
+      <p>${button('pending','jobs','matchAutomationStatus')}</p>
       <details class="guide-trouble"><summary>${t('help')}</summary><p>${t('offline')}</p><p>${t('privacy')}</p></details>
       <button type="button" id="guidePrint">${t('print')}</button>`;
     const practice=document.createElement('section');practice.id='workedExample';practice.className='worked-example';

@@ -45,6 +45,7 @@
      // Ink bounds may extend beyond advance width for bold CJK glyphs.
      const ink=text.getBBox().width;
      if(ink>limit)text.setAttribute('font-size',+text.getAttribute('font-size')*(limit/ink)*.99);
+     if(text.closest('.ef-disclabels')){const box=text.getBBox();text.setAttribute('transform',`translate(${Number(text.getAttribute('x'))-box.x-box.width/2} ${904-box.y-box.height/2})`);}
      if(text.closest('.ef-rtile')){const box=text.getBBox();text.setAttribute('transform',`translate(${53.5-box.x-box.width/2} ${78-box.y-box.height/2})`);}
     }
    }

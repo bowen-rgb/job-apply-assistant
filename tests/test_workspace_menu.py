@@ -24,7 +24,7 @@ class WorkspaceMenuTests(unittest.TestCase):
    if r.request.method!='GET':self.writes.append(path)
    data={}
    if path=='/api/capabilities':data={'sources':[],'models':{'configured':[],'agents':{}},'tasks':[],'templates':[],'documents':[],'portals':[],'salary':[],'notion':{},'gmail_compose':{},'selected_backend':'chatgpt'}
-   elif path=='/api/insights':data={'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'followups':[],'mail_proposals':[]}
+   elif path=='/api/insights':data={'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'followups':[],'mail_proposals':[],'summary':{'counts':{'waiting':1,'responses':0,'followups':0,'decide':1,'rejected':0},'job_ids':{'waiting':[2],'responses':[],'followups':[],'decide':[1],'rejected':[]},'recent':[]}}
    elif path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Example Candidate','identity':{},'active':True}]}
    elif path=='/api/profile':data=profile
    elif path in ['/api/jobs','/api/pipeline']:data=[job,dict(job,id=2,review_verdict='',application_status='submitted',tracker_stage='submitted')]
@@ -185,6 +185,34 @@ class WorkspaceMenuTests(unittest.TestCase):
     self.assertGreaterEqual(label['x'],149,(language,label));self.assertLessEqual(label['x']+label['w'],311,(language,label))
     self.assertLess(label['y']+label['h'],a+b*(label['x']+label['w'])-1,(language,label))
    for action,center in [('overview',826),('guide',1126)]:
-    label=frame.locator(f'[data-label-route={action}] text[data-menu-label]').last.evaluate('(e)=>({x:e.getBBox().x,w:e.getBBox().width})')
+    label=frame.locator(f'[data-label-route={action}] text[data-menu-label]').last.evaluate('(e)=>({x:e.getBBox().x+(e.transform.baseVal.consolidate()?.matrix.e||0),w:e.getBBox().width})')
     self.assertLess(abs(label['x']+label['w']/2-center),1.5,(language,action,label));self.assertLessEqual(label['w'],209)
    if language in ['zh','fr']:self.page.screenshot(path=f'tmp/endfield-menu-aligned-{language}.png',full_page=True)
+
+ def test_all_scene_tiles_use_real_pointer_clicks_including_scrolled_rows(self):
+  self.page.set_viewport_size({'width':1440,'height':1100})
+  frame=self.page.frame_locator('#menuScene')
+  expect(frame.locator('.ef-rtile')).to_have_count(24)
+  self.page.wait_for_timeout(1100)
+  destinations={'jobs':'jobsView','pipeline':'pipelineView','profile':'profileView','qr':'qrApplicationDialog','overview':'overviewView','guide':'guideView','tools':'toolsView','tracking':'trackingView','accounts':'accountsDialog','logins':'accountsDialog','pending':'pendingTasksDialog','pfe':'pfeView','export':'jobsView','sources':'toolsView','resumes':'profileView','appearance':'profileView','activity':'overviewView'}
+  for action in ['waiting','responses','followups','decide','rejected','activity','overview','tracking','liked','pending','sources','tools','accounts','logins','pfe','export','resumes','appearance','jobs','pipeline','profile','qr','guide','submitted']:
+   with self.subTest(action=action):
+    print('Pointer route:',action,flush=True)
+    self.page.locator('#workspaceMenuButton').click()
+    self.page.wait_for_timeout(1000)
+    tile=frame.locator('.ef-rtile[data-action='+action+']')
+    viewport=frame.locator('.ef-right__viewport')
+    hit=False
+    for _ in range(35):
+     box=tile.bounding_box();vp=viewport.bounding_box()
+     hit=tile.evaluate('(n)=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}')
+     if hit and box and vp and vp['y']+65<box['y']+box['height']/2<vp['y']+vp['height']-65:break
+     viewport.hover(force=True);self.page.mouse.wheel(0,150);self.page.wait_for_timeout(500)
+    self.assertTrue(hit,action)
+    box=tile.bounding_box()
+    self.page.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2)
+    expect(self.page.locator('#'+destinations.get(action,'jobsView'))).to_be_visible()
+    if action in ['waiting','responses','followups','decide','rejected']:
+     expect(self.page.locator('#jobFilterSelect')).to_have_value(action)
+    for dialog in self.page.locator('dialog[open]').all():dialog.evaluate('(d)=>d.close()')
+  self.assertEqual(self.writes,[]);self.assertEqual(self.errors,[])

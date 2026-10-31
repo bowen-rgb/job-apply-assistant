@@ -330,6 +330,8 @@ def _worker(base_profile: dict, scan_id: int):
         finished = datetime.now(timezone.utc).isoformat()
         _set(running=False, finished_at=finished, current_source='', current_title='', current_campaign='', message='Scan finished')
         _finish_scan(scan_id, status())
+        from .match_review import after_scan
+        after_scan(base_profile)
 
 
 def _start(profile: dict) -> dict[str, Any]:

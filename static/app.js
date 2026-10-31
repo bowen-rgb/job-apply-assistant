@@ -330,6 +330,8 @@ function render(){
     return [j.title,titleTranslations.get(titleKey(j))?.title,j.company,j.location,j.source,j.employment_type].join(' ').toLowerCase().includes(q);
   });
   const jobs=scopedJobs.filter(j=>matchFilter(j));
+  const heading=el('jobsView').querySelector('header h1');
+  heading.textContent=['waiting','responses','followups','decide','rejected'].includes(current)?Locale.t('menu.'+current):tr('Offres');
   visibleJobIds=jobs.map(j=>j.id);
   updateExportCount();
   el('filterHelp').textContent=tr(filterHelp[current]||'');

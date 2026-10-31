@@ -2,7 +2,7 @@
 import json
 
 from .db import connect
-from .human_review import automatic_token, confirmation_status
+from .human_review import automatic_token, confirmation_status, automatic_ready
 from .profile_store import load_profile_raw
 from .reviewer import review_via_chatgpt_web
 
@@ -22,6 +22,10 @@ def prepare(job_id, stopped=lambda: False):
         return False
     if job.get('human_review_status') == 'declined':
         raise ValueError('This application was declined by the user')
+    if automatic_ready(job):
+        with connect() as conn:
+            conn.execute("UPDATE application_queue SET note='' WHERE job_id=? AND status='queued'",(job_id,))
+        return True
     content = [job.get(key) for key in CONTENT]
     for attempt in range(2):
         if stopped():

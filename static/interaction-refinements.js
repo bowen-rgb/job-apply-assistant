@@ -48,6 +48,12 @@ window.InteractionMotion=(()=>{
   current=view;
   for(const animation of [...animations])animation.cancel();
   reveal(view);
+  if(view.id!=='mainMenuView'&&allowed()){
+   for(const [index,section] of [...view.children].filter(node=>node.getClientRects().length&&!node.matches('header')).slice(0,4).entries()){
+    const animation=section.animate([{opacity:.55,translate:'0 10px'},{opacity:1,translate:'0 0'}],{duration:280,delay:index*35,easing:'cubic-bezier(.16,1,.3,1)'});
+    animations.add(animation);animation.onfinish=animation.oncancel=()=>animations.delete(animation);
+   }
+  }
  }
  function selection(){
   queued=false;

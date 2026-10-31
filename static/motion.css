@@ -32,3 +32,9 @@ html[data-angelina-mode=quiet] :is(dialog[open],#cards[aria-busy=true]::before,.
 html[data-angelina-mode=quiet] #cards[aria-busy=true]::before{opacity:1}
 html[data-angelina-mode=quiet] :is(main,dialog) details::details-content,html[data-angelina-mode=quiet] aside .primary-nav::before{transition:none!important}
 @media print{.primary-nav::before,#cards::before{display:none}}
+
+/* Strong-match automation remains part of the jobs page. */
+.match-automation{border:1px solid var(--line,#bfc4c2);border-left:4px solid #ffde00;border-radius:8px;padding:16px 20px;margin:12px 0 20px;background:#fafaf7}
+.match-automation p{margin:8px 0;line-height:1.5;overflow-wrap:anywhere}
+.match-automation progress{display:block;width:100%;height:8px;accent-color:#b19a00}
+.match-automation button{margin:8px 12px 0 0}

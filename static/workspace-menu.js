@@ -50,7 +50,7 @@ window.WorkspaceMenu=(()=>{
   loading=true;const request=++serial;render();
   try{
    const [jobs,queue,insights]=await Promise.all([requestJson('/api/jobs'),requestJson('/api/queue'),requestJson('/api/insights')]);
-   if(!Array.isArray(jobs)||!Array.isArray(queue.items))throw Error('Menu data unavailable');
+   if(!Array.isArray(jobs)||!Array.isArray(queue.items)||!insights.summary?.counts)throw Error('Menu data unavailable');
    if(request!==serial)return;
    summary={counts:{jobs:jobs.filter(j=>matchFilter(j,'all')).length,pipeline:queue.items.filter(j=>!['done','cancelled'].includes(j.status)).length,
     ...insights.summary?.counts,submitted:jobs.filter(j=>matchFilter(j,'submitted')).length}};
@@ -66,7 +66,7 @@ window.WorkspaceMenu=(()=>{
   if(['liked','submitted','waiting','responses','followups','decide','rejected'].includes(id)){
    await showView('jobs');await load();selectApplicationView(id);
   }else if(id==='activity'){
-   await showView('overview');await Workbench.refresh();const target=document.querySelector('.wb-outcome-panels > section:last-child');target.tabIndex=-1;target.scrollIntoView({block:'start',behavior:'smooth'});target.focus({preventScroll:true});
+   await showView('overview');await Workbench.refresh();const target=document.querySelector('.wb-outcome-panels > section:last-child');if(target){target.tabIndex=-1;target.scrollIntoView({block:'start',behavior:'smooth'});target.focus({preventScroll:true});}
   }else if(id==='sources'){
    await showView('tools');await CareerTools.open('connections','sources');
   }else if(id==='export'){
@@ -97,7 +97,7 @@ window.WorkspaceMenu=(()=>{
   header.append(brand,menu,title,controls);document.querySelector('.shell').before(header);
   document.querySelector('aside').hidden=true;
   const actionBar=document.createElement('div');actionBar.className='workspace-page-actions';
-  actionBar.append($('searchBtn'));$('jobsView').querySelector('header').after(actionBar);
+  actionBar.append($('searchBtn'));window.MatchAutomation?.init(actionBar);$('jobsView').querySelector('header').after(actionBar);
   const workflow=document.createElement('nav');workflow.id='workflowNav';workflow.className='workflow-nav';
   workflow.setAttribute('aria-label','Workflow');
   for(const id of ['overview','jobs','pipeline','tracking','tools']){
@@ -117,7 +117,7 @@ window.WorkspaceMenu=(()=>{
   window.addEventListener('message',event=>{
    if(event.source!==frame.contentWindow||!event.data||event.data.token!==token)return;
    if(event.data.type==='jaa-menu:ready'){ready=true;clearTimeout(frameDeadline);$('mainMenuView').classList.remove('menu-fallback');notify();}
-   if(event.data.type==='jaa-menu:navigate')navigate(event.data.action);
+   if(event.data.type==='jaa-menu:navigate')navigate(event.data.action).catch(error=>{$('workspaceTitle').textContent=error.message;});
    if(event.data.type==='jaa-menu:back')showView(previous,{resume:true});
 
   });
