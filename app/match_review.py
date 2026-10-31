@@ -89,8 +89,12 @@ def review_one(job):
         return 'APPLY'
     profile=load_profile_raw()
     content=[job.get(key) for key in CONTENT]
-    for _ in range(2):
+    for attempt in range(2):
         check_cancelled()
+        if attempt:
+            # Repeating the identical packet cannot resolve missing public facts.
+            from .review_research import collect
+            collect(job)
         result=review_via_chatgpt_web(job['id'])
         if result['verdict']!='HUMAN_REVIEW':break
     check_cancelled()

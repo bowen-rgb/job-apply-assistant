@@ -7,7 +7,10 @@ from app import match_review as flow, db
 
 
 class MatchReviewTests(unittest.TestCase):
-    setUp=fixtures.AutomaticReviewTests.setUp
+    def setUp(self):
+        fixtures.AutomaticReviewTests.setUp(self)
+        research=patch('app.review_research.collect',return_value={'pages':[],'status':'unavailable'})
+        research.start();self.addCleanup(research.stop)
     job=fixtures.AutomaticReviewTests.job
 
     def test_strong_matches_are_reviewed_before_queueing_and_not_submitted(self):

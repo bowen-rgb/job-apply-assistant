@@ -1,10 +1,30 @@
 import copy
 import json
 import unittest
-from app.reviewer import build_prompt, _prompt_packet
+from app.reviewer import build_prompt, _prompt_packet, build_review_packet, validate_review
 
 
 class ReviewPromptTests(unittest.TestCase):
+    def test_commute_origin_and_public_research_are_available_during_review(self):
+        packet=build_review_packet({'id':7,'url':'https://employer.test/role'},
+            {'address_line1':'12 Example Street','city':'Example City','postal_code':'75000',
+             'country':'France','email':'do-not-send@example.test','max_commute_minutes':90})
+        origin=packet['candidate_constraints']['commute_origin']
+        self.assertEqual(origin['address_line1'],'12 Example Street')
+        self.assertNotIn('email',origin)
+        prompt=build_prompt(packet)
+        self.assertNotIn('Do not browse',prompt)
+        self.assertIn('Search the web',prompt)
+        self.assertIn('commute_origin',prompt)
+        self.assertIn('research_findings',prompt)
+
+    def test_public_findings_require_a_source_and_cannot_become_candidate_facts(self):
+        result=validate_review({'verdict':'APPLY','research_findings':[
+            {'topic':'worksite','answer':'Official address','source_url':'https://employer.test/contact','source_quote':'Worksite: official address','status':'verified'},
+            {'topic':'commute','answer':'Exact 45 minutes','source_url':'','status':'verified'}]})
+        self.assertEqual(result['research_findings'][0]['status'],'verified')
+        self.assertEqual(result['research_findings'][1]['status'],'unverified')
+
     def test_changed_review_policy_invalidates_cached_automatic_authorization(self):
         from unittest.mock import patch
         from app import human_review

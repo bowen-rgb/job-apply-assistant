@@ -26,7 +26,7 @@ def snapshot():
                            for q in legacy if isinstance(q,str)] if isinstance(legacy,list) else []
             if review.get('rubric_error'):
                 questions.append({'kind':'evaluation','question':review['rubric_error'],'reason':'','evidence':''})
-            job.update(questions=questions,risks=review.get('risks',[]),reasons=review.get('reasons',[]))
+            job.update(questions=questions,risks=review.get('risks',[]),reasons=review.get('reasons',[]),research_findings=review.get('research_findings',[]))
             items.append(job)
     return {'candidate_id':workspaces.candidate_id(),'items':items,
             'answers':load_profile_raw().get('background',{}).get('review_answers',[])}

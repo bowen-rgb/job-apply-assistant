@@ -22,6 +22,11 @@ window.ReviewGaps=(()=>{
     const link=document.createElement('a');link.textContent=t('查看原始岗位 ↗','Voir l’offre originale ↗');
     if(/^https?:\/\//i.test(job.url)){link.href=job.url;link.target='_blank';link.rel='noopener noreferrer';}
     section.append(title,summary,link);
+    for(const finding of job.research_findings||[]){
+     const p=document.createElement('p');p.textContent=`${t('系统查证','Recherche')} · ${finding.answer||''}`;
+     if(/^https?:\/\//i.test(finding.source_url||'')){const a=document.createElement('a');a.href=finding.source_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t(' 查看来源 ↗',' Source ↗');p.append(a);}
+     section.append(p);
+    }
     if(!job.questions.length){const p=document.createElement('p');p.textContent=t('旧回复没有提供具体问题，请重试批量处理以获取明确缺项。','L’ancienne réponse ne précise pas les questions. Relancez la revue.');section.append(p);}
     for(const gap of job.questions){
      const field=document.createElement('fieldset'),legend=document.createElement('legend');legend.textContent=kinds[gap.kind]||kinds.unknown;field.append(legend);
