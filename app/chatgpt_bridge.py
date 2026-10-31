@@ -80,6 +80,7 @@ def _assistant_messages(page) -> list[str]:
     selectors = [
         '[data-message-author-role="assistant"]',
         'article[data-turn="assistant"]',
+        '[data-markdown-text-style="assistant-message"]',
         'article:has([data-message-author-role="assistant"])',
     ]
     for sel in selectors:
@@ -206,6 +207,7 @@ def _page_json(page, purpose: str, previous: list[dict] | None = None) -> dict[s
     for sel in (
         '[data-message-author-role="assistant"]',
         'article[data-turn="assistant"]',
+        '[data-markdown-text-style="assistant-message"]',
         'article:has([data-message-author-role="assistant"])',
     ):
         try:
@@ -225,6 +227,72 @@ def _page_json(page, purpose: str, previous: list[dict] | None = None) -> dict[s
         if obj is not None and obj not in (previous or []):
             return obj
     return None
+
+
+class ChatGPTResponseError(RuntimeError):
+    """A visible response-loading failure, never a model verdict."""
+
+
+def _response_failure(page):
+    pattern = re.compile(r'^(?:无法加载此回复|無法載入此回覆|Unable to load (?:this )?response[.!]?|Failed to load (?:this )?response[.!]?|Impossible de charger (?:cette |la )?réponse[.!]?)$',re.I)
+    texts=_assistant_messages(page)[-1:]
+    try:
+        notices=page.locator('[role="status"], [role="alert"]')
+        texts += [notices.nth(i).inner_text(timeout=500) for i in range(max(0,notices.count()-8),notices.count()) if notices.nth(i).is_visible()]
+    except Exception:
+        pass
+    for message in texts:
+        if any(pattern.fullmatch(line.strip()) for line in message.splitlines()):
+            return 'ChatGPT could not load this response. Check the ChatGPT page and connection, then resume the batch.'
+    return None
+
+
+def _wait_response(page,purpose,before,previous_json,timeout_s):
+    deadline = time.time() + timeout_s
+    response = ''
+    last = ''
+    stable = 0
+    while time.time() < deadline:
+        check_cancelled()
+        page.wait_for_timeout(1000)
+
+        failure = _response_failure(page)
+        if failure:
+            raise ChatGPTResponseError(failure)
+
+        # ChatGPT web changes its message DOM periodically. Prefer a
+        # complete typed JSON object visible anywhere in the recent
+        # conversation over relying on one assistant selector.
+        obj = _page_json(page, purpose, previous_json)
+        if obj is not None and not _is_generating(page):
+            encoded = json.dumps(obj, sort_keys=True)
+            stable = stable + 1 if encoded == last else 0
+            last = encoded
+            if stable >= 2:
+                return obj
+            continue
+
+        msgs = _assistant_messages(page)
+        if len(msgs) > len(before):
+            response = msgs[-1]
+        elif msgs and msgs[-1] not in before:
+            response = msgs[-1]
+        if response and response == last and not _is_generating(page):
+            stable += 1
+        else:
+            stable = 0
+        last = response
+        if response and stable >= 2:
+            obj = _extract_json_for_purpose(response, purpose)
+            if obj is not None and obj not in previous_json:
+                return obj
+
+    if response and not _is_generating(page):
+        obj = _extract_json_for_purpose(response, purpose)
+        if obj is not None and obj not in previous_json:
+            return obj
+    _diagnostic(page, purpose)
+    raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
 
 
 def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str = 'job-agent') -> dict[str, Any]:
@@ -268,47 +336,30 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
             _set_prompt(box, prompt)
             box.press('Enter')
 
-            deadline = time.time() + timeout_s
-            response = ''
-            last = ''
-            stable = 0
-            while time.time() < deadline:
+            try:
+                return _wait_response(page,purpose,before,previous_json,timeout_s)
+            except ChatGPTResponseError:
+                _diagnostic(page,purpose)
+                if _find_prompt(page) is None:
+                    raise
+                # Retry only this read/generation request, once, in a fresh worker-owned tab.
+                # Never refresh a login page or touch a recruiter application tab.
+                page.close()
+                page=context.new_page()
                 check_cancelled()
-                page.wait_for_timeout(1000)
-
-                # ChatGPT web changes its message DOM periodically. Prefer a
-                # complete typed JSON object visible anywhere in the recent
-                # conversation over relying on one assistant selector.
-                obj = _page_json(page, purpose, previous_json)
-                if obj is not None and not _is_generating(page):
-                    encoded = json.dumps(obj, sort_keys=True)
-                    stable = stable + 1 if encoded == last else 0
-                    last = encoded
-                    if stable >= 2:
-                        return obj
-                    continue
-
-                msgs = _assistant_messages(page)
-                if len(msgs) > len(before):
-                    response = msgs[-1]
-                elif msgs and msgs[-1] not in before:
-                    response = msgs[-1]
-                if response and response == last and not _is_generating(page):
-                    stable += 1
-                else:
-                    stable = 0
-                last = response
-                if response and stable >= 2:
-                    obj = _extract_json_for_purpose(response, purpose)
-                    if obj is not None and obj not in previous_json:
-                        return obj
-
-            if response and not _is_generating(page):
-                obj = _extract_json_for_purpose(response, purpose)
-                if obj is not None and obj not in previous_json:
-                    return obj
-            _diagnostic(page, purpose)
-            raise PlaywrightTimeoutError(f'No ChatGPT response detected for {purpose}')
+                page.wait_for_timeout(2500)
+                page.goto(chat_url,wait_until='domcontentloaded',timeout=60000)
+                page.wait_for_timeout(1600)
+                box=_find_prompt(page)
+                if box is None:
+                    raise RuntimeError('ChatGPT prompt box not found. Log in to chatgpt.com in the shared Chrome profile.')
+                before=_assistant_messages(page)
+                previous_json=[obj for message in before if (obj := _extract_json_for_purpose(message,purpose)) is not None]
+                _set_prompt(box,prompt);box.press('Enter')
+                try:return _wait_response(page,purpose,before,previous_json,timeout_s)
+                except ChatGPTResponseError:
+                    _diagnostic(page,purpose)
+                    raise
         except Cancelled:
             # Close only this worker's chat tab, never the candidate's browser.
             page.close()

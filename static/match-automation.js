@@ -13,7 +13,7 @@ window.MatchAutomation=(()=>{
   title.textContent=text('高度匹配 → ChatGPT 再审 → 通过后加入申请队列','Bons résultats → revue ChatGPT → file après validation');
   const note=document.createElement('p');
   const phases={idle:text('扫描完成后自动继续，也可以处理已有岗位。','La revue suit le scan. Vous pouvez aussi traiter les offres déjà enregistrées.'),starting:text('正在启动…','Démarrage…'),running:text('正在复核','Revue en cours'),done:text('本轮已完成','Lot terminé'),blocked:text('流程暂停，需要处理连接或资料问题','En pause : connexion ou informations à vérifier'),stopped:text('已停止','Arrêté'),interrupted:text('上次处理已中断，可继续','Le lot précédent a été interrompu. Vous pouvez reprendre.')};
-  const failure=/No ChatGPT response/.test(state.error||'')?text('ChatGPT 没有返回有效回复。请检查平台 Chrome 中的登录和网络，然后点击“继续 / 重试批量处理”。','ChatGPT n’a pas répondu. Vérifiez la connexion dans Chrome dédié, puis reprenez le lot.'):state.error;
+  const failure=/No ChatGPT response|ChatGPT could not load this response/.test(state.error||'')?text('ChatGPT 没有返回有效回复。请检查平台 Chrome 中的登录和网络，然后点击“继续 / 重试批量处理”。','ChatGPT n’a pas répondu. Vérifiez la connexion dans Chrome dédié, puis reprenez le lot.'):state.error;
   note.textContent=stopRequested?text('停止请求已收到，当前复核结束后会停止。','Arrêt demandé : la revue en cours va se terminer.'):failure||phases[state.phase]||phases.idle;
   panel.append(title,note);
   if(state.current_title){const current=document.createElement('p');current.textContent=`${state.company||''} · ${state.current_title}`;panel.append(current);}

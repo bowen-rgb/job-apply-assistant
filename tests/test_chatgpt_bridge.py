@@ -5,6 +5,45 @@ from playwright.sync_api import sync_playwright
 
 
 class ChatGPTBridgeTests(unittest.TestCase):
+    def test_new_assistant_markup_and_loading_error_are_separate_from_user_text(self):
+        from app.chatgpt_bridge import _response_failure
+        with sync_playwright() as pw:
+            browser=pw.chromium.launch(headless=True)
+            try:
+                page=browser.new_page()
+                page.set_content('<article data-message-author-role="user">无法加载此回复</article><div data-markdown-text-style="assistant-message">{"verdict":"APPLY","confidence":95,"summary":"Verified"}</div>')
+                self.assertIsNone(_response_failure(page))
+                self.assertEqual(_page_json(page,'final-review')['verdict'],'APPLY')
+                page.set_content('<div data-markdown-text-style="assistant-message"><div role="status">无法加载此回复</div></div>')
+                self.assertIn('could not load',_response_failure(page))
+                self.assertIsNone(_page_json(page,'final-review'))
+            finally:browser.close()
+
+    def test_loading_failure_retries_only_one_worker_owned_tab(self):
+        from unittest.mock import MagicMock,patch
+        from app import chatgpt_bridge as bridge
+        first,second=MagicMock(),MagicMock()
+        context=MagicMock();context.new_page.side_effect=[first,second]
+        expected={'verdict':'APPLY','confidence':95,'summary':'Verified'}
+        with patch.object(bridge,'CHATGPT_LOCK'),patch.object(bridge,'_find_prompt'),patch.object(bridge,'_set_prompt'),patch.object(bridge,'_assistant_messages',return_value=[]),patch.object(bridge,'_diagnostic'),patch.object(bridge,'_wait_response',side_effect=[bridge.ChatGPTResponseError('load failed'),expected]) as wait:
+            self.assertEqual(bridge.ask_chatgpt_json(context,'same review',{},purpose='final-review'),expected)
+            self.assertEqual(wait.call_count,2)
+            self.assertEqual(context.new_page.call_count,2)
+            first.close.assert_called_once();second.close.assert_called_once()
+            context.close.assert_not_called()
+            first.reload.assert_not_called();second.reload.assert_not_called()
+
+    def test_repeated_loading_failure_stops_after_one_retry_and_keeps_evidence(self):
+        from unittest.mock import MagicMock,patch
+        from app import chatgpt_bridge as bridge
+        first,second=MagicMock(),MagicMock()
+        context=MagicMock();context.new_page.side_effect=[first,second]
+        with patch.object(bridge,'CHATGPT_LOCK'),patch.object(bridge,'_find_prompt'),patch.object(bridge,'_set_prompt'),patch.object(bridge,'_assistant_messages',return_value=[]),patch.object(bridge,'_diagnostic') as diagnostic,patch.object(bridge,'_wait_response',side_effect=bridge.ChatGPTResponseError('load failed')):
+            with self.assertRaises(bridge.ChatGPTResponseError):bridge.ask_chatgpt_json(context,'same review',{},purpose='final-review')
+            self.assertEqual(context.new_page.call_count,2)
+            self.assertEqual(diagnostic.call_count,2)
+            second.close.assert_not_called()
+
     def test_current_speaker_layout_reads_only_assistant_response(self):
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)

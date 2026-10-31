@@ -8,6 +8,7 @@ import hashlib
 import json
 
 REVIEWABLE = {'APPLY', 'HUMAN_REVIEW'}
+AUTOMATIC_REVIEW_POLICY_VERSION = '2026-10-31-compact-v1'
 
 
 def review_token(job: dict) -> str:
@@ -36,7 +37,7 @@ def annotate(job: dict) -> dict:
 
 def automatic_token(job: dict) -> str:
     from .profile_store import load_profile_raw
-    return hashlib.sha256((review_token(job)+json.dumps(load_profile_raw(), sort_keys=True, ensure_ascii=False)).encode()).hexdigest()
+    return hashlib.sha256((AUTOMATIC_REVIEW_POLICY_VERSION+review_token(job)+json.dumps(load_profile_raw(), sort_keys=True, ensure_ascii=False)).encode()).hexdigest()
 
 
 def automatic_ready(job: dict) -> bool:
