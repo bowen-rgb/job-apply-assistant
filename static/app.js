@@ -312,6 +312,7 @@ function reviewDetails(j){
 }
 
 function render(){
+  window.MatchAutomation?.paint();
   if(queryComposing)return;
   document.querySelectorAll('.filter').forEach(button=>{
     const selected=button.dataset.filter===current;

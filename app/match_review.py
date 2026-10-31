@@ -1,5 +1,6 @@
 """Review strong matches before enqueueing; never opens application forms."""
 import json
+import hashlib
 import sys
 from datetime import datetime, timezone
 from filelock import FileLock, Timeout
@@ -34,13 +35,21 @@ def save(state):
     temporary.replace(path)
 
 
-def status():
+def saved_state():
     path=data_dir()/'match-review.json'
-    state=json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'phase':'idle'}
+    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'phase':'idle'}
+
+
+def scope_token():
+    return hashlib.sha256(json.dumps(load_profile_raw(),sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
+
+def status():
+    state=saved_state()
     from .worker_runtime import is_running
     if state['phase'] in {'running','starting'} and not is_running(MODULE,0):
         state={**state,'phase':'interrupted'}
-    return {**state,'eligible':len(candidates())}
+    return {**{k:v for k,v in state.items() if k not in {'processed','scope'}},'eligible':len(candidates())}
 
 
 def start():
@@ -65,7 +74,11 @@ def start():
         if profile.get('chatgpt_web_reviewer',{}).get('backend','chatgpt')=='chatgpt':
             if not browser_status(profile).get('ready'):start_browser(profile)
             require_connection(profile)
-        save({'phase':'starting','total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
+        previous=saved_state()
+        if previous.get('scope')==scope_token() and previous.get('phase') in {'blocked','stopped','interrupted'}:
+            previous.update(phase='starting');previous.pop('error',None);save(previous)
+        else:
+            save({'phase':'starting','total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0})
         launch(MODULE,0)
         return status()
 
@@ -96,8 +109,13 @@ def review_one(job):
 def run():
     from .worker_runtime import check_cancelled, Cancelled
     from .queue_manager import enqueue
-    rows=candidates()
-    state={'phase':'running','total':len(rows),'completed':0,'enqueued':0,'skipped':0,'unresolved':0}
+    previous=saved_state()
+    scope=scope_token()
+    resume=previous.get('scope')==scope and previous.get('phase') in {'starting','blocked','stopped','interrupted'}
+    processed=previous.get('processed',{}) if resume else {}
+    rows=[job for job in candidates() if processed.get(str(job['id']))!=automatic_token(job)]
+    counts={key:previous.get(key,0) if resume else 0 for key in ['completed','enqueued','skipped','unresolved']}
+    state={'phase':'running','total':counts['completed']+len(rows),**counts,'processed':processed,'scope':scope}
     save(state)
     try:
         for job in rows:
@@ -112,6 +130,9 @@ def run():
                 state['enqueued']+=int(bool(queued))
             elif verdict=='SKIP':state['skipped']+=1
             else:state['unresolved']+=1
+            with connect() as conn:
+                current=dict(conn.execute('SELECT * FROM jobs WHERE id=?',(job['id'],)).fetchone())
+            processed[str(job['id'])]=automatic_token(current)
             state['completed']+=1;save(state)
         state['phase']='done'
     except Cancelled:

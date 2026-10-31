@@ -8,6 +8,15 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_blocked_batch_keeps_the_direct_retry_button_available(self):
+        self.page.route('**/api/matches/automation',lambda route:route.fulfill(json={
+            'phase':'blocked','total':116,'completed':16,'error':'No ChatGPT response detected for final-review'}))
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        expect(self.page.locator('#reviewMatchesBtn')).to_have_text('继续 / 重试批量处理')
+        expect(self.page.locator('#reviewMatchesBtn')).to_be_enabled()
+        expect(self.page.locator('#matchAutomationStatus')).to_contain_text('ChatGPT 没有返回有效回复')
+        expect(self.page.locator('dialog[open]')).to_have_count(0)
+
     def test_native_job_workflow_progress_stop_and_queue_destination(self):
         state={'phase':'idle','eligible':116}
         writes=[]

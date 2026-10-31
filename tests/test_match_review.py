@@ -57,6 +57,23 @@ class MatchReviewTests(unittest.TestCase):
             flow.after_scan({});start.assert_not_called()
             flow.after_scan({'review_and_queue_strong':True});start.assert_called_once()
 
+    def test_resume_does_not_repeat_completed_unchanged_reviews(self):
+        with db.connect() as conn:
+            conn.execute("INSERT INTO jobs(id,url,title,company,decision) VALUES(2,'https://example.test/2','Next','Example','keep')")
+        def interrupted(identifier):
+            if identifier==2:raise ValueError('No ChatGPT response')
+            return {'verdict':'HUMAN_REVIEW'}
+        with patch.object(flow,'data_dir',return_value=Path(self.temp.name)),patch.object(flow,'load_profile_raw',return_value=self.profile):
+            with patch.object(flow,'review_via_chatgpt_web',side_effect=interrupted):flow.run()
+            self.assertEqual(flow.status()['completed'],1)
+            def approved(identifier):
+                with db.connect() as conn:conn.execute("UPDATE jobs SET review_verdict='APPLY' WHERE id=?",(identifier,))
+                return {'verdict':'APPLY'}
+            with patch.object(flow,'review_via_chatgpt_web',side_effect=approved) as reviewer:
+                flow.run();reviewer.assert_called_once_with(2)
+            self.assertEqual(flow.status()['completed'],2)
+            self.assertEqual(flow.status()['enqueued'],1)
+
     def test_platform_opens_its_own_chrome_and_launches_the_background_workflow(self):
         profile={'chatgpt_web_reviewer':{'enabled':True,'backend':'chatgpt'}}
         with patch.object(flow,'data_dir',return_value=Path(self.temp.name)), \
