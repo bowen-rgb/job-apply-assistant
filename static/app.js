@@ -213,6 +213,7 @@ function selectApplicationView(filter){
   render();cards.tabIndex=-1;cards.scrollIntoView({block:'start',behavior:'smooth'});cards.focus({preventScroll:true});
 }
 function matchFilter(j,filter=current){
+  if(filter.startsWith('workflow:'))return window.MatchAutomation?.matches(j.id,filter.slice(9))===true;
   // Explicit field/value filters, like GitHub Projects single-select views:
   // suitability, AI recommendation, listing availability and recruiter outcome
   // have separate meanings and must never be merged into one rejection state.
@@ -333,7 +334,7 @@ function render(){
   });
   const jobs=scopedJobs.filter(j=>matchFilter(j));
   const heading=el('jobsView').querySelector('header h1');
-  heading.textContent=['waiting','responses','followups','decide','rejected'].includes(current)?Locale.t('menu.'+current):tr('Offres');
+  heading.textContent=current.startsWith('workflow:')?MatchAutomation.label(current.slice(9)):['waiting','responses','followups','decide','rejected'].includes(current)?Locale.t('menu.'+current):tr('Offres');
   visibleJobIds=jobs.map(j=>j.id);
   updateExportCount();
   el('filterHelp').textContent=tr(filterHelp[current]||'');
@@ -700,8 +701,10 @@ function queueItemMarkup(x){
   const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
   const url=safeUrl(p.form_url)||safeUrl(x.url);
   const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
+  const plan=x.material_plan;
+  const materialPlan=plan?`<p class="small queue-material-plan">${esc(Locale.language==='zh'?'材料计划（尚未上传）：':'Documents prévus (non encore joints) : ')}${esc(plan.resume_label||(Locale.language==='zh'?'未找到可用简历':'CV à sélectionner'))} · ${esc(plan.letter_mode==='targeted'?(Locale.language==='zh'?'按此岗位生成并复核专用动机信':'Lettre ciblée générée et relue pour cette offre'):(Locale.language==='zh'?'只用简历，不生成动机信':'CV seul, sans lettre'))}${plan.matched_tags?.length?` · ${esc(Locale.language==='zh'?'匹配标签：':'Mots-clés : ')}${esc(plan.matched_tags.join(', '))}`:''}</p>`:'';
   const guidance=x.automatic_review_requested&&!x.application_status?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.automatic_review_requested?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('La revue IA est intégrée à cette préparation.'))}</p>`:'';
-  return `<div class="queue-item ${esc(x.status)}" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">#${x.job_id} · ${esc(tr('Tentatives'))} ${x.attempts||0}${x.status!=='queued'&&x.application_step?` · ${esc(tr(stepLabels[x.application_step]||'Étape inconnue'))}`:''}${(x.application_step_at||x.updated_at)?` · ${esc(tr('Dernière mise à jour'))}: ${esc(x.application_step_at||x.updated_at)} UTC`:''}</div>${failureMarkup(x)}${checks}${guidance}${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${handoffActionsMarkup(x)}<div class="queue-actions">${!hasSubmitted(x)&&['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Remettre en file pour préparer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
+  return `<div class="queue-item ${esc(x.status)}" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">#${x.job_id} · ${esc(tr('Tentatives'))} ${x.attempts||0}${x.status!=='queued'&&x.application_step?` · ${esc(tr(stepLabels[x.application_step]||'Étape inconnue'))}`:''}${(x.application_step_at||x.updated_at)?` · ${esc(tr('Dernière mise à jour'))}: ${esc(x.application_step_at||x.updated_at)} UTC`:''}</div>${materialPlan}${failureMarkup(x)}${checks}${guidance}${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${handoffActionsMarkup(x)}<div class="queue-actions">${!hasSubmitted(x)&&['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Remettre en file pour préparer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
 }
 async function loadPipeline(){
   clearTimeout(pipelineTimer);

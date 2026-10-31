@@ -31,6 +31,7 @@ def status() -> dict[str, Any]:
         rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
                             j.review_revision,j.reviewed_at,j.review_summary,j.review_json,j.body,j.employment_type,j.start_date,j.end_date,j.valid_through,
                             j.automatic_review_requested,j.automatic_review_token,j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,j.application_step,j.application_step_at,
+                            j.application_resume_id,j.application_context_json,j.search_profile_id,j.snippet,
                             COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status IN ('apply_error','login_required','submission_check','privacy_consent_required') ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
@@ -39,12 +40,17 @@ def status() -> dict[str, Any]:
         base = dict(_state)
     base['counts'] = counts
     base['items'] = [annotate(dict(r)) for r in rows]
+    from .profile_store import load_profile_raw
+    from .material_plan import material_plan
+    raw=load_profile_raw()
     for item in base['items']:
+        try:item['material_plan']=material_plan(item,raw)
+        except (ValueError,OSError):item['material_plan']={'status':'unavailable'}
         from .application_safety import verification_state
         item['verification_state'] = verification_state(item['job_id'], item['application_status'])
         item['preparation'] = preparation_summary(item)
         item.pop('fill_audit_path', None)
-        for field in ('body', 'review_json', 'human_review_fingerprint', 'automatic_review_token'):
+        for field in ('body', 'review_json', 'human_review_fingerprint', 'automatic_review_token','application_context_json'):
             item.pop(field, None)
         if item['status'] == 'error' and item['note'] in {'error', 'timeout', ''}:
             item['note'] = item['failure_reason'] or item['note']
@@ -198,7 +204,8 @@ def _worker(mode: str = 'one'):
                     try:
                         audit = json.loads(Path(existing['fill_audit_path']).read_text(encoding='utf-8'))
                         documents = audit.get('documents', {})
-                        prepared = bool(documents.get('resume_attached') and documents.get('letter_generated'))
+                        prepared = bool(documents.get('resume_attached') and
+                                        (documents.get('letter_required',True) is False or documents.get('letter_generated')))
                     except (OSError, ValueError, TypeError):
                         pass
                 if not prepared and result not in {'submitted', 'submitted_verified', 'withdrawn'}:

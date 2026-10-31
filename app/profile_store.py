@@ -418,7 +418,7 @@ def update_resume_metadata(resume_id: str, label: str | None = None, tags: list[
 def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None) -> tuple[Path | None, dict[str, Any] | None]:
     """Choose a tagged resume when auto routing is enabled, else use the active resume.
 
-    Routing is intentionally deterministic: tags must literally occur in title/body/contract/location.
+    Routing is deterministic: exact tag phrases in the role title outweigh generic body mentions.
     If nothing matches, the active resume is used.
     """
     p = raw or ensure_profile()
@@ -432,7 +432,7 @@ def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None
         if not chosen:
             return None, None
         path = resume_directory() / chosen['filename']
-        return (path if path.is_file() else None), chosen
+        return (path if path.is_file() else None), {**chosen,'selection_reason':'explicit'}
 
     # A search campaign can explicitly bind one CV. This takes precedence over
     # automatic tag routing and makes multi-market workflows deterministic.
@@ -444,33 +444,42 @@ def select_resume_for_job(job: dict[str, Any], raw: dict[str, Any] | None = None
                 chosen = next((x for x in rows if x.get('id') == rid), None)
                 if chosen:
                     path = resume_directory() / chosen.get('filename', '')
-                    return (path if path.exists() else None), chosen
+                    return (path if path.exists() else None), {**chosen,'selection_reason':'campaign'}
                 break
 
     if not p.get('application', {}).get('auto_resume_routing', False):
         path = active_resume_path(p)
-        return path, active
+        return path, {**active,'selection_reason':'active'} if active else None
 
     def _norm_text(v: Any) -> str:
         x = unicodedata.normalize('NFD', str(v or ''))
         return ''.join(ch for ch in x if unicodedata.category(ch) != 'Mn').lower()
 
-    hay = _norm_text(' '.join(str(job.get(k, '')) for k in ('title','body','snippet','employment_type','location')))
+    title = _norm_text(job.get('title',''))
+    body = _norm_text(' '.join(str(job.get(k, '')) for k in ('body','snippet')))
     best = None
     best_score = 0
-    for row in rows:
+    matched=[]
+    for row in sorted(rows,key=lambda row:row.get('id')!=active_id):
         score = 0
+        tags=[]
         for tag in row.get('tags', []) or []:
             t = _norm_text(str(tag).strip())
-            if t and t in hay:
-                score += max(1, min(8, len(t.split())))
+            if not t:continue
+            pattern=r'(?<!\w)'+re.escape(t)+r'(?!\w)'
+            in_title=bool(re.search(pattern,title));in_body=bool(re.search(pattern,body))
+            if in_title or in_body:
+                score += (8 if in_title else 1)*max(1,min(8,len(t.split())))
+                tags.append(tag)
         if score > best_score:
             best_score = score
             best = row
+            matched=tags
     chosen = best if best_score > 0 else active
     if chosen:
         path = resume_directory() / chosen.get('filename', '')
-        return (path if path.exists() else None), chosen
+        return (path if path.exists() else None), {**chosen,'selection_reason':'tags' if best_score else 'active_fallback',
+                                                  'matched_tags':matched,'routing_score':best_score}
     return active_resume_path(p), None
 
 def runtime_profile(raw: dict[str, Any] | None = None) -> dict[str, Any]:

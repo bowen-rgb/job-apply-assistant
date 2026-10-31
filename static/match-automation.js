@@ -2,12 +2,14 @@
 window.MatchAutomation=(()=>{
  let button,panel,state={},busy=false,stopRequested=false,refreshing=false,recordsSignature=null;
  const text=(zh,fr)=>Locale.language==='zh'?zh:fr;
+ const groupLabels=()=>({pending:text('待初审','À évaluer'),reviewing:text('审核中','En revue'),needs_information:text('待补全','À compléter'),approved:text('已通过待入队','Validées à mettre en file'),queued:text('申请队列','En file'),submitted:text('已投递','Envoyées'),not_suitable:text('复核不适合','Écartées'),errors:text('审核异常','Erreurs'),inactive:text('已退出流程','Hors processus')});
  function paint(){
   if(!panel)return;
   const active=['starting','running'].includes(state.phase);
   button.disabled=busy||active;
-  const strong=allJobs.filter(job=>job.decision==='keep').length;
-  button.textContent=active?text(`批量处理中 ${state.completed||0}/${state.total||strong}`,`Traitement en lot ${state.completed||0}/${state.total||strong}`):['blocked','stopped','interrupted'].includes(state.phase)?text('继续 / 重试批量处理','Reprendre le traitement en lot'):text(`批量处理高度匹配岗位（${strong}）`,`Traiter les bons résultats en lot (${strong})`);
+  const strong=state.inventory?.total??allJobs.filter(job=>job.decision==='keep').length;
+  const scope=state.mode==='clarify'?text('旧缺项补全','Clarifications'):text('全部待审核岗位','Toutes les offres à évaluer');
+  button.textContent=active?`${scope} ${state.completed||0}/${state.total||strong}`:['blocked','stopped','interrupted'].includes(state.phase)?text('继续 / 重试批量处理','Reprendre le traitement en lot'):text(`批量处理全部高度匹配岗位（${strong}）`,`Traiter tous les bons résultats (${strong})`);
   panel.replaceChildren();
   const title=document.createElement('strong');
   title.textContent=text('高度匹配 → ChatGPT 再审 → 通过后加入申请队列','Bons résultats → revue ChatGPT → file après validation');
@@ -16,6 +18,12 @@ window.MatchAutomation=(()=>{
   const failure=/No ChatGPT response|ChatGPT could not load this response/.test(state.error||'')?text('ChatGPT 没有返回有效回复。请检查平台 Chrome 中的登录和网络，然后点击“继续 / 重试批量处理”。','ChatGPT n’a pas répondu. Vérifiez la connexion dans Chrome dédié, puis reprenez le lot.'):state.error;
   note.textContent=stopRequested?text('停止请求已收到，当前复核结束后会停止。','Arrêt demandé : la revue en cours va se terminer.'):failure||phases[state.phase]||phases.idle;
   panel.append(title,note);
+  if(state.inventory){
+   const total=document.createElement('p');total.textContent=text(`规则初筛高度匹配共 ${strong} 条，以下阶段互不重复，合计等于总数。`,`Présélection : ${strong} offres. Les étapes ci-dessous sont exclusives et leur somme égale le total.`);panel.append(total);
+   const groups=document.createElement('div');groups.className='review-inventory';
+   for(const [key,label] of Object.entries(groupLabels())){const metric=document.createElement('button');metric.type='button';metric.dataset.reviewGroup=key;metric.textContent=`${label} ${state.inventory.counts[key]||0}`;metric.onclick=()=>selectApplicationView('workflow:'+key);groups.append(metric);}panel.append(groups);
+  }
+  const scopeNote=document.createElement('p');scopeNote.className='small';scopeNote.textContent=state.mode==='clarify'?text(`当前子批次：旧缺项补全 ${state.total||0} 条；其余 ${state.inventory?.counts?.pending??'—'} 条待初审会随后自动继续。`,`Lot actuel : ${state.total||0} clarifications ; ${state.inventory?.counts?.pending??'—'} offres encore non évaluées suivront automatiquement.`):state.continued_from_clarify?text('旧缺项补全阶段已结束，正在继续其余岗位初审。','Clarifications terminées, poursuite des autres évaluations.'):text('当前范围：全部符合处理条件的高度匹配岗位。','Périmètre : toutes les offres présélectionnées encore éligibles.');panel.append(scopeNote);
   if(state.current_title){const current=document.createElement('p');current.textContent=`${state.company||''} · ${state.current_title}`;panel.append(current);}
   if(Number.isFinite(state.total)){
    const progress=document.createElement('progress');progress.max=Math.max(1,state.total);progress.value=state.completed||0;progress.setAttribute('aria-label',text('复核进度','Avancement de la revue'));panel.append(progress);
@@ -50,5 +58,5 @@ window.MatchAutomation=(()=>{
   button.onclick=async()=>{busy=true;paint();try{state=await requestJson('/api/matches/automation',{method:'POST'});await load();}catch(error){state={phase:'blocked',error:error.message};}finally{busy=false;paint();}};
   document.addEventListener('localechange',paint);document.addEventListener('visibilitychange',refresh);setInterval(refresh,4000);refresh();
  }
- return {init,refresh,paint};
+ return {init,refresh,paint,matches:(id,group)=>state.inventory?.job_ids?.[group]?.includes(id)===true,label:group=>groupLabels()[group]||group};
 })();

@@ -53,3 +53,5 @@ dialog .surface-heading{border-radius:8px 8px 0 0}.surface-jumps button{backgrou
 .review-gap-job fieldset{margin-top:18px;padding:16px;border:1px solid #b9bdba;border-radius:8px}
 .review-gap-job textarea{width:100%;box-sizing:border-box;margin-bottom:12px}
 .review-gap-job label{display:flex;gap:8px;align-items:start;margin-bottom:12px}
+
+.review-inventory{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.review-inventory button{font-size:14px;padding:8px 12px}

@@ -22,9 +22,9 @@ class MatchReviewTests(unittest.TestCase):
             with db.connect() as c:c.execute("UPDATE jobs SET review_verdict='ERROR' WHERE id=1")
             with patch.object(flow,'review_one',return_value='HUMAN_REVIEW') as review:
                 flow.run()
-                self.assertEqual(review.call_count,1)
-                self.assertEqual(review.call_args.args[0]['id'],1)
-            self.assertEqual(flow.status()['total'],1)
+                self.assertEqual([call.args[0]['id'] for call in review.call_args_list],[1,2])
+            self.assertEqual(flow.status()['total'],2)
+            self.assertTrue(flow.status()['continued_from_clarify'])
 
     def test_strong_matches_are_reviewed_before_queueing_and_not_submitted(self):
         with db.connect() as conn:

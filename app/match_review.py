@@ -50,8 +50,10 @@ def status():
     if state['phase'] in {'running','starting'} and not is_running(MODULE,0):
         state={**state,'phase':'interrupted'}
     rows=candidates()
+    from .review_inventory import snapshot
+    inventory=snapshot()
     return {**{k:v for k,v in state.items() if k not in {'processed','scope','targets'}},'eligible':len(rows),
-            'unresolved_available':sum(row['review_verdict']=='HUMAN_REVIEW' for row in rows)}
+            'unresolved_available':inventory['counts']['needs_information'],'inventory':inventory}
 
 
 def start(unresolved_only=False):
@@ -129,6 +131,7 @@ def run():
     if previous.get('mode')=='clarify':rows=[job for job in rows if job['id'] in previous.get('targets',[])]
     counts={key:previous.get(key,0) if resume else 0 for key in ['completed','enqueued','skipped','unresolved']}
     state={'phase':'running','mode':previous.get('mode','strong'),'targets':previous.get('targets',[]),
+           'continued_from_clarify':previous.get('continued_from_clarify',False),
            'total':counts['completed']+len(rows),**counts,'processed':processed,'scope':scope}
     save(state)
     try:
@@ -148,6 +151,14 @@ def run():
                 current=dict(conn.execute('SELECT * FROM jobs WHERE id=?',(job['id'],)).fetchone())
             processed[str(job['id'])]=automatic_token(current)
             state['completed']+=1;save(state)
+            if state['mode']=='clarify' and job is rows[-1]:
+                # Clarifying twenty old records must not strand the unreviewed remainder.
+                remaining=[row for row in candidates() if row['review_verdict'] in {'','ERROR'}
+                           and str(row['id']) not in processed]
+                if remaining:
+                    state.update(mode='strong',continued_from_clarify=True,targets=[],
+                                 total=state['completed']+len(remaining))
+                    rows.extend(remaining);save(state)
         state['phase']='done'
     except Cancelled:
         state['phase']='stopped'

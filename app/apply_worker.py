@@ -325,9 +325,12 @@ def main(job_id: int, *, privacy_confirmed: bool = False, qr_request_id: str = '
                     'id': (resume_meta or {}).get('id', ''),
                     'label': (resume_meta or {}).get('label', ''),
                     'auto_routed': bool(raw_profile.get('application', {}).get('auto_resume_routing', False)),
+                    'selection_reason':(resume_meta or {}).get('selection_reason',''),
+                    'matched_tags':(resume_meta or {}).get('matched_tags',[]),
                 },
                 'report': report,
                 'documents': {
+                    'letter_required':requires_letter(job,raw_profile),
                     'resume_available': bool(resume_path and resume_path.is_file()),
                     'resume_attached': 'resume' in report.get('filled', []),
                     'letter_generated': bool(profile.get('cover_letter_text')),

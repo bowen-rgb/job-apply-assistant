@@ -8,6 +8,28 @@ class MatchAutomationUITests(unittest.TestCase):
     setUp=fixture.WorkspaceMenuTests.setUp
     tearDown=fixture.WorkspaceMenuTests.tearDown
 
+    def test_global_inventory_is_distinct_from_clarification_subset_and_clicks_exact_records(self):
+        self.page.route('**/api/matches/automation',lambda r:r.fulfill(json={
+            'phase':'running','mode':'clarify','total':1,'completed':0,'unresolved_available':1,
+            'inventory':{'total':2,'counts':{'needs_information':1,'submitted':1},
+                         'job_ids':{'needs_information':[1],'submitted':[2]}}}))
+        navigate(self.page,'jobs');self.page.evaluate('MatchAutomation.refresh()')
+        expect(self.page.locator('#reviewMatchesBtn')).to_have_text('旧缺项补全 0/1')
+        expect(self.page.locator('#matchAutomationStatus')).to_contain_text('规则初筛高度匹配共 2 条')
+        self.page.locator('[data-review-group=submitted]').click()
+        expect(self.page.locator('.card')).to_have_count(1)
+        expect(self.page.locator('.card[data-record-id="2"]')).to_be_visible()
+
+    def test_queue_explains_planned_cv_and_targeted_letter_separately_from_uploads(self):
+        self.page.route('**/api/queue',lambda r:r.fulfill(json={'items':[{
+            'job_id':1,'title':'Simulation','company':'Example','status':'queued',
+            'material_plan':{'status':'planned','resume_label':'Simulation CV','letter_mode':'targeted','matched_tags':['simulation']}}],
+            'counts':{'queued':1},'running':False}))
+        navigate(self.page,'pipeline')
+        expect(self.page.locator('.queue-material-plan')).to_contain_text('Simulation CV')
+        expect(self.page.locator('.queue-material-plan')).to_contain_text('尚未上传')
+        expect(self.page.locator('.queue-material-plan')).to_contain_text('按此岗位生成并复核专用动机信')
+
     def test_open_gap_window_syncs_new_review_and_removes_resolved_items_without_losing_draft(self):
         data={'candidate_id':'default','answers':[],'items':[{
             'id':1,'company':'Example','title':'Simulation','url':'https://employer.test/1',
