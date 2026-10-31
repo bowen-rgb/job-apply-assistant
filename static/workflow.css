@@ -38,3 +38,16 @@ body[data-workspace-view=menu] .workflow-nav { display:none; }
 }
 
 #careerTools [data-tool-status]:empty { display:none; }
+
+/* Apply-Pilot's outcome-first hierarchy, using this application's tokens. */
+.wb-metrics { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.wb-metrics [data-wb-outcome=rejected] { border-top-color:var(--red); }
+.wb-outcome-panels { display:grid; grid-template-columns:1.3fr 1fr; gap:24px; margin-bottom:24px; }
+.wb-application-row { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:8px; padding:16px 0; margin:0; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); width:100%; }
+.wb-application-row strong { font-size:16px; }
+.wb-application-row span { color:var(--muted); line-height:1.6; overflow-wrap:anywhere; }
+.wb-application-row small { color:var(--green); }
+[data-tracker-results] { scroll-margin-top:100px; }
+.optional-review { margin-block:12px; }
+@media(max-width:900px) { .wb-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } .wb-outcome-panels { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:600px) { .wb-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .wb-metrics>button { padding:16px; min-width:0; } }

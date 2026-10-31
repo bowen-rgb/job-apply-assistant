@@ -176,6 +176,7 @@ class DashboardMetricTests(unittest.TestCase):
             page.locator('[data-metric-filter="human"]').click()
             expect(page.locator('#cards .card')).to_have_count(2)
             expect(page.locator('#cards .apply:disabled')).to_have_count(2)
+            page.locator('.optional-review:has([data-human-review="1"]) > summary').click()
             page.locator('button[onclick="confirmHumanReview(1,\'approved\')"]').click()
             expect(page.locator('[data-metric-filter="human"] b')).to_have_text('1')
             page.locator('#jobFilterSelect').select_option('confirmed')
@@ -185,8 +186,10 @@ class DashboardMetricTests(unittest.TestCase):
             navigate(page,'jobs')
             page.locator('[data-metric-filter="human"]').click()
             expect(page.locator('#cards .card')).to_have_count(2)
+            page.locator('.optional-review:has([data-human-review="1"]) > summary').click()
             page.locator('button[onclick="confirmHumanReview(1,\'declined\')"]').click()
             expect(page.locator('#cards .card')).to_have_count(1)
+            page.locator('.optional-review:has([data-human-review="2"]) > summary').click()
             page.locator('button[onclick="confirmHumanReview(2,\'approved\')"]').click()
             expect(page.locator('[data-metric-filter="human"] b')).to_have_text('0')
             page.locator('#jobFilterSelect').select_option('human_declined')
@@ -408,7 +411,7 @@ class DashboardMetricTests(unittest.TestCase):
             expect(first).to_contain_text('Availability date')
             expect(first.locator('a')).to_have_attribute('href', preparation['form_url'])
             expect(page.locator('[data-queue-job="2"]')).to_contain_text('准备记录不可用')
-            with page.expect_request('**/api/queue/start?mode=batch'):
+            with page.expect_request('**/api/queue/start?mode=batch&auto_review=true'):
                 page.locator('#queueBatchBtn').click()
             self.assertTrue(any('/api/queue/start?mode=batch' in url for url in posts))
             first.locator('button[onclick="retryQueue(1)"]').click()

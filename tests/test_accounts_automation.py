@@ -213,7 +213,7 @@ class AutomationBrowserTests(unittest.TestCase):
                 navigate(page,'guideNav')
                 page.locator('#coachAutomate').click()
                 page.wait_for_function('!document.getElementById("pipelineView").classList.contains("hidden")')
-                self.assertEqual(writes,[('/api/queue',json.dumps({'job_ids':[8]},separators=(',',':')))])
+                self.assertEqual(writes,[('/api/queue',json.dumps({'job_ids':[8],'auto_review':True},separators=(',',':')))])
                 self.assertEqual(errors,[])
                 self.assertTrue(all(headers.get('x-candidate-id')=='default' for path,headers in requests if path!='/api/candidates'))
             finally:browser.close()

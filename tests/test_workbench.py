@@ -27,6 +27,9 @@ class WorkbenchTests(unittest.TestCase):
                     if path=='/api/candidates':data={'active_id':'default','items':[dict(id='default',name='Bowen Li',identity={})]}
                     elif path=='/api/profile':data={'automation':{}}
                     elif path=='/api/jobs':data=jobs
+                    elif path=='/api/insights':
+                        from app.application_overview import snapshot
+                        data={'summary':snapshot(jobs,[],[]),'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'mail_proposals':[],'followups':[]}
                     elif path=='/api/pending-tasks':data={'items':tasks}
                     elif path=='/api/pending-tasks/vacancy/queue':
                         mutations.append(path);tasks[1]['queue_status']='queued';data={'job_id':1,'queue_status':'queued'}
@@ -37,7 +40,7 @@ class WorkbenchTests(unittest.TestCase):
                 page.route('**/*',respond);page.goto('http://workbench.test/')
                 navigate(page,'overviewNav')
                 expect(page.locator('[data-wb-filter=all] b')).to_have_text('2')
-                expect(page.locator('[data-wb-filter=submitted] b')).to_have_text('1')
+                expect(page.locator('[data-wb-outcome=waiting] b')).to_have_text('1')
                 expect(page.locator('.wb-owner')).to_contain_text('Bowen Li')
                 expect(page.locator('.wb-focus-title')).to_have_text('Research internship')
                 self.assertEqual(page.locator('#overviewView svg rect').count(),7)
@@ -92,4 +95,21 @@ class WorkbenchTests(unittest.TestCase):
                 expect(page.locator('#wbRefresh')).to_be_enabled()
                 page.locator('#overviewView details').evaluate_all('(nodes)=>nodes.forEach(node=>node.open=false)')
                 page.screenshot(path='data/workbench-preview.png',full_page=False)
+                jobs[1].update(tracker_stage='rejected',tracker_note='HR: not selected',company='Rejected Employer')
+                jobs.append(dict(id=4,title='Not suitable',company='Not a recruiter rejection',decision='reject',application_status='error'))
+                page.locator('#languageSelect').select_option('zh')
+                page.locator('#wbRefresh').click()
+                expect(page.locator('[data-wb-outcome=rejected] b')).to_have_text('1')
+                page.locator('[data-wb-outcome=rejected]').click()
+                expect(page.locator('#trackingView')).to_be_visible()
+                expect(page.locator('.tracker-result-list')).to_contain_text('Rejected Employer')
+                expect(page.locator('.tracker-result-list')).not_to_contain_text('Not a recruiter rejection')
+                for width in [1280,375]:
+                    page.set_viewport_size({'width':width,'height':1000})
+                    page.screenshot(path=f'tmp/outcomes-rejected-{width}.png',full_page=True)
+                    self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'),width)
+                navigate(page,'overview')
+                page.set_viewport_size({'width':1280,'height':1000});page.evaluate('window.scrollTo(0,0)')
+                page.screenshot(path='tmp/outcomes-dashboard-1280.png',full_page=True)
+                self.assertEqual(errors,[])
             finally:browser.close()

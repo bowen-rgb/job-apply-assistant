@@ -672,7 +672,7 @@ def activate_candidate(identifier: str):
 
 @app.post('/api/queue')
 def add_queue(payload: QueueRequest):
-    result = queue_enqueue(payload.job_ids, payload.priority)
+    result = queue_enqueue(payload.job_ids, payload.priority, auto_review=payload.auto_review)
     if load_profile_raw().get('automation', {}).get('auto_start_queue') is True and not result.get('paused'):
         try:
             queue_start('batch')
@@ -683,9 +683,9 @@ def add_queue(payload: QueueRequest):
 
 
 @app.post('/api/queue/start')
-def start_queue(mode: Literal['one', 'batch'] = 'one'):
+def start_queue(mode: Literal['one', 'batch'] = 'one', auto_review: bool = False):
     try:
-        return queue_start(mode)
+        return queue_start(mode, auto_review=True) if auto_review else queue_start(mode)
     except ValueError as exc:
         raise HTTPException(409, str(exc))
 

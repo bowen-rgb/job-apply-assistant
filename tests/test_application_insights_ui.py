@@ -23,8 +23,8 @@ class ApplicationInsightsUITests(unittest.TestCase):
                     data={}
                     if path=='/api/candidates':data={'active_id':'default','items':[{'id':'default','name':'Test profile','identity':{}}]}
                     elif path=='/api/profile':data={'automation':{}}
-                    elif path=='/api/pipeline':data=[dict(id=1,company='Rejected Lab',title='Simulation',tracker_stage='rejected',application_status='submitted',tracker_note='HR: not selected'),dict(id=2,company='Silent Lab',title='Control',tracker_stage='no_response',application_status='submitted',tracker_note='Manually closed after no reply')]
-                    elif path in {'/api/jobs','/api/sources','/api/resumes'}:data=[]
+                    elif path in {'/api/jobs','/api/pipeline'}:data=[dict(id=1,company='Rejected Lab',title='Simulation',tracker_stage='rejected',application_status='submitted',tracker_note='HR: not selected'),dict(id=2,company='Silent Lab',title='Control',tracker_stage='no_response',application_status='submitted',tracker_note='Manually closed after no reply')]
+                    elif path in {'/api/sources','/api/resumes'}:data=[]
                     elif path=='/api/queue':data={'counts':{},'items':[]}
                     elif path=='/api/insights':data={'config':{'follow_up':{'after_days':14,'max_followups':1},'dimensions':[]},'followups':[],'mail_proposals':pending}
                     elif path=='/api/insights/gmail-sync':mutations.append(path);data={'read':1,'proposed':1}

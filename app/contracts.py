@@ -61,6 +61,7 @@ class ReviewExport(BaseModel):
 
 
 class QueueRequest(BaseModel):
+    auto_review: bool = False
     job_ids: list[int] = Field(min_length=1, max_length=200)
     priority: int = Field(default=100, ge=0, le=1000)
 

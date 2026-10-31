@@ -228,10 +228,11 @@ function matchFilter(j,filter=current){
 Object.assign(statusLabels,{reject:'Critères incompatibles',rejected:'Refus du recruteur'});
 const safeJobUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
 const hasSubmitted=j=>['submitted','submitted_verified'].includes(j.application_status);
-const humanStatus=j=>['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)?(j.human_review_status||'pending'):'not_required';
+const humanStatus=j=>j.automatic_review_ready?'not_required':['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)?(j.human_review_status||'pending'):'not_required';
 const reviewActionable=j=>!hasSubmitted(j) && j.application_status!=='withdrawn' && !['rejected','withdrawn','hired','offer_declined','no_response'].includes(j.tracker_stage) && !matchFilter(j,'expired');
 const needsHumanConfirmation=j=>humanStatus(j)==='pending' && reviewActionable(j);
-const reviewAllowsPreparation=j=>!['QUEUED','RUNNING'].includes(j.review_verdict) && (!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||humanStatus(j)==='approved');
+const queueEligible=j=>!['SKIP','QUEUED','RUNNING'].includes(j.review_verdict)&&humanStatus(j)!=='declined'&&j.user_action!=='skipped'&&!matchFilter(j,'expired')&&!hasSubmitted(j)&&!['withdrawn','opening','preparing','preparing_letter'].includes(j.application_status)&&!['rejected','withdrawn','hired','offer_declined','no_response'].includes(j.tracker_stage);
+const reviewAllowsPreparation=j=>j.automatic_review_ready || !['QUEUED','RUNNING'].includes(j.review_verdict) && (!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||humanStatus(j)==='approved');
 const preparable=j=>reviewAllowsPreparation(j) && j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn','hired','offer_declined','no_response'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
 const filterHelp={
   all:'Offres visibles, hors offres ignorées. Les compteurs suivent les mêmes filtres que les cartes.',
@@ -267,9 +268,9 @@ async function loadHistory(id,panel){
 window.loadHistory=loadHistory;
 
 function humanReviewMarkup(j){
-  if(!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict))return '';
+  if(j.automatic_review_ready||!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict))return '';
   const state=humanStatus(j), labels={pending:'À confirmer par vous',approved:'Confirmée par vous',declined:'Écartée par vous'};
-  return `<section class="human-review-panel ${esc(state)}" data-human-review="${j.id}"><strong>${esc(tr(labels[state]||labels.pending))}</strong>${state==='pending'?`<p>${esc(tr('Même une recommandation IA verte doit être lue par vous. Vérifiez les dates, horaires, trajet et les questions du reviewer.'))}</p>`:''}${state!=='pending'&&j.human_reviewed_at?`<p class="small">${esc(j.human_reviewed_at)}</p>`:''}${reviewActionable(j)?`<div class="queue-actions">${state!=='approved'?`<button class="primary compact" onclick="confirmHumanReview(${j.id},'approved')">${esc(tr('J’ai vérifié : autoriser la préparation'))}</button>`:''}${state!=='declined'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'declined')">${esc(tr('Ne pas préparer ce poste'))}</button>`:''}${state!=='pending'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'pending')">${esc(tr('Revenir à vérifier'))}</button>`:''}</div>`:''}</section>`;
+  return `<section class="human-review-panel ${esc(state)}" data-human-review="${j.id}"><strong>${esc(tr(labels[state]||labels.pending))}</strong>${state==='pending'?`<p>${esc(tr('La file vérifie automatiquement ce résultat. Vous pouvez aussi décider manuellement ici.'))}</p>`:''}${state!=='pending'&&j.human_reviewed_at?`<p class="small">${esc(j.human_reviewed_at)}</p>`:''}${reviewActionable(j)?`<div class="queue-actions">${state!=='approved'?`<button class="primary compact" onclick="confirmHumanReview(${j.id},'approved')">${esc(tr('J’ai vérifié : autoriser la préparation'))}</button>`:''}${state!=='declined'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'declined')">${esc(tr('Ne pas préparer ce poste'))}</button>`:''}${state!=='pending'?`<button class="ghost compact" onclick="confirmHumanReview(${j.id},'pending')">${esc(tr('Revenir à vérifier'))}</button>`:''}</div>`:''}</section>`;
 }
 async function confirmHumanReview(id,state){
   const job=allJobs.find(j=>j.id===id);if(!job)return;
@@ -347,17 +348,17 @@ function render(){
     ${j.application_status==='error'&&j.application_error?`<div class="application-error" role="status">${esc(errorMessage(j.application_error))}</div>`:''}
     ${j.last_workflow_event==='privacy_consent_required'?`<div class="application-error" role="status">${esc(tr('Accord à la charte de données requis.'))} <button onclick="approvePrivacy(${j.id})">${esc(tr('Accepter pour cette candidature et continuer'))}</button></div>`:''}
     ${reviewDetails(j)}
-    ${humanReviewMarkup(j)}
+    ${humanStatus(j)==='pending'?`<details class="optional-review"><summary>${esc(tr("Questions à clarifier"))}</summary>${humanReviewMarkup(j)}</details>`:humanReviewMarkup(j)}
     ${evidenceMarkup(j)}
     <details class="letter-panel" ontoggle="if(this.open) loadLetter(${j.id})"><summary>${esc(tr('Lettre de motivation'))}</summary><div id="letter-${j.id}">${esc(tr('Chargement…'))}</div></details>
     <div class="linkrow">${safeJobUrl(j.url)?`<a href="${esc(safeJobUrl(j.url))}" target="_blank" rel="noopener">${esc(tr('Ouvrir l’offre ↗'))}</a>`:''}</div>
-    <p class="workflow-help">${esc(tr(!reviewAllowsPreparation(j)?'Confirmez d’abord la revue IA dans le bloc ci-dessus.':!preparable(j)?'Préparation indisponible dans cet état. Consultez le statut et l’historique.':j.queue_status?'Gérez la préparation et les reprises depuis Pipeline & file.':"Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
+    <p class="workflow-help">${esc(tr(!reviewAllowsPreparation(j)?'Ajoutez à la file : ChatGPT vérifiera automatiquement cette candidature.':!preparable(j)?'Préparation indisponible dans cet état. Consultez le statut et l’historique.':j.queue_status?'Gérez la préparation et les reprises depuis Pipeline & file.':"Lettre → Pré-remplissage → Vérification et envoi manuel"))}</p><div class="actions five">
       <button class="primary letter-action" onclick="openLetter(${j.id})">${esc(tr("Rédiger la lettre"))}</button>
       <button class="skip" onclick="decide(${j.id},'${j.user_action==='skipped'?'clear_user_action':'skipped'}')">${esc(tr(j.user_action==='skipped'?'Restaurer':'Passer'))}</button>
       <button class="like" onclick="decide(${j.id},'${j.user_action==='liked'?'clear_user_action':'liked'}')">${esc(tr(j.user_action==='liked'?'Ne plus garder':'Garder'))}</button>
       <button class="reviewbtn" onclick="reviewJob(${j.id})">${esc(tr("Évaluer le poste"))}</button>
       ${['opening','preparing','preparing_letter'].includes(j.application_status)?`<button class="apply" onclick="stopApplication(${j.id})">${esc(tr('Arrêter'))}</button>`:`<button class="apply" ${preparable(j)&&!['queued','running','waiting_user'].includes(j.queue_status)?'':'disabled'} onclick="applyJob(${j.id})">${esc(tr('Pré-remplir'))}</button>`}
-      <button class="ghost" ${preparable(j)&&!j.queue_status?'':'disabled'} onclick="queueJob(${j.id})">${esc(tr(j.queue_status?'File:':'+ File'))}${j.queue_status?` ${esc(statusLabel(j.queue_status))}`:''}</button>
+      <button class="ghost" ${queueEligible(j)&&!j.queue_status?'':'disabled'} onclick="queueJob(${j.id})">${esc(tr(j.queue_status?'File:':'+ File'))}${j.queue_status?` ${esc(statusLabel(j.queue_status))}`:''}</button>
     </div>
     <div class="status-actions">${['submitted','submitted_verified'].includes(j.application_status)?`<span class="submitted-pill">${esc(applicationLabel(j))}</span>`:`<button class="ghost compact" onclick="markApplication(${j.id},'submitted')">${esc(tr('Marquer envoyée'))}</button>`}${hasSubmitted(j)?`<button class="ghost compact" onclick="setStage(${j.id},'rejected')">${esc(tr('Enregistrer un refus du recruteur'))}</button>`:''}${j.apply_adapter?`<span class="small">${esc(tr('Adapter:'))} ${esc(j.apply_adapter)}</span>`:''}${j.agent_status?`<span class="small">${esc(tr('Agent:'))} ${esc(j.agent_status)}${j.agent_steps?` · ${j.agent_steps} ${esc(tr('étapes'))}`:''}</span>`:''}${j.fill_audit_path?`<button class="ghost compact" onclick="openMaterials(${j.id})">${esc(tr('Vérifier les documents'))}</button><a class="audit-link" href="/api/jobs/${j.id}/audit" target="_blank" rel="noopener">${esc(tr('Audit ↗'))}</a>`:''}${j.agent_trace_path?`<a class="audit-link" href="/api/jobs/${j.id}/agent-trace" target="_blank" rel="noopener">${esc(tr('Agent trace ↗'))}</a>`:''}</div>
   </article>`).join('');
@@ -397,7 +398,7 @@ async function markApplication(id,status){
 }
 async function queueJob(id){
   try{
-    await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id],priority:100})});
+    await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[id],priority:100,auto_review:true})});
     await load();const job=allJobs.find(j=>j.id===id);
     statusEl.textContent=tr(job?.queue_status?'Ajoutée à la file. Cliquez sur « Préparer la suivante ».':'Cette candidature ne peut pas être ajoutée à la file.');
   }catch(error){statusEl.textContent=error.message;}
@@ -707,11 +708,11 @@ el('queueFilter').onchange=renderQueueItems;
 function queueItemMarkup(x){
   const p=x.preparation||{}, d=p.documents||{};
   const waiting=x.status==='waiting_user';
-  const label=hasSubmitted(x)?statusLabel('done'):x.status==='error'?tr('Préparation échouée'):waiting?tr(x.application_status==='needs_human'?'À compléter sur le site':'Pré-remplie · envoi manuel requis'):statusLabel(x.status);
+  const label=hasSubmitted(x)?statusLabel('done'):x.status==='error'?tr('Préparation échouée'):waiting&&x.automatic_review_requested&&!x.application_status?tr('Informations nécessaires après la revue IA'):waiting?tr(x.application_status==='needs_human'?'À compléter sur le site':'Pré-remplie · envoi manuel requis'):statusLabel(x.status);
   const safeUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
   const url=safeUrl(p.form_url)||safeUrl(x.url);
   const checks=waiting?(p.audit_available?`<ul class="queue-checks"><li>${esc(tr(d.resume_attached?'CV joint':'CV à joindre'))}</li><li>${esc(tr(d.letter_attached?'Lettre jointe ou renseignée':'Vérifiez la lettre sur le site'))}</li><li>${p.required_unanswered==null?esc(tr('Champs obligatoires à vérifier sur le site')):`${esc(tr('Champs obligatoires restants :'))} ${esc(p.required_unanswered)}`}</li>${(p.missing_fields||[]).map(label=>`<li>${esc(label)}</li>`).join('')}</ul>`:`<p class="small">${esc(tr('Compte rendu indisponible. Vérifiez les pièces jointes et les champs sur le site, ou relancez la préparation.'))}</p>`):'';
-  const guidance=waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('Cette préparation attend votre confirmation du résultat IA.'))} <button class="ghost compact" onclick="openHumanConfirmation()">${esc(tr('Voir les postes à confirmer'))}</button></p>`:'';
+  const guidance=x.automatic_review_requested&&!x.application_status?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:waiting?`<p class="queue-guidance">${esc(tr('Ouvrez l’onglet déjà préparé dans le navigateur dédié. Vérifiez le CV, la lettre et les réponses, complétez les champs manquants, puis cliquez sur Envoyer sur le site. Revenez ici pour marquer la candidature envoyée.'))}</p>`:x.automatic_review_requested?`<p class="queue-guidance">${esc(x.note||tr('La revue IA est intégrée à cette préparation.'))}</p>`:x.human_review_status==='pending'?`<p class="queue-guidance">${esc(tr('Cette préparation attend votre confirmation du résultat IA.'))} <button class="ghost compact" onclick="openHumanConfirmation()">${esc(tr('Voir les postes à confirmer'))}</button></p>`:'';
   return `<div class="queue-item ${esc(x.status)}" data-queue-job="${x.job_id}">${titleMarkup({id:x.job_id,title:x.title},'b')} · ${esc(x.company||'')} <span class="tag queue">${esc(label)}</span><div class="small">#${x.job_id} · ${esc(tr('Tentatives'))} ${x.attempts||0}${x.status!=='queued'&&x.application_step?` · ${esc(tr(stepLabels[x.application_step]||'Étape inconnue'))}`:''}${(x.application_step_at||x.updated_at)?` · ${esc(tr('Dernière mise à jour'))}: ${esc(x.application_step_at||x.updated_at)} UTC`:''}</div>${failureMarkup(x)}${checks}${guidance}${waiting&&url?`<a class="ghost compact" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(tr('Ouvrir le formulaire'))}</a>`:''}${handoffActionsMarkup(x)}<div class="queue-actions">${!hasSubmitted(x)&&['error','cancelled','waiting_user'].includes(x.status)?`<button class="ghost compact" onclick="retryQueue(${x.job_id})">${esc(tr('Remettre en file pour préparer'))}</button>`:''}<button class="ghost compact" onclick="removeQueue(${x.job_id})">${esc(tr('Retirer'))}</button></div></div>`;
 }
 async function loadPipeline(){
@@ -723,6 +724,7 @@ async function loadPipeline(){
   el('queueStopBtn').disabled=!q.running;
   el('queueRunBtn').textContent=tr(q.running?'Préparation en cours':'Préparer la suivante');
   el('pipelineStatus').textContent=tr(q.running?'Vous pouvez arrêter la préparation en cours.':q.paused?'Préparation en pause. Vérifiez le résultat avant de continuer.':'Les candidatures pré-remplies attendent votre envoi sur le site.');
+  if(q.message==='ChatGPT is reviewing this application'||q.pause_reason==='review_needs_information')el('pipelineStatus').textContent=tr(q.message);
   if(q.message==='Human confirmation required')el('pipelineStatus').textContent=tr('Cette préparation attend votre confirmation du résultat IA.');
   if(!el('pipelineView').classList.contains('hidden'))pipelineTimer=setTimeout(()=>loadPipeline().catch(error=>el('pipelineStatus').textContent=error.message),q.running?1500:4000);
   const t=a.totals||{}; el('analyticsCards').innerHTML=[['Offres',t.total||0],['Aimées',t.liked||0],['Reviewer APPLY',t.reviewer_apply||0],['Envoyées',t.submitted||0]].map(x=>`<div class="metric"><span>${esc(tr(x[0]))}</span><b>${x[1]}</b></div>`).join('');
@@ -745,14 +747,14 @@ async function loadPipeline(){
   observeTitles();
   restoreDetails();
 }
-async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
+async function startPreparation(mode){try{await requestJson(`/api/queue/start?mode=${mode}&auto_review=true`,{method:'POST'});await loadPipeline();}catch(error){el('pipelineStatus').textContent=error.message;}}
 el('queueRunBtn').onclick=()=>startPreparation('one');
 el('queueBatchBtn').onclick=()=>startPreparation('batch');
 el('queueAddMatchesBtn').onclick=async()=>{
   try{
     await load();
-    const ids=allJobs.filter(j=>matchFilter(j,'confirmed')&&preparable(j)&&!j.queue_status).map(j=>j.id);
-    for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100)})});
+    const ids=allJobs.filter(j=>queueEligible(j)&&!j.queue_status&&(['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||j.user_action==='liked'||j.decision==='keep')).map(j=>j.id);
+    for(let i=0;i<ids.length;i+=100)await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:ids.slice(i,i+100),auto_review:true})});
     await loadPipeline();
     if(!ids.length)el('pipelineStatus').textContent=tr('Aucun poste confirmé à ajouter. Vérifiez les recommandations IA dans la vue de confirmation humaine.');
   }catch(error){el('pipelineStatus').textContent=error.message;}
@@ -809,7 +811,7 @@ async function confirmQueueSubmitted(id){
 window.confirmQueueSubmitted=confirmQueueSubmitted;
 window.retryQueue=retryQueue;
 el('queueClearBtn').onclick=async()=>{await requestJson('/api/queue/clear-finished',{method:'POST'});await loadPipeline();};
-el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
+el('startQueueBtn').onclick=async()=>{try{await requestJson('/api/queue/start?auto_review=true',{method:'POST'});statusEl.textContent=tr('File de pré-remplissage démarrée.');await load();showView('pipeline');}catch(error){statusEl.textContent=error.message;}};
 
 // Each static async action reports failures beside its view, including network
 // errors. Do not claim success until the server accepted the mutation.

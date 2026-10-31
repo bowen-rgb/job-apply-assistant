@@ -194,6 +194,8 @@ def _ensure_columns(conn):
         'review_json': "TEXT DEFAULT ''",
         'reviewed_at': "TEXT DEFAULT ''",
         'review_revision': "TEXT DEFAULT ''",
+        'automatic_review_requested': "INTEGER DEFAULT 0",
+        'automatic_review_token': "TEXT DEFAULT ''",
         'human_review_status': "TEXT DEFAULT ''",
         'human_review_fingerprint': "TEXT DEFAULT ''",
         'human_reviewed_at': "TEXT DEFAULT ''",

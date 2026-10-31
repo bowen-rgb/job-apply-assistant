@@ -30,7 +30,7 @@ def status() -> dict[str, Any]:
         counts = {r['status']: r['n'] for r in c.execute('SELECT status,COUNT(*) n FROM application_queue GROUP BY status').fetchall()}
         rows = c.execute('''SELECT q.*,j.title,j.company,j.location,j.url,j.fill_audit_path,j.review_verdict,j.application_status,j.tracker_stage,
                             j.review_revision,j.reviewed_at,j.review_summary,j.review_json,j.body,j.employment_type,j.start_date,j.end_date,j.valid_through,
-                            j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,j.application_step,j.application_step_at,
+                            j.automatic_review_requested,j.automatic_review_token,j.human_review_status,j.human_review_fingerprint,j.human_reviewed_at,j.application_step,j.application_step_at,
                             COALESCE((SELECT note FROM applications a WHERE a.job_id=q.job_id AND a.status IN ('apply_error','login_required','submission_check','privacy_consent_required') ORDER BY a.id DESC LIMIT 1),'') AS failure_reason
                             FROM application_queue q JOIN jobs j ON j.id=q.job_id
                             ORDER BY CASE q.status WHEN 'running' THEN 0 WHEN 'queued' THEN 1 WHEN 'waiting_user' THEN 2 ELSE 3 END,
@@ -44,14 +44,14 @@ def status() -> dict[str, Any]:
         item['verification_state'] = verification_state(item['job_id'], item['application_status'])
         item['preparation'] = preparation_summary(item)
         item.pop('fill_audit_path', None)
-        for field in ('body', 'review_json', 'human_review_fingerprint'):
+        for field in ('body', 'review_json', 'human_review_fingerprint', 'automatic_review_token'):
             item.pop(field, None)
         if item['status'] == 'error' and item['note'] in {'error', 'timeout', ''}:
             item['note'] = item['failure_reason'] or item['note']
     return base
 
 
-def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
+def enqueue(job_ids: list[int], priority: int = 100, *, auto_review: bool = False) -> dict[str, Any]:
     ids = []
     for x in job_ids[:100]:
         try:
@@ -63,7 +63,9 @@ def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
     with connect() as c:
         for jid in ids:
             job = c.execute('SELECT * FROM jobs WHERE id=?', (jid,)).fetchone()
-            if not job or not can_prepare(dict(job)):
+            if not job or (not can_prepare(dict(job)) and not auto_review):
+                continue
+            if auto_review and (job['human_review_status'] == 'declined' or job['review_verdict'] in {'SKIP','QUEUED','RUNNING'}):
                 continue
             if not c.execute("SELECT id FROM jobs WHERE id=? AND user_action != 'skipped' AND application_status NOT IN ('submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter') AND tracker_stage NOT IN ('rejected','withdrawn','hired','offer_declined','no_response') AND decision<>'expired' AND availability_status<>'expired'", (jid,)).fetchone():
                 continue
@@ -71,6 +73,10 @@ def enqueue(job_ids: list[int], priority: int = 100) -> dict[str, Any]:
                          VALUES(?, 'queued', ?, CURRENT_TIMESTAMP)
                          ON CONFLICT(job_id) DO UPDATE SET
                            priority=excluded.priority, updated_at=CURRENT_TIMESTAMP''', (jid, priority))
+            if auto_review:
+                from .automatic_review import NOTE
+                c.execute('UPDATE jobs SET automatic_review_requested=1 WHERE id=?', (jid,))
+                c.execute("UPDATE application_queue SET note=? WHERE job_id=? AND status='queued'", (NOTE, jid))
             c.execute("UPDATE jobs SET tracker_stage=CASE WHEN tracker_stage='' THEN 'queued' ELSE tracker_stage END,updated_at=CURRENT_TIMESTAMP WHERE id=?", (jid,))
     return status()
 
@@ -84,13 +90,16 @@ def retry(job_id: int) -> dict[str, Any]:
                            WHERE q.job_id=?''', (job_id,)).fetchone()
         if not row:
             raise KeyError(job_id)
-        if not can_prepare(dict(row)):
+        if not can_prepare(dict(row)) and not row['automatic_review_requested']:
             raise ValueError('Confirm the AI review yourself before preparing this application')
         if row['status'] not in {'error', 'cancelled', 'waiting_user'} or row['application_status'] in {'submitted', 'submitted_verified', 'withdrawn'} or row['user_action'] == 'skipped':
             raise ValueError('Application cannot be retried in its current state')
         if row['decision'] == 'expired' or row['availability_status'] == 'expired' or row['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined', 'no_response'}:
             raise ValueError('Application cannot be retried in its current state')
         c.execute("UPDATE application_queue SET status='queued',note='',finished_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (job_id,))
+        if row['automatic_review_requested']:
+            from .automatic_review import NOTE
+            c.execute('UPDATE application_queue SET note=? WHERE job_id=?', (NOTE, job_id))
         c.execute("UPDATE jobs SET application_status='',updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
     return status()
 
@@ -139,6 +148,20 @@ def _worker(mode: str = 'one'):
         for pending_id in pending_ids:
             if _stop.is_set():
                 break
+            from .automatic_review import NOTE, prepare as review_before_prepare
+            with connect() as c:
+                automatic = c.execute("SELECT note FROM application_queue WHERE job_id=? AND status='queued'", (pending_id,)).fetchone()
+            if automatic and automatic['note'] == NOTE:
+                _set(current_job_id=pending_id, last_job_id=pending_id, message='ChatGPT is reviewing this application')
+                try:
+                    if not review_before_prepare(pending_id, _stop.is_set):
+                        continue
+                except Exception as exc:
+                    with connect() as c:
+                        c.execute("UPDATE jobs SET review_verdict='ERROR',review_summary=? WHERE id=? AND review_verdict IN ('QUEUED','RUNNING')", (str(exc)[:2000], pending_id))
+                        c.execute("UPDATE application_queue SET status='waiting_user',note=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='queued'", (str(exc)[:2000], pending_id))
+                    _set(paused=True, pause_reason='review_needs_information', message=str(exc)[:2000])
+                    break
             with connect() as c:
                 row = c.execute("SELECT * FROM application_queue WHERE status='queued' AND job_id=?", (pending_id,)).fetchone()
                 if not row:
@@ -210,7 +233,7 @@ def _worker(mode: str = 'one'):
         _set(running=False, current_job_id=None)
 
 
-def _start(mode: str = 'one') -> dict[str, Any]:
+def _start(mode: str = 'one', *, auto_review: bool = False) -> dict[str, Any]:
     if mode not in {'one', 'batch'}:
         raise ValueError('Invalid queue mode')
     with _lock:
@@ -224,6 +247,13 @@ def _start(mode: str = 'one') -> dict[str, Any]:
     # Fail before claiming any job or clearing the user's paused state.
     from .browser_control import require_connection
     require_connection()
+    if auto_review:
+        from .automatic_review import NOTE
+        with connect() as c:
+            ids = [r['job_id'] for r in c.execute("SELECT q.job_id FROM application_queue q JOIN jobs j ON j.id=q.job_id WHERE q.status='queued' AND COALESCE(j.human_review_status,'')<>'declined'")]
+            for jid in ids:
+                c.execute('UPDATE jobs SET automatic_review_requested=1 WHERE id=?', (jid,))
+                c.execute('UPDATE application_queue SET note=? WHERE job_id=?', (NOTE, jid))
     already = False
     with _lock:
         already = bool(_state['running'])

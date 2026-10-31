@@ -18,9 +18,9 @@ fr:['Tableau de bord','Votre prochaine action, puis votre progression.','Actuali
     if(busy||!root())return;busy=true;document.getElementById('wbRefresh')?.setAttribute('disabled','');
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
     try{
-      const values=await Promise.all(['/api/jobs','/api/queue','/api/pending-tasks','/api/candidates','/api/resumes'].map(async url=>{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}));
-      if(!Array.isArray(values[0])||!Array.isArray(values[4]))throw new Error('Invalid snapshot');
-      snapshot={jobs:values[0],queue:values[1],tasks:values[2].items||[],owner:values[3].items?.find(x=>x.id===values[3].active_id)?.name||'',resumes:values[4]};
+      const values=await Promise.all(['/api/jobs','/api/queue','/api/pending-tasks','/api/candidates','/api/resumes','/api/insights'].map(async url=>{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}));
+      if(!Array.isArray(values[0])||!Array.isArray(values[4])||!values[5]?.summary?.counts)throw new Error('Invalid snapshot');
+      snapshot={summary:values[5].summary,jobs:values[0],queue:values[1],tasks:values[2].items||[],owner:values[3].items?.find(x=>x.id===values[3].active_id)?.name||'',resumes:values[4]};
       failed=false;last=new Date();const key=JSON.stringify([snapshot,period,Locale.language,day(last.toISOString())]);if(key!==signature){signature=key;paint();}clock();
     }catch{failed=true;if(!snapshot)paint();clock();}finally{clearTimeout(timeout);busy=false;document.getElementById('wbRefresh')?.removeAttribute('disabled');}
   }
@@ -34,7 +34,10 @@ fr:['Tableau de bord','Votre prochaine action, puis votre progression.','Actuali
     const focusTable=focused?.matches('summary')?focused.closest('details')?.dataset.table:null;
     document.getElementById('overviewNav').textContent=t(0);
     const s=snapshot,jobs=s?.jobs||[],queue=s?.queue||{},tasks=s?.tasks||[];
-    const counts=[['all',6],['human',7],['queued',8],['submitted',9]].map(([key,label])=>({key,label:t(label),n:jobs.filter(j=>matchFilter(j,key)).length}));
+    const outcomeLabels=Locale.language==='zh'?{waiting:'已投递，等待中',responses:'有回复／面试',followups:'待跟进',decide:'待决定',rejected:'被拒'}:{waiting:'Envoyées, en attente',responses:'Réponses / entretiens',followups:'À relancer',decide:'À décider',rejected:'Refusées'};
+    const counts=Object.entries(outcomeLabels).map(([key,label])=>({key,label,n:s?.summary.counts[key]||0}));
+    const needs=[...new Set([...(s?.summary.job_ids.responses||[]),...(s?.summary.job_ids.followups||[])])].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).slice(0,5);
+    const activity=s?.summary.recent||[];
     const sourceMap=new Map();for(const job of jobs.filter(j=>matchFilter(j,'all'))){const key=job.provider_key||'';const item=sourceMap.get(key)||{key,label:sourceLabels[key]||job.source||t(32),n:0};item.n++;sourceMap.set(key,item);}
     const sources=[...sourceMap.values()].sort((a,b)=>b.n-a.n);
     const states=['queued','running','waiting_user','error','done','cancelled'];
@@ -45,8 +48,9 @@ fr:['Tableau de bord','Votre prochaine action, puis votre progression.','Actuali
     const pending=tasks.filter(x=>x.status==='pending').length,cv=s?.resumes.some(x=>x.active);
     const openTables=[...root().querySelectorAll('details[open]')].map(x=>x.dataset.table);
     root().innerHTML=`<header class="wb-heading"><div class="wb-identity"><span class="wb-wordmark" aria-hidden="true">APPLY<span>FORWARD.</span></span><p class="wb-eyebrow">JOB APPLY / WORKSPACE</p><h1 id="overviewTitle">${e(t(0))}</h1><p>${e(t(1))}</p></div><img class="wb-art" src="/static/artwork/application-orbit.svg" alt="" aria-hidden="true"><div class="wb-sync"><span id="wbConnection" role="status"></span><button id="wbRefresh" type="button">↻ ${e(t(2))}</button></div></header>
-      <div class="wb-owner">${e(t(39))} <strong>${e(s?.owner||'—')}</strong><span>${e(t(41))}: ${s?jobs.length:'—'}</span></div>
-      <section class="wb-metrics" aria-label="${e(t(0))}">${counts.map((x,i)=>`<button type="button" data-wb-filter="${x.key}"><span class="wb-index" aria-hidden="true">0${i+1}</span><span>${e(x.label)}</span><b>${s?x.n:'—'}</b><span class="wb-arrow" aria-hidden="true">↗</span></button>`).join('')}</section>
+      <div class="wb-owner">${e(t(39))} <strong>${e(s?.owner||'—')}</strong><span><button type="button" class="ghost compact" data-wb-filter="all">${e(t(41))}: <b>${s?jobs.filter(j=>matchFilter(j,'all')).length:'—'}</b></button></span></div>
+      <section class="wb-metrics" aria-label="${e(t(0))}">${counts.map((x,i)=>`<button type="button" data-wb-outcome="${x.key}"><span class="wb-index" aria-hidden="true">0${i+1}</span><span>${e(x.label)}</span><b>${s?x.n:'—'}</b><span class="wb-arrow" aria-hidden="true">↗</span></button>`).join('')}</section>
+      <div class="wb-outcome-panels"><section class="wb-panel"><h2>${e(Locale.language==='zh'?'需要处理的申请':'Candidatures à traiter')}</h2>${needs.length?needs.map(j=>`<button type="button" class="wb-application-row" data-wb-record="${j.id}"><strong>${e(j.company)}</strong><span>${e(j.display_title||j.title)}</span><small>${e(tr(stageLabels[j.tracker_stage]||'Envoyée'))}</small></button>`).join(''):`<p class="wb-empty">${e(Locale.language==='zh'?'暂无需要跟进的回复。':'Aucune réponse à traiter.')}</p>`}</section><section class="wb-panel"><h2>${e(Locale.language==='zh'?'最近 7 天':'7 derniers jours')}</h2>${activity.length?activity.slice(0,5).map(row=>`<button type="button" class="wb-application-row" data-wb-record="${row.job_id}"><strong>${e(row.company)} · ${e(row.at.slice(5,10))}</strong><span>${e(row.note||tr(stageLabels[row.kind]||row.kind))}</span></button>`).join(''):`<p class="wb-empty">${e(Locale.language==='zh'?'暂无申请动态。扫描记录不算投递动态。':'Aucune activité de candidature récente.')}</p>`}</section></div>
       <section class="wb-next"><div><p class="wb-eyebrow">${e(t(10))}</p><h2>${e(cv?t(14):t(15))}</h2><p>${e(t(37))}</p></div><div class="wb-actions">${!cv?`<button type="button" data-wb-view="profile" class="primary">${e(t(13))}</button>`:''}<button type="button" id="wbTasks">${e(t(11))} · ${s?pending:'—'}</button><button type="button" data-wb-view="pipeline">${e(t(12))}</button><button type="button" data-wb-view="guide">${e(t(40))}</button></div></section>
       <div class="wb-grid"><section class="wb-panel wb-trend"><div class="wb-panel-head"><h2>${e(t(16))}</h2><select id="wbPeriod" aria-label="${e(t(16))}"><option value="7" ${period===7?'selected':''}>${e(t(17))}</option><option value="30" ${period===30?'selected':''}>${e(t(18))}</option></select></div><p>${e(t(19))}</p>${s?`<svg viewBox="0 0 ${width} ${height}" aria-hidden="true" class="wb-chart"><line x1="40" y1="140" x2="650" y2="140"/><line class="wb-gridline" x1="40" y1="30" x2="650" y2="30"/><text x="4" y="144">0</text><text x="4" y="34">${max}</text>${dailyRows.map((row,i)=>`<rect x="${42+i*step}" y="${140-110*row.n/max}" width="${Math.max(3,step-5)}" height="${110*row.n/max}"><title>${e(row.date)}: ${row.n}</title></rect>`).join('')}<text x="40" y="166">${dailyRows[0].date.slice(5)}</text><text x="598" y="166">${dailyRows.at(-1).date.slice(5)}</text></svg>${table(dailyRows,t(30))}`:`<p class="wb-empty">${e(t(5))}</p>`}</section>
       <section class="wb-panel"><div class="wb-panel-head"><h2>${e(t(33))}</h2><span aria-hidden="true">↗</span></div><p class="wb-focus-title">${e(focus?.title||t(34))}</p>${focus?`<p>${e(statusLabel(focus.status))} · #${Number(focus.job_id)}</p>`:''}<p>${e(t(38))}</p><button type="button" class="primary" data-wb-view="pipeline">${e(t(12))}</button></section>
@@ -58,6 +62,8 @@ fr:['Tableau de bord','Votre prochaine action, puis votre progression.','Actuali
     document.getElementById('wbPeriod').onchange=event=>{period=Number(event.target.value);signature='';paint();document.getElementById('wbPeriod').focus({preventScroll:true});};
     document.getElementById('wbTasks').onclick=()=>document.getElementById('pendingTasksNav').click();
     root().querySelectorAll('[data-wb-view],[data-wb-queue]').forEach(b=>b.onclick=()=>showView(b.dataset.wbView||'pipeline'));
+    root().querySelectorAll('[data-wb-outcome]').forEach(b=>b.onclick=()=>ApplicationInsights.open(b.dataset.wbOutcome));
+    root().querySelectorAll('[data-wb-record]').forEach(b=>b.onclick=()=>ApplicationInsights.openRecord(Number(b.dataset.wbRecord)));
     root().querySelectorAll('[data-wb-filter]').forEach(b=>b.onclick=()=>openJobs(b.dataset.wbFilter));
     root().querySelectorAll('[data-wb-source]').forEach(b=>b.onclick=()=>openJobs('all',b.dataset.wbSource));clock();
     root().querySelectorAll('.wb-data').forEach((node,index)=>{node.scrollTop=tablePositions[index]||0;});

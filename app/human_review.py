@@ -29,11 +29,22 @@ def confirmation_status(job: dict) -> str:
 def annotate(job: dict) -> dict:
     result = dict(job)
     result['human_review_status'] = confirmation_status(job)
+    result['automatic_review_ready'] = automatic_ready(job)
     result['human_review_token'] = review_token(job)
     return result
+
+
+def automatic_token(job: dict) -> str:
+    from .profile_store import load_profile_raw
+    return hashlib.sha256((review_token(job)+json.dumps(load_profile_raw(), sort_keys=True, ensure_ascii=False)).encode()).hexdigest()
+
+
+def automatic_ready(job: dict) -> bool:
+    return bool(job.get('review_verdict') == 'APPLY' and job.get('automatic_review_token') and job.get('automatic_review_token') == automatic_token(job)
+            and confirmation_status(job) != 'declined')
 
 
 def can_prepare(job: dict) -> bool:
     if job.get('review_verdict') in {'QUEUED', 'RUNNING'}:
         return False
-    return job.get('review_verdict') not in REVIEWABLE or confirmation_status(job) == 'approved'
+    return automatic_ready(job) or job.get('review_verdict') not in REVIEWABLE or confirmation_status(job) == 'approved'

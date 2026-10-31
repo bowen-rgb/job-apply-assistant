@@ -48,7 +48,7 @@ window.Coach=(()=>{
     if($('coachAlready'))$('coachAlready').onclick=()=>move(3);
     if($('coachConfirmed'))$('coachConfirmed').onchange=()=>{checked=$('coachConfirmed').checked;$('coachRecord').disabled=!checked;};
     if($('coachRecord'))$('coachRecord').onclick=()=>{if(!checked)return;action(async()=>{await requestJson(`/api/jobs/${state.id}/application-status`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status:'submitted'})});move(4);await load();});};
-    if($('coachAutomate'))$('coachAutomate').onclick=()=>action(async()=>{if(['APPLY','HUMAN_REVIEW'].includes(job.review_verdict)&&job.human_review_status!=='approved'){current='human';qInput.value=job.title||'';await load();showView('jobs');return;}await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[job.id]})});if(!autoStart)await requestJson('/api/queue/start?mode=batch',{method:'POST'});showView('pipeline');});
+    if($('coachAutomate'))$('coachAutomate').onclick=()=>action(async()=>{await requestJson('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({job_ids:[job.id],auto_review:true})});if(!autoStart)await requestJson('/api/queue/start?mode=batch&auto_review=true',{method:'POST'});showView('pipeline');});
     if($('coachNext'))$('coachNext').onclick=()=>{state.id=null;state.index=0;state.opened=false;move(1);};
     if($('coachBack'))$('coachBack').onclick=()=>move(state.step===1?0:state.step-1);
     if(state.step===2)loadResumeLink();

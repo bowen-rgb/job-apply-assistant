@@ -924,5 +924,12 @@
   "menu.tracking": "反馈与跟进",
   "Clôturée sans réponse": "未回复，已结束跟进",
   "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.": "确认将这份未回复的申请结束跟进？这不代表招聘方拒绝。",
-  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "填写最后联系日期及结束跟进的原因（必填）。"
+  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "填写最后联系日期及结束跟进的原因（必填）。",
+  "Questions à clarifier": "AI 判断与待补充信息",
+  "Ajoutez à la file : ChatGPT vérifiera automatiquement cette candidature.": "加入队列后，ChatGPT 会自动检查；有疑点时会再复核一轮。",
+  "La revue IA est intégrée à cette préparation.": "这份申请会在准备流程中自动完成 AI 复核。",
+  "Ajouter les postes recommandés": "将推荐岗位加入队列",
+  "Informations nécessaires après la revue IA": "AI 复核后仍需补充信息",
+  "ChatGPT is reviewing this application": "ChatGPT 正在自动复核这份申请",
+  "La file vérifie automatiquement ce résultat. Vous pouvez aussi décider manuellement ici.": "队列会自动复核这个结果。你也可以在这里手动决定。"
 }

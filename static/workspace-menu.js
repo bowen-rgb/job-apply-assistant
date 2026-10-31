@@ -96,7 +96,7 @@ window.WorkspaceMenu=(()=>{
   actionBar.append($('searchBtn'),$('batchBtn'));$('jobsView').querySelector('header').after(actionBar);
   const workflow=document.createElement('nav');workflow.id='workflowNav';workflow.className='workflow-nav';
   workflow.setAttribute('aria-label','Workflow');
-  for(const id of ['jobs','pipeline','tracking','tools']){
+  for(const id of ['overview','jobs','pipeline','tracking','tools']){
    const button=document.createElement('button');button.type='button';button.dataset.workflow=id;
    button.onclick=()=>navigate(id).catch(error=>{title.textContent=error.message;});workflow.append(button);
   }

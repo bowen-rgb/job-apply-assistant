@@ -64,13 +64,20 @@ def overview():
     cfg = InsightConfig.model_validate(raw.get('insights') or {}).model_dump()
     activities = records.activities()
     due = []
-    jobs = JobRepository().pipeline()
+    jobs = JobRepository().list()
+    with connect() as conn:
+        stage_events = [dict(row) for row in conn.execute("SELECT * FROM application_stage_events")]
+    events_by_job = {}
+    for event in [*activities, *stage_events]:
+        events_by_job.setdefault(event["job_id"], []).append(event)
     for job in jobs:
-        events = activities_for(job['id'], activities)
+        events = events_by_job.get(job['id'], [])
         item = followup_status(job, events, cfg['follow_up'])
         if item and item.get('due'):
             due.append({**item, 'title': job['title'], 'company': job['company'], 'url': job['url']})
-    return {'config': cfg, 'followups': sorted(due, key=lambda x: x['due_at']),
+    from .application_overview import snapshot
+    fields = ('id','company','title','display_title','tracker_stage','tracker_note','application_status','user_action','decision','review_verdict')
+    return {'application_rows': [{key:j.get(key) for key in fields} for j in jobs], 'summary': snapshot(jobs, due, [*activities, *stage_events]), 'config': cfg, 'followups': sorted(due, key=lambda x: x['due_at']),
             'mail_proposals': records.proposals(), 'rejected': sum(j['tracker_stage']=='rejected' for j in jobs)}
 
 

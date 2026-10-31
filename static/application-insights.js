@@ -5,7 +5,7 @@
  */
 window.ApplicationInsights = (() => {
   const root = document.getElementById('applicationInsights');
-  document.getElementById('trackingContent').append(document.getElementById('analyticsCards'),root);
+  document.getElementById('trackingContent').append(root);
   const t = (fr, zh) => Locale.language === 'zh' ? zh : fr;
   let state = null, jobs = [], importedFile = null, currentJob = null, resultFilter = 'all';
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -47,8 +47,8 @@ window.ApplicationInsights = (() => {
 
   async function load() {
     if (!root.firstElementChild) shell();
-    const [data, rows] = await Promise.all([api(''), requestJson('/api/pipeline')]);
-    state = data; jobs = rows;
+    const [data, rows] = await Promise.all([api(''), requestJson('/api/jobs')]);
+    state = data; jobs = Array.isArray(data.application_rows)?data.application_rows:rows;
     root.querySelector('[data-followup-days]').value = state.config.follow_up.after_days;
     root.querySelector('[data-followup-max]').value = state.config.follow_up.max_followups;
     root.querySelector('[data-rubric]').value = JSON.stringify(state.config.dimensions, null, 2);
@@ -56,12 +56,14 @@ window.ApplicationInsights = (() => {
     select.innerHTML = `<option value="">${escape(t('Choisissez une candidature','请选择一份申请'))}</option>`+jobs.map(job=>`<option value="${job.id}">${escape(job.company)} · ${escape(job.title)}</option>`).join('');
     select.value = previous;
     renderOutcomes(); renderFollowups(); renderTracker();
+    root.querySelector('[data-insight-status]').after(root.querySelector('[data-tracker-results]'));
   }
 
   function renderTracker(){
-    const labels={all:t('Toutes les candidatures','全部申请'),submitted:t('Envoyées','已投递'),interview:t('Entretiens','面试'),rejected:t('Refus confirmés','明确被拒'),no_response:t('Clôturées sans réponse','未回复，已结束跟进'),offer:t('Propositions','录用意向')};
-    const rows=jobs.filter(job=>resultFilter==='all'||job.tracker_stage===resultFilter);
-    root.querySelector('[data-tracker-results]').innerHTML=`<h3>${escape(t('Résultats des candidatures','申请结果'))}</h3><div class="queue-actions">${Object.entries(labels).map(([id,label])=>`<button type="button" class="ghost compact" data-result-filter="${id}" aria-pressed="${id===resultFilter}">${escape(label)} · ${jobs.filter(j=>id==='all'||j.tracker_stage===id).length}</button>`).join('')}</div><div class="tracker-result-list">${rows.length?rows.map(job=>`<article><h4>${escape(job.company)} · ${escape(job.display_title||job.title)}</h4><p><strong>${escape(tr(stageLabels[job.tracker_stage]||job.tracker_stage||'Sauvegardée'))}</strong></p><p>${escape(job.tracker_note||t('Aucun retour enregistré.','尚无已记录的招聘反馈。'))}</p><button type="button" class="ghost compact" data-insight="record" data-id="${job.id}">${escape(t('Voir ou mettre à jour le suivi','查看／更新这份申请'))}</button></article>`).join(''):`<p>${escape(t('Aucune candidature dans cette catégorie.','这个分类还没有申请记录。'))}</p>`}</div>`;
+    const labels={waiting:t('Envoyées, en attente','已投递，等待中'),responses:t('Réponses / entretiens','有回复／面试'),followups:t('À relancer','待跟进'),decide:t('À décider','待决定'),all:t('Toutes les candidatures','全部申请'),submitted:t('Envoyées','已投递'),interview:t('Entretiens','面试'),rejected:t('Refusées','被拒'),no_response:t('Clôturées sans réponse','未回复，已结束跟进'),offer:t('Propositions','录用意向')};
+    const matches=(job,id)=>Array.isArray(state.summary?.job_ids?.[id])?state.summary.job_ids[id].includes(job.id):id==='all'||job.tracker_stage===id;
+    const rows=jobs.filter(job=>matches(job,resultFilter));
+    root.querySelector('[data-tracker-results]').innerHTML=`<h3>${escape(resultFilter==='all'?t('Résultats des candidatures','申请结果'):labels[resultFilter]||resultFilter)} · ${rows.length}</h3><div class="queue-actions">${Object.entries(labels).filter(([id])=>!['submitted','interview','offer'].includes(id)).map(([id,label])=>`<button type="button" class="ghost compact" data-result-filter="${id}" aria-pressed="${id===resultFilter}">${escape(label)} · ${state.summary?.counts?.[id]??jobs.filter(j=>matches(j,id)).length}</button>`).join('')}</div><details><summary>${escape(t('Autres étapes','其他阶段'))}</summary><div class="queue-actions">${['submitted','interview','offer'].map(id=>`<button type="button" class="ghost compact" data-result-filter="${id}">${escape(labels[id])}</button>`).join('')}</div></details><div class="tracker-result-list">${rows.length?rows.map(job=>`<article><h4>${escape(job.company)} · ${escape(job.display_title||job.title)}</h4><p><strong>${escape(tr(stageLabels[job.tracker_stage]||job.tracker_stage||'Sauvegardée'))}</strong></p><p>${escape(job.tracker_note||t('Aucun retour enregistré.','尚无已记录的招聘反馈。'))}</p><button type="button" class="ghost compact" data-insight="record" data-id="${job.id}">${escape(t('Voir ou mettre à jour le suivi','查看／更新这份申请'))}</button></article>`).join(''):`<p>${escape(t('Aucune candidature dans cette catégorie.','这个分类还没有申请记录。'))}</p>`}</div>`;
   }
   function renderOutcomes() {
     const rows = state.mail_proposals;
@@ -157,5 +159,7 @@ window.ApplicationInsights = (() => {
     finally{if(button.isConnected)button.disabled=false;}
   });
   document.addEventListener('localechange',()=>{shell();if(state)load().catch(error=>message(error.message));});
-  return {load:()=>load().catch(error=>{if(!root.firstElementChild)shell();message(error.message);})};
+  async function open(filter='all'){showView('tracking');resultFilter=filter;try{await load();root.querySelector('[data-tracker-results]').scrollIntoView({block:'start',behavior:'smooth'});}catch(error){if(!root.firstElementChild)shell();message(error.message);}}
+  async function openRecord(id){showView('pipeline');await loadPipeline();const card=document.querySelector(`[data-record-id="${Number(id)}"]`);if(card){card.scrollIntoView({block:'center',behavior:'smooth'});card.tabIndex=-1;card.focus({preventScroll:true});}}
+  return {open,openRecord,load:()=>load().catch(error=>{if(!root.firstElementChild)shell();message(error.message);})};
 })();

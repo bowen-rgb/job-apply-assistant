@@ -101,8 +101,7 @@ def queue_task(identifier):
         if previous:
             item['job_id']=job_id
             return {'job_id':job_id,'queue_status':previous['status'],'already_queued':True}
-        JobRepository().assert_preparable(job_id)
-        enqueue([job_id])
+        enqueue([job_id], auto_review=True)
         with connect() as connection:
             queued=connection.execute('SELECT status FROM application_queue WHERE job_id=?',(job_id,)).fetchone()
         if not queued:raise ValueError('This job could not enter the queue. Confirm its review and eligibility first.')

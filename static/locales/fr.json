@@ -924,5 +924,12 @@
   "menu.tracking": "Réponses et relances",
   "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.": "Clôturer cette candidature sans réponse ? Cela ne signifie pas un refus du recruteur.",
   "Clôturée sans réponse": "Clôturée sans réponse",
-  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire)."
+  "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).": "Indiquez la dernière date de contact et pourquoi vous clôturez le suivi (obligatoire).",
+  "Questions à clarifier": "Questions à clarifier",
+  "Ajoutez à la file : ChatGPT vérifiera automatiquement cette candidature.": "Ajoutez à la file : ChatGPT vérifiera automatiquement cette candidature.",
+  "La revue IA est intégrée à cette préparation.": "La revue IA est intégrée à cette préparation.",
+  "Ajouter les postes recommandés": "Ajouter les postes recommandés",
+  "Informations nécessaires après la revue IA": "Informations nécessaires après la revue IA",
+  "ChatGPT is reviewing this application": "ChatGPT is reviewing this application",
+  "La file vérifie automatiquement ce résultat. Vous pouvez aussi décider manuellement ici.": "La file vérifie automatiquement ce résultat. Vous pouvez aussi décider manuellement ici."
 }
