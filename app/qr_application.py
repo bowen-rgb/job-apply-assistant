@@ -312,7 +312,7 @@ def start_request(identifier,resume_id,company):
             job=c.execute('SELECT * FROM jobs WHERE url=?',(payload['final_url'],)).fetchone()
             if job:
                 job=dict(job)
-                if (safety.has_dispatch(job['id']) or not can_prepare(job) or job.get('application_status') in {'submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn'}
+                if (safety.has_dispatch(job['id']) or not can_prepare(job) or job.get('application_status') in {'submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'} or job.get('tracker_stage') in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'}
                         or job.get('availability_status')=='expired' or job.get('decision')=='expired' or job.get('user_action')=='skipped'):
                     raise ValueError('qr_existing_application')
                 c.execute('UPDATE jobs SET application_resume_id=?,application_context_json=?,company=?,title=?,body=? WHERE id=?',

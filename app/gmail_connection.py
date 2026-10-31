@@ -11,6 +11,7 @@ from . import secret_store
 from .workspaces import candidate_id, active_id
 
 SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
+COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose'
 REDIRECT = 'http://127.0.0.1:8765/api/gmail/callback'
 _pending = {}
 _lock = threading.Lock()
@@ -40,15 +41,16 @@ def begin():
     config = secret_store.read().get('gmail_config', {})
     if not config.get('client_id'): raise ValueError('Configure Google OAuth before connecting.')
     state, verifier = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
+    requested_scope = SCOPE + (' '+COMPOSE_SCOPE if secret_store.read().get('gmail_compose_enabled') else '')
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
     with _lock:
         for key in list(_pending):
             if _pending[key]['expires'] < time.time(): _pending.pop(key)
         _pending[state] = {'owner': candidate_id(), 'verifier': verifier, 'expires': time.time()+600,
-                           'client_id': config['client_id']}
+                           'client_id': config['client_id'], 'scope': requested_scope}
     return {'authorization_url': 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode({
         'client_id': config['client_id'], 'redirect_uri': REDIRECT, 'response_type': 'code',
-        'scope': SCOPE, 'state': state, 'code_challenge': challenge, 'code_challenge_method': 'S256',
+        'scope': requested_scope, 'state': state, 'code_challenge': challenge, 'code_challenge_method': 'S256',
         'access_type': 'offline', 'prompt': 'consent select_account'})}
 
 
@@ -70,7 +72,7 @@ def finish(state, code, error=''):
     with urlopen(request, timeout=20) as response: mailbox = json.load(response)
     email = mailbox.get('emailAddress', '')
     if not email: raise ValueError('Could not verify the connected mailbox.')
-    secret_store.update(lambda data: data.update(gmail_connection={'refresh_token': tokens['refresh_token'], 'email': email}))
+    secret_store.update(lambda data: data.update(gmail_connection={'refresh_token': tokens['refresh_token'], 'email': email, 'scopes':tokens.get('scope','')}))
     return email
 
 

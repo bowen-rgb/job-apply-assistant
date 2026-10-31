@@ -34,7 +34,7 @@ window.ApplicationInsights = (() => {
       <label>${escape(t('Fichier de suivi','申请记录文件'))}<input data-ledger-file type="file" accept=".csv,.tsv,.json,.md,.xlsx"></label>
       <div class="queue-actions"><button type="button" class="ghost compact" data-insight="preview">${escape(t('Prévisualiser','预览导入'))}</button>
       <button type="button" class="secondary compact" data-insight="import" disabled>${escape(t('Importer les nouvelles lignes','导入新增记录'))}</button></div><div data-import-preview></div>
-      <div class="queue-actions">${['xlsx','csv','json'].map(format=>`<a class="ghost compact" href="/api/insights/export?format=${format}" download> ${escape(t('Exporter','导出'))} ${format.toUpperCase()}</a>`).join('')}</div></details>
+      <div class="queue-actions">${['xlsx','csv','json','md','html'].map(format=>`<a class="ghost compact" href="/api/insights/export?format=${format}" download> ${escape(t('Exporter','导出'))} ${format.toUpperCase()}</a>`).join('')}</div></details>
       <details><summary>${escape(t('Règles de suivi et grille de score','跟进规则与评分权重'))}</summary>
       <label>${escape(t('Jours sans réponse avant rappel','多久未回复后提醒（天）'))}<input data-followup-days type="number" min="1" max="90" value="14"></label>
       <label>${escape(t('Nombre maximal de relances','最多跟进次数'))}<input data-followup-max type="number" min="0" max="10" value="1"></label>

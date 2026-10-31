@@ -17,7 +17,7 @@ def add_activity(job_id, kind, note, occurred_at):
         if not job:
             raise KeyError(job_id)
         if kind == 'followup_sent' and (job['application_status'] not in {'submitted', 'submitted_verified'}
-                                       or job['tracker_stage'] in {'rejected', 'withdrawn', 'offer'}):
+                                       or job['tracker_stage'] in {'rejected', 'withdrawn', 'offer', 'hired', 'offer_declined'}):
             raise ValueError('Only an open submitted application can have a follow-up')
         conn.execute('INSERT INTO application_activities(job_id,kind,note,occurred_at) VALUES(?,?,?,?)',
                      (job_id, kind, note, occurred_at))
@@ -30,7 +30,7 @@ def proposals():
 
 
 def stage_allowed(current, signal):
-    if current in {'rejected', 'withdrawn'}:
+    if current in {'rejected', 'withdrawn', 'hired', 'offer_declined'}:
         return False
     if current == 'offer' and signal != 'offer':
         return False

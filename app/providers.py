@@ -98,7 +98,12 @@ def custom_sources(profile: dict) -> list[SourceSpec]:
 
 
 def all_sources(profile: dict | None = None) -> list[SourceSpec]:
-    return list(SOURCES) + (custom_sources(profile or {}) if profile is not None else [])
+    from .extended_sources import CATALOG
+    from .portal_registry import entries
+    from urllib.parse import urlsplit
+    extra=[SourceSpec(key,row['label'],row['domain'],False) for key,row in CATALOG.items()]
+    registered=[SourceSpec('portal_'+row['id'],row['label'],urlsplit(row['url']).hostname or '',False) for row in entries(profile)]
+    return list(SOURCES) + extra + registered + (custom_sources(profile or {}) if profile is not None else [])
 
 
 def source_map(profile: dict | None = None) -> dict[str, SourceSpec]:
@@ -192,7 +197,8 @@ def build_queries(profile: dict) -> list[tuple[str, str]]:
     ])
 
     cap = int(profile.get('search_queries_per_run', 18))
-    global_queries = [row for row in queries if row[0] == 'global']
+    global_queries = [('global',str(query)[:300]) for query in profile.get('additional_search_queries',[])[:10] if str(query).strip()]
+    global_queries += [row for row in queries if row[0] == 'global']
     source_queries = [row for row in queries if row[0] != 'global']
     ordered = global_queries[:1] + source_queries + global_queries[1:]
     return ordered[:max(1, cap)]

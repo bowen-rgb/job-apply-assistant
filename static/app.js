@@ -226,10 +226,10 @@ Object.assign(statusLabels,{reject:'Critères incompatibles',rejected:'Refus du 
 const safeJobUrl=url=>/^https?:\/\//i.test(url||'')?url:'';
 const hasSubmitted=j=>['submitted','submitted_verified'].includes(j.application_status);
 const humanStatus=j=>['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)?(j.human_review_status||'pending'):'not_required';
-const reviewActionable=j=>!hasSubmitted(j) && j.application_status!=='withdrawn' && !['rejected','withdrawn'].includes(j.tracker_stage) && !matchFilter(j,'expired');
+const reviewActionable=j=>!hasSubmitted(j) && j.application_status!=='withdrawn' && !['rejected','withdrawn','hired','offer_declined'].includes(j.tracker_stage) && !matchFilter(j,'expired');
 const needsHumanConfirmation=j=>humanStatus(j)==='pending' && reviewActionable(j);
 const reviewAllowsPreparation=j=>!['QUEUED','RUNNING'].includes(j.review_verdict) && (!['APPLY','HUMAN_REVIEW'].includes(j.review_verdict)||humanStatus(j)==='approved');
-const preparable=j=>reviewAllowsPreparation(j) && j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
+const preparable=j=>reviewAllowsPreparation(j) && j.user_action!=='skipped' && !matchFilter(j,'expired') && !['rejected','withdrawn','hired','offer_declined'].includes(j.tracker_stage) && !['submitted','submitted_verified','withdrawn','opening','preparing','preparing_letter'].includes(j.application_status);
 const filterHelp={
   all:'Offres visibles, hors offres ignorées. Les compteurs suivent les mêmes filtres que les cartes.',
   keep:'Match fort indique la pertinence du poste. Les dates et autres informations manquantes restent à vérifier avant de postuler.',
@@ -251,7 +251,7 @@ const filterHelp={
 const evidenceSources={email:'E-mail du recruteur',recruiter_portal:'Portail de candidature',phone:'Appel du recruteur',manual:'Confirmation manuelle'};
 function evidenceMarkup(j){
   const expired=matchFilter(j,'expired');
-  const outcome=['screening','interview','offer','rejected','withdrawn'].includes(j.tracker_stage);
+  const outcome=['screening','interview','offer','rejected','withdrawn','hired','offer_declined'].includes(j.tracker_stage);
   return `${expired?`<p class="small">${esc(tr('Expiration observée :'))} ${esc(j.valid_through||j.reason||tr('Date ou mention de fermeture dans la source'))}${j.last_checked_at?` · ${esc(tr('Dernière lecture :'))} ${esc(j.last_checked_at)}`:''}</p>`:''}${outcome?`<p class="small">${esc(tr(stageLabels[j.tracker_stage]))} · ${esc(tr(evidenceSources[j.tracker_source]||'Source non renseignée : statut à confirmer'))}${j.tracker_note?` · ${esc(j.tracker_note)}`:''}</p>`:''}<details ontoggle="if(this.open) loadHistory(${j.id},this)"><summary>${esc(tr('Historique et sources du suivi'))}</summary><div class="history-content"></div></details>`;
 }
 async function loadHistory(id,panel){
@@ -624,9 +624,9 @@ el('profileImportFile').onchange=async()=>{
 };
 
 
-const stageLabels={saved:'Sauvegardée',queued:'En file',prepared:'Préparée',submitted:'Envoyée',screening:'Screening',interview:'Entretien',offer:'Offre',rejected:'Refus du recruteur',withdrawn:'Retirée'};
+const stageLabels={saved:'Sauvegardée',queued:'En file',prepared:'Préparée',submitted:'Envoyée',screening:'Screening',interview:'Entretien',offer:'Offre',rejected:'Refus du recruteur',withdrawn:'Retirée',hired:'Embauché',offer_declined:'Offre déclinée'};
 async function setStage(id,stage){
-  const external=['screening','interview','offer','rejected'].includes(stage);
+  const external=['screening','interview','offer','rejected','hired','offer_declined'].includes(stage);
   let source='manual';
   if(stage==='submitted'&&!confirm(tr('Confirmez-vous avoir envoyé cette candidature sur le site du recruteur ? Le pré-remplissage seul ne constitue pas un envoi.'))){await loadPipeline();return;}
   if(external){
@@ -736,8 +736,8 @@ async function loadPipeline(){
   el('queueFocus').dataset.recordId=String(focusedId||'');
   if(active){el('pipelineSummary').textContent=`${jobs.length} ${tr('dossiers suivis')} · ${tr('Préparation en cours')} · #${focusedId}`;el('queueRunBtn').disabled=true;el('queueBatchBtn').disabled=true;}
   el('queueFocus').innerHTML=focus?`<strong>${esc(tr(active?'En traitement maintenant':'Votre prochaine action'))}</strong>${titleMarkup({id:focusedId,title:focus.title},'h3')}<p>${esc(focus.company||'')} · #${focusedId} · ${esc(tr(focus.status==='error'||focus.application_status==='error'?'Préparation échouée':statusLabels[focus.status||focus.application_status]||focus.status||focus.application_status||'Étape inconnue'))}</p><p>${esc(tr(stepLabels[focus.application_step]||statusLabels[focus.application_status]||'Étape inconnue'))}</p>${focus.application_step_at?`<p class="small">${esc(tr('Depuis'))} ${esc(focus.application_step_at)} UTC</p>`:''}${active?`<p>${esc(tr('L’automatisation travaille dans le navigateur dédié. Pour intervenir, arrêtez-la et attendez sa fin, puis reprenez l’onglet.'))}</p><button class="secondary compact" onclick="stopApplication(${focusedId})">${esc(tr('Arrêter avant de reprendre'))}</button>`:`${failureMarkup(focus)}${handoffActionsMarkup(focus)}`}`:`<p>${esc(tr(q.running?'Démarrage de la préparation…':'Aucune préparation en cours. Choisissez une préparation ou consultez les candidatures à reprendre.'))}</p>`;
-  const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn'];
-  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card" data-record-id="${j.id}">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':applicationLabel(j)))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
+  const stages=['saved','queued','prepared','submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'];
+  el('pipelineBoard').innerHTML=stages.map(st=>{const xs=jobs.filter(j=>(j.tracker_stage||((j.user_action==='liked')?'saved':''))===st);return `<div class="pipeline-col"><h3>${esc(tr(stageLabels[st]))} <span class="stage-count">${xs.length}</span></h3>${xs.map(j=>`<div class="pipeline-card" data-record-id="${j.id}">${titleMarkup(j,'b')}<div>${esc(j.company||'')}</div>${j.application_status?`<span class="tag appstate ${j.application_status==='error'?'failed':''}">${esc(tr(j.application_status==='error'?'Préparation échouée':applicationLabel(j)))}</span>`:''}${failureMarkup(j)}${!hasSubmitted(j)&&j.application_status!=='withdrawn'?handoffActionsMarkup(j):''}<div class="small">${esc(j.location||'')} ${j.next_followup_at?`· ${esc(tr('suivi'))} ${esc(j.next_followup_at)}`:''}</div><select onchange="setStage(${j.id},this.value)">${stages.map(x=>`<option value="${x}" ${x===st?'selected':''} ${(['screening','interview','offer','rejected','hired','offer_declined'].includes(x)&&!hasSubmitted(j))||(x==='queued'&&!['queued','running','waiting_user'].includes(j.queue_status))||(x==='prepared'&&!['prefilled','needs_human'].includes(j.application_status))?'disabled':''}>${esc(tr(stageLabels[x]))}</option>`).join('')}</select>${evidenceMarkup(j)}</div>`).join('')}</div>`}).join('');
   observeTitles();
   restoreDetails();
 }
@@ -758,7 +758,7 @@ window.openHumanConfirmation=openHumanConfirmation;
 function updateExportCount(){
   const scope=el('reviewExportScope').value;
   const count=scope==='visible'?visibleJobIds.length:allJobs.filter(j=>{
-    if(['submitted','submitted_verified','withdrawn'].includes(j.application_status)||['rejected','withdrawn'].includes(j.tracker_stage)||j.user_action==='skipped'||j.decision==='expired'||j.availability_status==='expired')return false;
+    if(['submitted','submitted_verified','withdrawn'].includes(j.application_status)||['rejected','withdrawn','hired','offer_declined'].includes(j.tracker_stage)||j.user_action==='skipped'||j.decision==='expired'||j.availability_status==='expired')return false;
     if(scope==='pending')return humanStatus(j)==='pending';
     return !['submitted','screening','interview','offer'].includes(j.tracker_stage)&&j.human_review_status!=='declined'&&j.review_verdict!=='SKIP'&&j.decision!=='reject';
   }).length;

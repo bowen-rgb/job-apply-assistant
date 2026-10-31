@@ -9,6 +9,9 @@ import io
 import json
 import re
 import zipfile
+import sqlite3
+import tempfile
+from pathlib import Path
 from datetime import date, timedelta
 from xml.etree import ElementTree as ET
 import posixpath
@@ -20,13 +23,13 @@ from .extractor import canonicalize_url
 from .job_identity import build_job_dedupe_key
 
 ALIASES = {
-    'company': ['company', 'employer', 'entreprise', 'societe', 'laboratoire', '公司', '雇主'],
-    'title': ['title', 'role', 'position', 'poste', 'intitule', '岗位', '职位'],
+    'company': ['company', 'employer', 'entreprise', 'societe', 'laboratoire', 'firma', 'unternehmen', '公司', '雇主'],
+    'title': ['title', 'role', 'position', 'poste', 'intitule', 'rolle', 'stelle', '岗位', '职位'],
     'url': ['url', 'link', 'lien', '链接', '网址'],
     'stage': ['status', 'stage', 'statut', 'etat', '状态', '结果'],
-    'date': ['date', 'applied on', 'date applied', 'application date', '投递日期', '日期'],
-    'note': ['note', 'notes', 'comment', 'remarques', '备注'],
-    'location': ['location', 'city', 'lieu', 'ville', '地点', '城市'],
+    'date': ['date', 'applied on', 'date applied', 'application date', 'bewerbungsdatum', 'datum', '投递日期', '日期'],
+    'note': ['note', 'notes', 'comment', 'remarques', 'notizen', 'bemerkung', '备注'],
+    'location': ['location', 'city', 'lieu', 'ville', 'ort', 'stadt', '地点', '城市'],
 }
 
 
@@ -88,6 +91,10 @@ def stage(raw):
     text = fold(raw).strip()
     if re.search(r'reject|refus|non retenu|pas retenu|未录用|拒绝|not selected', text):
         return 'rejected'
+    if re.search(r'offer.declined|offre.decline|婉拒录用', text):
+        return 'offer_declined'
+    if text in {'hired','embauche','eingestellt','已入职'}:
+        return 'hired'
     if re.search(r'offer|录用|embauche', text):
         return 'offer'
     if re.search(r'interview|entretien|面试', text):
@@ -96,7 +103,7 @@ def stage(raw):
         return 'screening'
     if re.search(r'withdrawn|retire|撤回', text):
         return 'withdrawn'
-    if text in {'applied', 'submitted', 'envoye', '已投递', '已申请', '已发送'}:
+    if text in {'applied', 'submitted', 'envoye', 'beworben', '已投递', '已申请', '已发送'}:
         return 'submitted'
     return 'saved'
 
@@ -105,6 +112,29 @@ def parse_upload(name, content):
     if len(content) > 2_000_000:
         raise ValueError('Maximum import size is 2 MB')
     extension = name.lower().rsplit('.', 1)[-1]
+    if extension in {'db','sqlite','sqlite3'}:
+        if not content.startswith(b'SQLite format 3\x00'):raise ValueError('Not a SQLite database')
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'import.db';path.write_bytes(content)
+            connection=sqlite3.connect(path.as_uri()+'?mode=ro&immutable=1',uri=True)
+            connection.row_factory=sqlite3.Row
+            try:
+                connection.execute('PRAGMA query_only=ON')
+                count=0
+                def progress():
+                    nonlocal count
+                    count+=1;return count>1000
+                connection.set_progress_handler(progress,1000)
+                tables=[r['name'] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+                rows=[]
+                for table in tables[:30]:
+                    quoted='"'+table.replace('"','""')+'"'
+                    columns=[row['name'].casefold() for row in connection.execute('PRAGMA table_info('+quoted+')')]
+                    if not any(key in columns for key in ALIASES['company']) or not any(key in columns for key in ALIASES['title']):continue
+                    rows.extend(dict(row) for row in connection.execute('SELECT * FROM '+quoted+' LIMIT 1001'))
+                    if len(rows)>1000:raise ValueError('Import at most 1000 rows at a time')
+                return rows
+            finally:connection.close()
     if extension == 'xlsx':
         return read_xlsx(content)
     text = content.decode('utf-8-sig')
@@ -202,6 +232,20 @@ def import_rows(rows):
 
 def export_rows(rows, format):
     columns = ['company', 'title', 'location', 'url', 'tracker_stage', 'last_application_at', 'tracker_note']
+    if format=='md':
+        def cell(value):return str(value or '').replace('|','\\|').replace('\n',' ')
+        lines=['| '+' | '.join(columns)+' |','| '+' | '.join('---' for _ in columns)+' |']
+        lines.extend('| '+' | '.join(cell(row.get(key)) for key in columns)+' |' for row in rows)
+        return ('\n'.join(lines)+'\n').encode(),'text/markdown'
+    if format=='html':
+        from html import escape
+        headers=''.join('<th>'+escape(key)+'</th>' for key in columns)
+        body=''.join('<tr>'+''.join('<td>'+escape(str(row.get(key) or ''))+'</td>' for key in columns)+'</tr>' for row in rows)
+        document='''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Suivi des candidatures · 申请记录</title>
+<style>body{font:16px system-ui;margin:24px;color:#1a1c1e}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:12px;text-align:left;overflow-wrap:anywhere}input{padding:12px;width:min(90%,500px)}.table{overflow:auto}th{background:#ffde00}h1{font-size:24px}</style>
+<h1>Suivi des candidatures · 申请记录</h1><p>Instantané local · 本地导出快照</p><label>Filtrer / 筛选 <input id="filter" type="search"></label><p id="count"></p><div class="table"><table><thead><tr>'''+headers+'</tr></thead><tbody>'+body+'''</tbody></table></div>
+<script>const rows=[...document.querySelectorAll('tbody tr')];function filter(){const q=document.getElementById('filter').value.toLowerCase();let n=0;for(const r of rows){r.hidden=!r.textContent.toLowerCase().includes(q);if(!r.hidden)n++;}document.getElementById('count').textContent=n+' / '+rows.length;}document.getElementById('filter').addEventListener('input',filter);filter();</script></html>'''
+        return document.encode(),'text/html'
     def safe(value):
         value = str(value or '')
         return "'"+value if value.lstrip().startswith(('=', '+', '-', '@')) else value

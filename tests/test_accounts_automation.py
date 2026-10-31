@@ -107,7 +107,7 @@ class CandidateTests(unittest.TestCase):
             responses=[io.BytesIO(json.dumps({'access_token':'access','refresh_token':'refresh','scope':gmail_connection.SCOPE}).encode()),io.BytesIO(b'{"emailAddress":"alice@example.test"}')]
             with patch.object(gmail_connection,'urlopen',side_effect=responses),patch.object(secret_store,'update',side_effect=lambda fn:fn(config)):
                 self.assertEqual(gmail_connection.finish(state,'code'),'alice@example.test')
-            self.assertEqual(config['gmail_connection'],{'refresh_token':'refresh','email':'alice@example.test'})
+            self.assertEqual(config['gmail_connection'],{'refresh_token':'refresh','email':'alice@example.test','scopes':gmail_connection.SCOPE})
             with self.assertRaises(ValueError):gmail_connection.finish(state,'code')
             with patch.object(secret_store,'read',return_value=config):
                 self.assertNotIn('refresh_token',gmail_connection.status())

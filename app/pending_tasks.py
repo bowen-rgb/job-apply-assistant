@@ -95,7 +95,7 @@ def queue_task(identifier):
                       json.dumps([{'source':item['source'],'url':item['url'],'provider_key':'pending_tasks'}])))
                 row=connection.execute('SELECT * FROM jobs WHERE url=?',(item['url'],)).fetchone()
             job_id=row['id']
-            if row['application_status'] in {'submitted','submitted_verified','withdrawn'} or row['tracker_stage'] in {'submitted','screening','interview','offer','rejected','withdrawn'}:
+            if row['application_status'] in {'submitted','submitted_verified','withdrawn'} or row['tracker_stage'] in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'}:
                 raise ValueError('This application is already sent or closed. Check its history instead of sending again.')
             previous=connection.execute('SELECT status FROM application_queue WHERE job_id=?',(job_id,)).fetchone()
         if previous:

@@ -17,6 +17,9 @@ def main(job_id: int):
         raise ValueError('job not found')
     job = dict(row)
     resume, _ = select_resume_for_job(job, raw)
+    if profile.get('chatgpt_web_reviewer',{}).get('backend','chatgpt') != 'chatgpt':
+        generate_letter(None,job,raw,resume,profile.get('chatgpt_web_reviewer',{}))
+        return
     with sync_playwright() as playwright:
         _, context, mode = _open_browser(playwright, profile)
         try:

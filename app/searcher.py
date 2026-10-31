@@ -352,6 +352,17 @@ def search_web(query: str, limit: int, provider_key: str, engines: list[str], ma
 def discover(profile: dict, report=None) -> Iterable[Hit]:
     seen: set[str] = set()
     early_hits: list[Hit] = []
+    from .extended_sources import discover as discover_extended
+    for hit in discover_extended(profile, report):
+        key = _dedupe_key(hit.url)
+        if key not in seen:
+            seen.add(key)
+            early_hits.append(hit)
+    from .portal_registry import discover as discover_registered
+    for hit in discover_registered(profile,report):
+        key=_dedupe_key(hit.url)
+        if key not in seen:
+            seen.add(key);early_hits.append(hit)
     queries = build_queries(profile)
     planned = {key for key, _ in queries}
     for source in enabled_sources(profile):

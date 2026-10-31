@@ -917,5 +917,7 @@
   "menu.rotate": "自动轮换",
   "menu.clock": "本地时间",
   "menu.audioError": "这首歌无法播放，换一个音频文件试试。",
-  "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.": "每行一个招聘站点：填写完整 HTTPS 网址，或保留原来的 greenhouse:代号:企业 格式。支持 12 类招聘系统的公开岗位接口；搜索时识别出的站点也会自动记住。"
+  "Une ligne par board surveillé : URL HTTPS complète ou ancien format greenhouse:token:entreprise. Les flux publics de 12 systèmes sont pris en charge ; les sources reconnues pendant la découverte sont aussi mémorisées.": "每行一个招聘站点：填写完整 HTTPS 网址，或保留原来的 greenhouse:代号:企业 格式。支持 12 类招聘系统的公开岗位接口；搜索时识别出的站点也会自动记住。",
+  "Embauché": "已入职",
+  "Offre déclinée": "已婉拒录用"
 }

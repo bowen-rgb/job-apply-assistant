@@ -43,27 +43,33 @@
 | 本地安装、数据与账号隔离 | 继续使用本项目桌面宿主、候选人目录、加密账号、专用 Chrome | 原安装包 / 档案选择 |
 | 自动投递 | 保留现有 auto_submission 和提交回执，不用上游“记为 Applied”替代真实网站成功 | 原投递引擎、QR 与队列 |
 
-## 尚未实现为本项目功能的上游附加能力
+## 完整能力扩展（2026-10-30 后续轮次）
 
-这些已阅读，但**不宣称已完成**，也不因为复制了文件就标记“接入”。
+上一轮暂缓的能力已改为原生实现，不再是“以后再做”的清单。使用入口、配置与逐项说明见 [完整求职工具](../CAREER_TOOLS.md)，验收见 [FULL_CAPABILITY_PLAN.md](FULL_CAPABILITY_PLAN.md)。
 
-| 能力 | 状态 / 不盲目引入的理由 |
+| 上游功能 | 本项目实现 |
 | --- | --- |
-| ai-job-search 的完整逐岗 CV 重写、LaTeX/Typst 自定义模板注册、版面空洞测量和裁切优化 | 本轮只诊断已上传 CV，不修改你的原 CV；既有 LM PDF 布局保留。需要独立材料版本与事实审核链后再扩展。 |
-| 自动联网研究的深度面试包、多轮模拟面试、能力提升学习计划 | 本轮提供有证据的准备资料与问题框架，尚未接入专用模型任务和模拟会话。 |
-| Notion 单向同步 | 未配置外部目标；不创建第二个必须维护的申请真源。 |
-| 自带薪资样本的统计基准工具 | 当前支持薪资偏好，但没有导入可靠薪资样本，不生成伪分位数。 |
-| Apply-Pilot 的 Brave/Mojeek、Adzuna/Jooble/Careerjet/France Travail 密钥 API、JobTech 与 freehire | 本项目有搜索和法国公开页能力，但本轮没有冒充已接这些额外接口；新增接口应按法国实习实际覆盖效果再决定。 |
-| Claude/Codex/DeepSeek 等整套命令行启动器、career-ops 包装入口 | 不引入第二套 harness。现有专用 Chrome ChatGPT 工作流保留。 |
-| 原版 DOCX 段落模板编辑、SQLite 外部账本导入 | 本轮支持 5 种账本格式；现有 PDF/DOCX CV 上传保留，没有新增模板替换或任意外部数据库挂载。 |
-| 自动作跨站账号授权、自动发送跟进邮件 | 本轮邮件仅只读；“我已发送跟进”是记录已发生的事实，不会冒充已经发信。 |
+| /setup、/expand，行为与目标画像、潜在职业方向 | career_intelligence.profile_expand、capability_actions.accept_plan；批量导入、证据确认、偏好配置；采用的查询词进入原扫描 |
+| /apply 的逐岗 CV、起草／独立审稿、相关性裁切 | career_intelligence.tailor_cv；原件保留、逐句证据、PDF 检查、版本指纹、单岗采用；既有自动申请及 LM01–LM12 保留 |
+| /add-template | document_templates；DOCX、TeX、Typst、PDF、ZIP；本地文档编译器和占位符，不执行模板安装脚本 |
+| /add-portal | portal_registry；模型分析公开页面，提案经真实查询测试后才可启用，无动态 Python 插件 |
+| /interview、模拟面试、/upskill | 联网来源、STAR 原文、分环节准备、持续问答、技能缺口与学习计划；计划不变成技能事实 |
+| /outcome、档案、经验校准、/html-report | 原申请历史，加 hired／offer_declined、ZIP 归档、候选人经验提案、离线 HTML 跟踪表；拒信仍需真实证据确认 |
+| /notion-sync | Notion 新版 data-source API、目标确认、单向去重、限流处理，原账本为真源 |
+| 薪资工具 | 直接使用上游 salary_lookup 校验／公司索引查询，加同口径样本分位数和原生图表 |
+| scan boards / websearch、各国示范来源 | extended_sources；Brave、Mojeek、Adzuna、Jooble、Careerjet、France Travail API、JobTech、Euraxess、freehire、丹麦四站、LinkedIn public；原 Bing/DDG/SearXNG/JobSpy/ATS 保留 |
+| LinkedIn login / scan / triage | linkedin_discovery；复用专用 Chrome，只操作新建搜索页，岗位与帖子分开，人工选择后加入未核验机会 |
+| agent 选择／委托、eval prompt / score / run / pipeline | model_backends、原 bridge、capability_worker、app.cli；Chrome、兼容接口／DeepSeek、Anthropic、Ollama、Claude/Codex/OpenCode CLI |
+| followups、draft | 到期规则保留；生成草稿、原邮件会话校验、可选 Gmail compose、明确确认发送、结果不明锁重试 |
+| DOCX、lint、SQLite / folder / merge-additions / export | 原生模板段落复制、writing_lint、多文件／目录追加导入、JSON/CSV/XLSX/Markdown/HTML 导出；不覆盖旧记录 |
+| doctor、reset、数据目录／桌面启动 | app.cli、现有桌面宿主和 JAA_WORKSPACE_HOME；预览和含二进制材料／数据库 SQL 的重置前备份；保留账号 |
+
+新增直接复用：`app/vendor/job_search/{verify_pdf,verify_layout,salary_lookup}.py`；保留上游 MIT 许可。移植 Apply-Pilot 的 lint、docx、scan/boards、scan/linkedin、agents、importer、scoring、events、followups 机制，完整许可仍保留在 Apply-Pilot-LICENSE.txt。
+
+这里吸收的是可用能力和源码算法，不把上游 Claude 配置、安装器、Node 服务、网站主题或 CI 模板再嵌套进产品。默认 ChatGPT 工作流和本项目所有业务页面保留；可选 career-ops 数据互通通过标准账本交换实现，不运行第二份申请真源。
 
 ## 使用与验证边界
 
-1. 打开**申请队列**，找到**招聘反馈与下一步**。
-2. 若已在**个人档案与账号**配置 Gmail，点**读取 Gmail 招聘反馈**；查看企业、岗位、日期、发件人、主题与证据，勾选后确认。无需连接邮箱也能继续手动记录结果。
-3. **需要跟进**只显示真实投递后的到期申请。先自己联系，再点**我已发送跟进**记入历史。
-4. **准备面试／检查简历**选择申请即可看 CV 比较、岗位关键词覆盖和面试准备线索。
-5. 账本导入始终先预览。已投/被拒/面试等导入记录必须有投递日期；重复记录不会覆盖。无原网址的旧记录只留档，使用不可点击的内部记录标识，不伪造岗位链接，也不能直接进入准备流程。
+入口是 **求职进度与队列 → 完整求职工具**。扩展能力未配置时显示待配置／缺失原因。没有自动替用户申请云密钥、启用付费调用、发送申请或写入 Notion。Gmail 读取与撰写权限分开；升级需自行重新 OAuth 授权。
 
-测试采用合成候选人、临时数据库、假 Gmail 响应和 ATS 样本，不读取用户真实邮箱、不提交真实申请。12 类 ATS 的样本测试证明解析与路由可用，**不证明每个公司的在线接口都可访问**。SuccessFactors 依租户/地区变化，Phenom 的自定义域需明确配置；达到分页上限会报告 capped/partial，不能说已抓全。Gmail 规则可能漏检复杂措辞；冲突/模糊情况要求人工处理。
+来源样本和假模型测试证明解析、路由、校验、状态和确认链有效，不能冒充各平台全部在线可访问。原有 12 ATS、二维码、材料授权、队列、菜单与桌面回归继续运行。真实企业页面、字段和登录可能变化，须以本机连接检查及原文为准。

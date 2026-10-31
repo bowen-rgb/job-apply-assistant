@@ -49,6 +49,41 @@ Model answer:
         self.assertIsNotNone(obj)
         self.assertEqual(obj['status'], 'HANDOFF')
 
+    def test_new_career_tasks_keep_whole_response_instead_of_last_nested_object(self):
+        import json
+        examples={
+            'cv-tailor':{'sections':[{'heading':'Projects','lines':[{'text':'Actual work','source_quote':'Observed quote'}]}]},
+            'cv-review':{'checks':{'factual_support':True},'issues':[]},
+            'interview-pack':{'likely_questions':[{'question':'How?'}],'star_examples':[{'outline':'Evidence'}]},
+            'mock-interview':{'feedback':'Use evidence','next_question':'How?','details':{'score':2}},
+            'upskill':{'gaps':[{'skill':'Python'}],'plan':[{'week':1}]},
+            'profile-expand':{'facts':[{'text':'Actual work'}],'questions':[]},
+            'search_plan':{'roles':['Engineer'],'queries':['stage'],'details':{'x':1}},
+            'calibration':{'lessons':[{'text':'Check conditions'}],'suggested_rules':[]},
+            'followup-draft':{'subject':'Follow-up','body':'Thank you.','details':{'x':1}},
+            'linkedin-triage':{'opportunities':[{'company':'Lab'}],'questions':[]},
+            'portal-analyze':{'url':'https://jobs.test/','label':'Lab','item_selector':'.job','details':{'x':1}},
+            'model-check':{'ok':True},
+            'job-agent-step-1':{'status':'CONTINUE','actions':[{'op':'fill','args':{'value':'x'}}]},
+        }
+        for purpose,expected in examples.items():
+            with self.subTest(purpose=purpose):
+                self.assertEqual(_extract_json_for_purpose(json.dumps(expected),purpose),expected)
+                self.assertIsNone(_extract_json_for_purpose('{"unrelated":{}}',purpose))
+        generic={'unknown_future_task':{'nested':1}}
+        self.assertEqual(_extract_json_for_purpose(json.dumps(generic),'future-task'),generic)
+
+    def test_new_task_browser_response_ignores_user_schema_and_nested_fields(self):
+        with sync_playwright() as pw:
+            browser=pw.chromium.launch(headless=True)
+            try:
+                page=browser.new_page();page.set_content('''<article data-message-author-role="user">{"sections":[]}</article>
+                    <article data-message-author-role="assistant">{"sections":[{"heading":"Projects","lines":[{"text":"Actual work","source":"cv"}]}],"gaps":[]}</article>''')
+                result=_page_json(page,'cv-tailor')
+                self.assertEqual(result['sections'][0]['lines'][0]['text'],'Actual work')
+                self.assertIsNone(_page_json(page,'cv-tailor',[result]))
+            finally:browser.close()
+
 
 if __name__ == '__main__':
     unittest.main()

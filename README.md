@@ -137,3 +137,6 @@ For bugs and feature requests, [open an issue](https://github.com/bowen-rgb/job-
 ---
 
 [Open-source references](OPEN_SOURCE_REFERENCES.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [README design references](docs/README_DESIGN.md)
+
+
+完整求职工具：在“求职进度与队列”中展开，可使用逐岗 CV、面试／模拟面试、学习计划、扩展来源、LinkedIn 帖子、多模型、Notion、邮件草稿和批量数据工具。操作示例与可选连接配置见 [docs/CAREER_TOOLS.md](docs/CAREER_TOOLS.md)。

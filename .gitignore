@@ -25,6 +25,8 @@ data/
 *.zip
 playwright-report/
 test-results/
+tmp/
+.playwright-mcp/
 desktop/node_modules/
 desktop/payload/
 output/desktop/

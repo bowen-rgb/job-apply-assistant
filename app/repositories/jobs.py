@@ -79,7 +79,7 @@ class JobRepository:
             result = dict(conn.execute(query).fetchone())
             result['human_n'] = sum(confirmation_status(dict(j)) == 'pending' and j['user_action'] != 'skipped'
                                     and j['application_status'] not in {'submitted', 'submitted_verified', 'withdrawn'}
-                                    and j['tracker_stage'] not in {'rejected', 'withdrawn'}
+                                    and j['tracker_stage'] not in {'rejected', 'withdrawn', 'hired', 'offer_declined'}
                                     and j['decision'] != 'expired' and j['availability_status'] != 'expired'
                                     for j in conn.execute('SELECT * FROM jobs'))
             return result
@@ -160,7 +160,7 @@ class JobRepository:
         query = """SELECT jobs.*, COALESCE((SELECT status FROM application_queue q WHERE q.job_id=jobs.id),'') AS queue_status,
                    COALESCE((SELECT note FROM applications a WHERE a.job_id=jobs.id AND a.status IN ('apply_error','cover_letter_error','login_required','submission_check','privacy_consent_required') ORDER BY a.id DESC LIMIT 1),'') AS application_error
                    FROM jobs
-                     WHERE (user_action<>'skipped' OR application_status IN ('submitted','submitted_verified','withdrawn') OR tracker_stage IN ('rejected','screening','interview','offer')) AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
+                     WHERE (user_action<>'skipped' OR application_status IN ('submitted','submitted_verified','withdrawn') OR tracker_stage IN ('rejected','screening','interview','offer','hired','offer_declined')) AND (tracker_stage<>'' OR application_status<>'' OR user_action='liked')
                    ORDER BY COALESCE(last_application_at,updated_at) DESC"""
         with connect() as conn:
             return [self._verification(dict(row)) for row in conn.execute(query).fetchall()]
@@ -185,7 +185,7 @@ class JobRepository:
                 if job['application_status'] == 'withdrawn':
                     raise ValueError('A withdrawn application cannot be reopened')
                 return
-        external = stage in {'screening', 'interview', 'offer', 'rejected'}
+        external = stage in {'screening', 'interview', 'offer', 'rejected', 'hired', 'offer_declined'}
         if external:
             if job['application_status'] not in {'submitted', 'submitted_verified'}:
                 raise ValueError('Confirm submission before recording a recruiter response')
@@ -204,7 +204,7 @@ class JobRepository:
             conn.execute("INSERT INTO applications(job_id,status,note) VALUES(?,'submitted',?)", (job_id, 'Manual confirmation from pipeline'))
         if stage == 'withdrawn':
             conn.execute("UPDATE jobs SET application_status='withdrawn' WHERE id=?", (job_id,))
-        if stage in {'submitted', 'withdrawn', 'rejected'}:
+        if stage in {'submitted', 'withdrawn', 'rejected', 'hired', 'offer_declined'}:
             conn.execute("UPDATE application_queue SET status='done',note=?,finished_at=COALESCE(finished_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE job_id=?", (stage, job_id))
         conn.execute('UPDATE jobs SET tracker_stage=?,tracker_note=?,tracker_source=?,next_followup_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (stage, note.strip()[:4000], source, followup_at[:80], job_id))
         conn.execute('INSERT INTO application_stage_events(job_id,stage,note,followup_at,source) VALUES(?,?,?,?,?)', (job_id, stage, note.strip()[:4000], followup_at[:80], source))
@@ -220,7 +220,7 @@ class JobRepository:
             raise ValueError('Confirm the AI review yourself before preparing this application')
         if (job['user_action'] == 'skipped' or job['decision'] == 'expired'
                 or job['availability_status'] == 'expired'
-                or job['tracker_stage'] in {'rejected', 'withdrawn'}
+                or job['tracker_stage'] in {'rejected', 'withdrawn', 'hired', 'offer_declined'}
                 or job['application_status'] in {'submitted', 'submitted_verified', 'withdrawn', 'opening', 'preparing', 'preparing_letter'}):
             raise ValueError('Application cannot be prepared in its current state')
 

@@ -98,6 +98,8 @@ from .platform_login import router as platform_login_router
 app.include_router(platform_login_router)
 from .insights_routes import router as insights_router
 app.include_router(insights_router)
+from .capabilities_routes import router as capabilities_router
+app.include_router(capabilities_router)
 
 
 job_repository = JobRepository()
@@ -143,11 +145,11 @@ def start_review_export(payload: ReviewExport):
     if payload.scope=='pending':
         rows=[j for j in rows if j['human_review_status']=='pending' and j['user_action']!='skipped'
               and j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
-              and j['tracker_stage'] not in {'rejected','withdrawn'}
+              and j['tracker_stage'] not in {'rejected','withdrawn','hired','offer_declined'}
               and j['decision']!='expired' and j['availability_status']!='expired']
     elif payload.scope=='unsubmitted':
         rows=[j for j in rows if j['application_status'] not in {'submitted','submitted_verified','withdrawn'}
-              and j['tracker_stage'] not in {'submitted','screening','interview','offer','rejected','withdrawn'}
+              and j['tracker_stage'] not in {'submitted','screening','interview','offer','rejected','withdrawn','hired','offer_declined'}
               and j['user_action']!='skipped' and j['human_review_status']!='declined'
               and j['review_verdict']!='SKIP' and j['decision'] not in {'reject','expired'} and j['availability_status']!='expired']
     else:
@@ -334,12 +336,17 @@ def sources():
     enabled = set([s.key for s in SOURCES if s.enabled_by_default] if configured is None else configured)
     custom_keys = {s.key for s in all_sources(auto) if s.key.startswith('custom_')}
     enabled |= custom_keys
+    from .extended_sources import status as extended_status
+    extended={row['id']:row for row in extended_status()}
+    enabled|={key for key,row in extended.items() if row['enabled']}
     rows = [
         {'key': s.key, 'label': s.label, 'domain': s.domain, 'enabled': s.key in enabled, 'custom': s.key.startswith('custom_')}
         for s in all_sources(auto)
     ]
     from .public_boards import capability
     for row in rows:row.update(capability(row['key']))
+    for row in rows:
+        if row['key'] in extended:row.update(native_api=True,configured=extended[row['key']]['configured'])
     if auto.get('jobspy_enabled', True):
         known = {x['key'] for x in rows}
         for site in auto.get('jobspy_sites', []) or []:
@@ -723,7 +730,7 @@ def track(job_id: int, payload: TrackPatch):
         raise HTTPException(404, 'job not found')
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    if payload.stage in {'submitted','withdrawn','rejected'}:
+    if payload.stage in {'submitted','withdrawn','rejected','hired','offer_declined'}:
         cancel_worker('app.apply_worker', job_id)
     return {'ok': True}
 

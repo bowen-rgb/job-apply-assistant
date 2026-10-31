@@ -149,7 +149,7 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
         return False
     if purpose == 'final-review':
         return str(obj.get('verdict', '')).upper().strip() in {'APPLY', 'SKIP', 'HUMAN_REVIEW'}
-    if purpose == 'job-agent':
+    if purpose == 'job-agent' or purpose.startswith('job-agent-step-'):
         return str(obj.get('status', '')).upper().strip() in {'CONTINUE', 'HANDOFF', 'DONE'}
     if purpose == 'cover-letter':
         return isinstance(obj.get('letter'), str) and (bool(obj['letter'].strip()) or bool(obj.get('concerns')))
@@ -163,6 +163,21 @@ def _matches_purpose(obj: Any, purpose: str) -> bool:
                 and isinstance(obj.get('issues'), list) and isinstance(obj.get('evidence'), list))
     if purpose == 'review-export-translation':
         return isinstance(obj.get('translations'),dict) and bool(obj['translations'])
+    contracts={
+        'cv-tailor':{'sections':list},
+        'cv-review':{'checks':dict,'issues':list},
+        'interview-pack':{'likely_questions':list,'star_examples':list},
+        'mock-interview':{'feedback':str,'next_question':str},
+        'upskill':{'gaps':list,'plan':list},
+        'profile-expand':{'facts':list,'questions':list},
+        'search_plan':{'roles':list,'queries':list},
+        'calibration':{'lessons':list,'suggested_rules':list},
+        'followup-draft':{'subject':str,'body':str},
+        'linkedin-triage':{'opportunities':list,'questions':list},
+    }
+    if purpose in contracts:return all(isinstance(obj.get(key),kind) for key,kind in contracts[purpose].items())
+    if purpose=='portal-analyze':return obj.get('error')=='login_required' or all(isinstance(obj.get(key),str) for key in ('url','label','item_selector'))
+    if purpose=='model-check':return obj.get('ok') is True
     return True
 
 
@@ -172,11 +187,15 @@ def _extract_json_for_purpose(text: str, purpose: str) -> dict[str, Any] | None:
         return None
     decoder = json.JSONDecoder()
     found = None
+    consumed_until=0
     for m in re.finditer(r'\{', raw):
+        if m.start()<consumed_until:continue
         try:
-            obj, _ = decoder.raw_decode(raw[m.start():])
+            obj, length = decoder.raw_decode(raw[m.start():])
         except Exception:
             continue
+        # A nested line/check/action is not another complete model response.
+        consumed_until=m.start()+length
         if _matches_purpose(obj, purpose):
             found = obj
     return found
@@ -215,6 +234,11 @@ def ask_chatgpt_json(context, prompt: str, cfg: dict[str, Any], *, purpose: str 
     temporary ChatGPT tab and never touches the application tab. It deliberately does not
     use undocumented network endpoints: the integration remains a visible browser workflow.
     """
+    if cfg.get('backend','chatgpt') != 'chatgpt':
+        from .model_backends import ask
+        from .capability_store import safe_file
+        import uuid
+        return ask(prompt,cfg['backend'],workspace=safe_file('agent-runs/'+uuid.uuid4().hex),purpose=purpose)
     chat_url = cfg.get('url', 'https://chatgpt.com/')
     timeout_s = max(30, int(cfg.get('timeout_seconds', 180)))
     keep_open = purpose == 'cover-letter' or bool(cfg.get('keep_chat_tab_open', False))

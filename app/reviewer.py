@@ -38,6 +38,9 @@ def build_review_packet(job: dict[str, Any], profile: dict[str, Any], form_snaps
             'academic_profile': {key: profile.get(key, '') for key in ('school', 'degree', 'education_level', 'prepared_degree', 'prepared_degree_level', 'field_of_study', 'graduation_year', 'graduation_year_status', 'graduation_timing_note')},
             'skill_inventory': profile.get('skill_inventory', []),
             'skill_notes': profile.get('skill_notes', []),
+            'candidate_evidence_facts': profile.get('candidate_evidence_facts', []),
+            'outcome_lessons_not_candidate_facts': profile.get('outcome_lessons', []),
+            'self_reported_work_preferences': profile.get('behavioral_profile', {}),
             'availability_start_date': profile.get('availability_start_date', ''),
             'availability_end_date': profile.get('max_end_date', ''),
             'availability_preferences': profile.get('availability', {}),
@@ -306,23 +309,26 @@ def review_via_chatgpt_web(job_id: int, form_snapshot: dict[str, Any] | None = N
     with connect() as c:
         c.execute("UPDATE jobs SET review_verdict='RUNNING', review_summary='ChatGPT web review in progress', updated_at=CURRENT_TIMESTAMP WHERE id=?", (job_id,))
 
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(endpoint)
-        context = browser.contexts[0] if browser.contexts else browser.new_context()
-        raw = ask_chatgpt_json(context, prompt, cfg, purpose='final-review')
-        result = validate_review(raw)
-        if profile.get('scoring_dimensions'):
-            from .application_intelligence import score_evaluation
-            try:
-                result['rubric'] = score_evaluation(profile['scoring_dimensions'], result['ratings'])
-                # A rubric cannot override a hard rejection or required human check.
-                if result['rubric']['decision'] != 'apply' and result['verdict'] == 'APPLY':
-                    result['verdict'] = 'HUMAN_REVIEW'
-            except ValueError:
-                result['rubric_error'] = 'Incomplete ratings; human review required'
-                if result['verdict'] == 'APPLY':
-                    result['verdict'] = 'HUMAN_REVIEW'
-        result = apply_local_guardrails(result, job, profile, form_snapshot)
+    if cfg.get('backend','chatgpt') != 'chatgpt':
+        raw = ask_chatgpt_json(None, prompt, cfg, purpose='final-review')
+    else:
+        with sync_playwright() as p:
+            browser = p.chromium.connect_over_cdp(endpoint)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            raw = ask_chatgpt_json(context, prompt, cfg, purpose='final-review')
+    result = validate_review(raw)
+    if profile.get('scoring_dimensions'):
+        from .application_intelligence import score_evaluation
+        try:
+            result['rubric'] = score_evaluation(profile['scoring_dimensions'], result['ratings'])
+            # A rubric cannot override a hard rejection or required human check.
+            if result['rubric']['decision'] != 'apply' and result['verdict'] == 'APPLY':
+                result['verdict'] = 'HUMAN_REVIEW'
+        except ValueError:
+            result['rubric_error'] = 'Incomplete ratings; human review required'
+            if result['verdict'] == 'APPLY':
+                result['verdict'] = 'HUMAN_REVIEW'
+    result = apply_local_guardrails(result, job, profile, form_snapshot)
 
     with connect() as c:
         c.execute(

@@ -1,0 +1,21 @@
+/* Layout only: retain the existing Endfield tokens and components. */
+#careerTools { min-width:0; }
+#careerTools details { margin-block:16px; }
+#careerTools summary { cursor:pointer; padding-block:8px; }
+#careerTools form { margin-block:16px; }
+#careerTools label { min-width:0; }
+#careerTools fieldset { min-width:0; border:1px solid var(--border); margin-block:12px; }
+#careerTools .check { display:flex; align-items:flex-start; gap:10px; }
+#careerTools .check input { flex:0 0 auto; width:auto; margin-top:4px; }
+#careerTools [data-rank-jobs], #careerTools [data-documents] { max-height:280px; overflow:auto; }
+#careerTools [data-task-result], #careerTools [data-ledger-result], #careerTools [data-salary-result] { overflow-wrap:anywhere; }
+#careerTools dd { margin:4px 0 12px 16px; white-space:pre-wrap; }
+#careerTools ol { padding-left:24px; }
+#careerTools [data-task-result] > details { max-height:650px; overflow:auto; }
+#careerTools button, #careerTools a { margin:4px; }
+#careerTools input, #careerTools textarea, #careerTools select { max-width:100%; }
+#careerTools meter { width:180px; max-width:50%; }
+@media (max-width:600px) {
+  #careerTools .form-grid { grid-template-columns:minmax(0,1fr); }
+  #careerTools dd { margin-left:8px; }
+}

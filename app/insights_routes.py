@@ -175,7 +175,7 @@ async def import_ledger(file: UploadFile = File(...), write: bool = Form(False))
 
 
 @router.get('/export')
-def export_ledger(format: Literal['json', 'csv', 'xlsx'] = 'xlsx'):
+def export_ledger(format: Literal['json', 'csv', 'xlsx', 'md', 'html'] = 'xlsx'):
     from .tracker_exchange import export_rows
     content, media = export_rows(JobRepository().pipeline(), format)
     return Response(content, media_type=media, headers={'Content-Disposition': f'attachment; filename="applications.{format}"'})
